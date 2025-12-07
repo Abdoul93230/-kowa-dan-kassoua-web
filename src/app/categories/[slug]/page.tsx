@@ -1,13 +1,14 @@
 // app/categories/[slug]/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, use } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Header } from "../../../components/home/Header";
 import { Footer } from '../../../components/home/Footer';
 import { Breadcrumb } from '../../../components/CategoryPage/Breadcrumb';
 import { FiltersSidebar } from '../../../components/CategoryPage/FiltersSidebar';
 import { ItemCard } from '../../../components/CategoryPage/ItemCard';
-import { mockItems } from '../../../../lib/mockData';
+import { mockItems, categories } from '../../../../lib/mockData';
 import { Item } from '../../../../types/index';
 import { 
   SlidersHorizontal, 
@@ -32,9 +33,16 @@ import { Filters } from '../../../../types/index';
 
 
 // Main Category Page Component
-export default function CategoryPage({ params }: { params: { slug: string } }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+export default function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+  // Déballer params avec React.use()
+  const { slug } = use(params);
+  
+  const searchParams = useSearchParams();
+  const queryParam = searchParams.get('q') || '';
+  const locationParam = searchParams.get('location') || 'all';
+  
+  const [searchQuery, setSearchQuery] = useState(queryParam);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('recent');
@@ -43,16 +51,124 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
     showServices: true,
     priceMin: '',
     priceMax: '',
-    location: 'all',
+    location: locationParam,
     condition: 'all',
     minRating: 0,
     promotedOnly: false
   });
+  
+  // Mettre à jour les filtres quand les paramètres changent
+  useEffect(() => {
+    const query = searchParams.get('q') || '';
+    const location = searchParams.get('location') || 'all';
+    const type = searchParams.get('type'); // 'product' ou 'service'
+    
+    setSearchQuery(query);
+    
+    // Appliquer le filtre de type depuis l'URL
+    setFilters(prev => ({
+      ...prev,
+      location,
+      showProducts: type === 'service' ? false : true,
+      showServices: type === 'product' ? false : true,
+    }));
+  }, [searchParams]);
 
   const itemsPerPage = ITEMS_PER_PAGE;
 
-const allItems: Item[] = Object.values(mockItems).flat();
-const filteredItems = filterItems(allItems, filters);
+// Récupérer tous les items ou filtrer par catégorie
+const allItems: Item[] = slug === 'tous' 
+  ? Object.values(mockItems).flat() 
+  : (mockItems[slug] || Object.values(mockItems).flat());
+
+// Fonction pour normaliser les chaînes (enlever accents et mettre en minuscules)
+const normalizeString = (str: string): string => {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, ''); // Enlève les accents
+};
+
+// Filtrer par sous-catégorie si spécifié dans l'URL
+const subcategoryParam = searchParams.get('subcategory');
+const subcategoryFilteredItems = subcategoryParam 
+  ? allItems.filter(item => 
+      item.subcategory && 
+      normalizeString(item.subcategory) === normalizeString(subcategoryParam)
+    )
+  : allItems;
+
+// Fonction de recherche complète dans tous les attributs
+const performSearch = (items: Item[], query: string): Item[] => {
+  if (query.trim() === '') return items;
+  
+  const searchTerm = query.toLowerCase();
+  
+  return items.filter(item => {
+    // Recherche dans les champs textuels principaux
+    const titleMatch = item.title.toLowerCase().includes(searchTerm);
+    const descriptionMatch = item.description.toLowerCase().includes(searchTerm);
+    const locationMatch = item.location.toLowerCase().includes(searchTerm);
+    const categoryMatch = item.category.toLowerCase().includes(searchTerm);
+    const subcategoryMatch = item.subcategory?.toLowerCase().includes(searchTerm);
+    
+    // Recherche dans le prix (ex: "1000", "1000 fcfa")
+    const priceMatch = item.price.toLowerCase().includes(searchTerm);
+    
+    // Recherche dans les tags
+    const tagsMatch = item.tags.some(tag => 
+      tag.toLowerCase().includes(searchTerm)
+    );
+    
+    // Recherche dans la marque
+    const brandMatch = item.brand?.toLowerCase().includes(searchTerm);
+    
+    // Recherche dans la condition
+    const conditionMatch = item.condition?.toLowerCase().includes(searchTerm);
+    
+    // Recherche dans les spécifications (ex: "128GB", "4K", etc.)
+    const specsMatch = item.specifications ? 
+      Object.entries(item.specifications).some(([key, value]) => 
+        key.toLowerCase().includes(searchTerm) || 
+        value.toLowerCase().includes(searchTerm)
+      ) : false;
+    
+    // Recherche dans le nom du vendeur
+    const sellerMatch = item.seller.name.toLowerCase().includes(searchTerm);
+    
+    // Recherche dans les zones de livraison (pour produits)
+    const deliveryMatch = item.delivery?.areas.some(area => 
+      area.toLowerCase().includes(searchTerm)
+    ) || false;
+    
+    // Recherche dans les zones de service (pour services)
+    const serviceAreaMatch = item.serviceArea?.some(area => 
+      area.toLowerCase().includes(searchTerm)
+    ) || false;
+    
+    // Recherche dans le type (produit/service)
+    const typeMatch = item.type.toLowerCase().includes(searchTerm);
+    
+    // Retourner true si au moins un champ correspond
+    return titleMatch || descriptionMatch || locationMatch || categoryMatch || 
+           subcategoryMatch || priceMatch || tagsMatch || brandMatch || 
+           conditionMatch || specsMatch || sellerMatch || deliveryMatch || 
+           serviceAreaMatch || typeMatch;
+  });
+};
+
+// Filtrer par recherche textuelle d'abord
+const searchFilteredItems = performSearch(subcategoryFilteredItems, searchQuery);
+
+// Appliquer les filtres supplémentaires
+let filteredItems = filterItems(searchFilteredItems, filters);
+
+// Si aucun résultat avec le filtre de localisation ET qu'il y a une recherche active,
+// réessayer sans le filtre de localisation
+if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location !== 'all') {
+  const filtersWithoutLocation = { ...filters, location: 'all' };
+  filteredItems = filterItems(searchFilteredItems, filtersWithoutLocation);
+}
 
 
   const sortedItems = sortItems(filteredItems,sortBy);
@@ -64,9 +180,21 @@ const filteredItems = filterItems(allItems, filters);
   // Compter produits et services
   const productsCount = filteredItems.filter(i => i.type === 'product').length;
   const servicesCount = filteredItems.filter(i => i.type === 'service').length;
+  
+  // Trouver le nom de la catégorie et sous-catégorie
+  const currentCategory = categories.find(cat => cat.slug === slug);
+  const currentSubcategory = currentCategory?.subcategories?.find(
+    sub => sub.slug === subcategoryParam
+  );
+  
+  const categoryName = searchQuery 
+    ? `Résultats pour "${searchQuery}"` 
+    : subcategoryParam && currentSubcategory
+      ? `${currentCategory?.name} - ${currentSubcategory.name}`
+      : (slug === 'tous' ? 'Toutes les catégories' : (currentCategory?.name || 'Catégorie'));
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50">
       <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       
       <div className="container mx-auto px-4 py-8">
@@ -74,32 +202,40 @@ const filteredItems = filterItems(allItems, filters);
 
         {/* En-tête de catégorie */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
-            Électronique
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+            {categoryName}
           </h1>
-          <div className="flex items-center gap-4 text-slate-600">
+          <div className="flex items-center gap-4 text-gray-600">
             <p className="text-lg">
-              <span className="font-semibold text-slate-900">{filteredItems.length}</span> résultats
+              <span className="font-semibold text-[#ec5a13]">{filteredItems.length}</span> résultats
             </p>
-            <span className="text-slate-400">•</span>
+            <span className="text-gray-400">•</span>
             <p className="text-sm">
               {productsCount} produits, {servicesCount} services
             </p>
+            {filters.location !== 'all' && (
+              <>
+                <span className="text-gray-400">•</span>
+                <p className="text-sm">
+                  📍 {filters.location}
+                </p>
+              </>
+            )}
           </div>
         </div>
 
         {/* Barre d'outils */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-lg border border-slate-200">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className="w-full md:w-auto"
+            className="w-full md:w-auto border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de]"
           >
             <SlidersHorizontal className="h-4 w-4 mr-2" />
             Filtres
             {(filters.promotedOnly || filters.minRating > 0 || filters.condition !== 'all' || 
               !filters.showProducts || !filters.showServices) && (
-              <Badge className="ml-2 bg-emerald-600">Actifs</Badge>
+              <Badge className="ml-2 bg-[#ec5a13] hover:bg-[#d94f0f]">Actifs</Badge>
             )}
           </Button>
 
@@ -122,7 +258,7 @@ const filteredItems = filterItems(allItems, filters);
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="icon"
                 onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                className={viewMode === 'grid' ? 'bg-[#ec5a13] hover:bg-[#d94f0f]' : 'hover:bg-[#ffe9de]'}
               >
                 <Grid3x3 className="h-4 w-4" />
               </Button>
@@ -130,7 +266,7 @@ const filteredItems = filterItems(allItems, filters);
                 variant={viewMode === 'list' ? 'default' : 'outline'}
                 size="icon"
                 onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                className={viewMode === 'list' ? 'bg-[#ec5a13] hover:bg-[#d94f0f]' : 'hover:bg-[#ffe9de]'}
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -166,13 +302,13 @@ const filteredItems = filterItems(allItems, filters);
           {/* Grille de produits/services */}
           <main className="flex-1">
             {currentItems.length === 0 ? (
-              <Card className="p-12 text-center">
+              <Card className="p-12 text-center shadow-sm">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center">
-                    <SlidersHorizontal className="h-10 w-10 text-slate-400" />
+                  <div className="w-20 h-20 bg-[#ffe9de] rounded-full flex items-center justify-center">
+                    <SlidersHorizontal className="h-10 w-10 text-[#ec5a13]" />
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Aucun résultat trouvé</h3>
-                  <p className="text-slate-600 max-w-md">
+                  <h3 className="text-xl font-semibold text-gray-900">Aucun résultat trouvé</h3>
+                  <p className="text-gray-600 max-w-md">
                     Essayez de modifier vos filtres ou critères de recherche pour voir plus de résultats.
                   </p>
                   <Button 
@@ -186,7 +322,7 @@ const filteredItems = filterItems(allItems, filters);
                       minRating: 0,
                       promotedOnly: false
                     })}
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white"
                   >
                     Réinitialiser les filtres
                   </Button>
@@ -205,8 +341,8 @@ const filteredItems = filterItems(allItems, filters);
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-10 bg-white p-4 rounded-lg border border-slate-200">
-                    <p className="text-sm text-slate-600">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-10 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                    <p className="text-sm text-gray-600">
                       Page {currentPage} sur {totalPages} - Affichage de {startIndex + 1} à {Math.min(startIndex + itemsPerPage, sortedItems.length)} sur {sortedItems.length} résultats
                     </p>
                     
@@ -239,7 +375,7 @@ const filteredItems = filterItems(allItems, filters);
                                   setCurrentPage(pageNum);
                                   window.scrollTo({ top: 0, behavior: 'smooth' });
                                 }}
-                                className={currentPage === pageNum ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                                className={currentPage === pageNum ? 'bg-[#ec5a13] hover:bg-[#d94f0f]' : 'hover:bg-[#ffe9de]'}
                                 size="sm"
                               >
                                 {pageNum}

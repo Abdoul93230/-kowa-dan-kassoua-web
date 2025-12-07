@@ -39,10 +39,10 @@ export function TestimonialsSection() {
     <section className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             Ce que nos utilisateurs disent
           </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Des milliers d'utilisateurs font confiance à MarketHub pour leurs achats et ventes
           </p>
         </div>
@@ -51,20 +51,20 @@ export function TestimonialsSection() {
           {testimonials.map((testimonial) => (
             <Card
               key={testimonial.id}
-              className="relative p-6 border-slate-200 hover:shadow-lg transition-all duration-300 hover:border-emerald-500"
+              className="relative p-6 border-gray-200 hover:shadow-lg transition-all duration-300 hover:border-[#ec5a13]"
             >
-              <Quote className="absolute top-4 right-4 h-8 w-8 text-emerald-200" />
+              <Quote className="absolute top-4 right-4 h-8 w-8 text-orange-200" />
 
               <div className="flex items-center gap-3 mb-4">
-                <Avatar className="h-12 w-12 border-2 border-emerald-100">
+                <Avatar className="h-12 w-12 border-2 border-orange-100">
                   <AvatarImage src={testimonial.avatar} alt={testimonial.name} />
-                  <AvatarFallback className="bg-emerald-100 text-emerald-700">
+                  <AvatarFallback className="bg-orange-100 text-[#ec5a13]">
                     {testimonial.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h4 className="font-semibold text-slate-900">{testimonial.name}</h4>
-                  <p className="text-sm text-slate-600">{testimonial.role}</p>
+                  <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
+                  <p className="text-sm text-gray-600">{testimonial.role}</p>
                 </div>
               </div>
 
@@ -74,11 +74,11 @@ export function TestimonialsSection() {
                 ))}
               </div>
 
-              <p className="text-slate-700 leading-relaxed mb-3">
+              <p className="text-gray-700 leading-relaxed mb-3">
                 "{testimonial.comment}"
               </p>
 
-              <p className="text-sm text-slate-500">{testimonial.location}</p>
+              <p className="text-sm text-gray-500">{testimonial.location}</p>
             </Card>
           ))}
         </div>

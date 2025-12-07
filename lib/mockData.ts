@@ -548,7 +548,7 @@ export const mockItems: Record<string, Item[]> = {
       status: 'active'
     },
     {
-      id: 102,
+      id: 103,
       title: 'Pâtisserie & Gâteaux sur commande',
       price: 'À partir de 25 000 FCFA',
       negotiable: true,
@@ -576,7 +576,7 @@ export const mockItems: Record<string, Item[]> = {
       status: 'active'
     },
     {
-      id: 103,
+      id: 104,
       title: 'Dibiterie - Brochettes & Grillades',
       price: '1 500 FCFA la portion',
       negotiable: false,
@@ -817,7 +817,7 @@ export const mockItems: Record<string, Item[]> = {
       status: 'active'
     },
         {
-      id: 302,
+      id: 304,
       title: 'Peugeot 3008 GT Line 2019',
       price: '14 800 000 FCFA',
       negotiable: true,
@@ -853,7 +853,7 @@ export const mockItems: Record<string, Item[]> = {
       status: 'active'
     },
     {
-      id: 303,
+      id: 305,
       title: 'Location voiture mariage & événements',
       price: 'À partir de 80 000 FCFA/jour',
       negotiable: true,

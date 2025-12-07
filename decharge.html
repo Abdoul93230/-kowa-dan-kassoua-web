@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            padding: 50px;
+            background: white;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 22px;
+            text-decoration: underline;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .objet {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 35px;
+            font-size: 15px;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            text-decoration: underline;
+        }
+        
+        .partie {
+            margin-bottom: 15px;
+        }
+        
+        .partie strong {
+            font-weight: bold;
+        }
+        
+        hr {
+            border: none;
+            border-top: 2px solid #000;
+            margin: 30px 0;
+        }
+        
+        .content {
+            text-align: justify;
+            margin: 25px 0;
+        }
+        
+        .montant {
+            font-weight: bold;
+            font-size: 16px;
+            text-align: center;
+            margin: 25px 0;
+        }
+        
+        .fait-a {
+            margin-top: 50px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 80px;
+            gap: 60px;
+        }
+        
+        .signature-bloc {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .signature-bloc strong {
+            display: block;
+            margin-bottom: 25px;
+            font-size: 15px;
+            text-decoration: underline;
+        }
+        
+        .signature-nom {
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        .signature-titre {
+            font-size: 13px;
+            margin-bottom: 60px;
+            font-style: italic;
+        }
+        
+        .signature-ligne {
+            border-top: 1px solid #000;
+            width: 180px;
+            margin: 0 auto;
+            padding-top: 8px;
+            font-size: 12px;
+        }
+        
+        @media print {
+            body {
+                padding: 40px;
+            }
+            
+            @page {
+                margin: 2cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DÉCHARGE DE PAIEMENT PARTIEL</h1>
+        
+        <div class="objet">Objet : Réception d'acompte de 40% sur projet Kowa Dan Kassoua</div>
+        
+        <div class="section-title">Entre les soussignés :</div>
+        
+        <div class="partie">
+            <strong>Le prestataire :</strong><br>
+            SmartLimb<br>
+            Adresse : Bobiel pharmacie goroual<br>
+            Représentée par Monsieur Adamou Oumarou Abdoul Razak, en qualité de représentant légal<br>
+            Numéro de pièce d'identité : 9044/22/CCN/DP VN
+        </div>
+        
+        <div class="partie">
+            <strong>Et le client :</strong><br>
+            Ganin Gaba<br>
+            Adresse : Francophonie, à côté de la station Sobami<br>
+            Représenté par Monsieur ASSELOKA ETIKOKOU Amadou Roufaye<br>
+            Numéro de passeport : 12PC96614 (délivré le 18/06/2024)
+        </div>
+        
+        <hr>
+        
+        <div class="section-title">Il a été convenu ce qui suit :</div>
+        
+        <div class="content">
+            Je soussigné, Adamou Oumarou Abdoul Razak, représentant légal de la structure SmartLimb, certifie avoir reçu ce jour, <strong>26 novembre 2025</strong>, de la part de Ganin Gaba, représenté par Monsieur ASSELOKA ETIKOKOU Amadou Roufaye, la somme de :
+        </div>
+        
+        <div class="montant">420 000 FCFA (Quatre cent vingt mille francs CFA)</div>
+        
+        <div class="content">
+            Cette somme correspond à un acompte de <strong>40%</strong> du montant total convenu de <strong>1 050 000 FCFA (Un million cinquante mille francs CFA)</strong> pour la réalisation du projet de développement de la plateforme web et mobile Kowa Dan Kassoua.
+        </div>
+        
+        <div class="content">
+            Ce versement constitue le paiement initial prévu dans l'accord contractuel établi entre les deux parties et permettra d'engager les travaux relatifs audit projet.
+        </div>
+        
+        <div class="content">
+            Le solde restant de <strong>630 000 FCFA (Six cent trente mille francs CFA)</strong> sera réglé selon les modalités convenues.
+        </div>
+        
+        <div class="content">
+            La présente décharge est établie pour servir et valoir ce que de droit.
+        </div>
+        
+        <hr>
+        
+        <div class="fait-a">Fait à Niamey, le 26 novembre 2025</div>
+        <div style="text-align: center; font-style: italic; margin-bottom: 40px;">En deux exemplaires originaux</div>
+        
+        <div class="signatures">
+            <div class="signature-bloc">
+                <strong>Le Prestataire</strong>
+                <div class="signature-nom">Adamou Oumarou Abdoul Razak</div>
+                <div class="signature-titre">Représentant légal de SmartLimb</div>
+                <div class="signature-ligne">Signature</div>
+            </div>
+            
+            <div class="signature-bloc">
+                <strong>Le Client</strong>
+                <div class="signature-nom">ASSELOKA ETIKOKOU Amadou Roufaye</div>
+                <div class="signature-titre">Représentant de Ganin Gaba</div>
+                <div class="signature-ligne">Signature</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

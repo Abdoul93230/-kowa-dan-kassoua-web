@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents Projet Portail E-commerce</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            padding: 40px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .document {
+            max-width: 210mm;
+            margin: 0 auto 40px;
+            padding: 50px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            page-break-after: always;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .header .subtitle {
+            font-size: 16px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .section {
+            margin: 30px 0;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-left: 4px solid #333;
+        }
+        
+        .subsection-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+            text-decoration: underline;
+        }
+        
+        .info-block {
+            margin: 15px 0;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 5px;
+        }
+        
+        .info-block strong {
+            display: inline-block;
+            width: 200px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        table th, table td {
+            border: 1px solid #333;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        table th {
+            background: #333;
+            color: white;
+            font-weight: bold;
+        }
+        
+        table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .timeline-item {
+            margin: 15px 0;
+            padding-left: 20px;
+            border-left: 3px solid #333;
+        }
+        
+        .timeline-week {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .feature-list {
+            margin: 10px 0;
+            padding-left: 30px;
+        }
+        
+        .feature-list li {
+            margin: 8px 0;
+        }
+        
+        .total-row {
+            font-weight: bold;
+            font-size: 16px;
+            background: #e0e0e0 !important;
+        }
+        
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+            gap: 40px;
+        }
+        
+        .signature-bloc {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .signature-bloc strong {
+            display: block;
+            margin-bottom: 20px;
+        }
+        
+        .signature-ligne {
+            border-top: 1px solid #000;
+            width: 180px;
+            margin: 60px auto 0;
+            padding-top: 8px;
+            font-size: 12px;
+        }
+        
+        .note {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff9e6;
+            border-left: 4px solid #ffc107;
+            font-style: italic;
+        }
+        
+        .highlight {
+            background: #ffeb3b;
+            padding: 2px 5px;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .document {
+                box-shadow: none;
+                margin: 0;
+                page-break-after: always;
+            }
+            
+            @page {
+                margin: 2cm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- DOCUMENT 1: PLAN DE TRAVAIL -->
+    <div class="document">
+        <div class="header">
+             <h1>Plan de Travail</h1>
+            <div class="subtitle">Développement Portail E-commerce - Bijoux & Colis</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">1. INFORMATIONS GÉNÉRALES DU PROJET</div>
+            
+            <div class="info-block">
+                <strong>Prestataire :</strong> Adamou Oumarou Abdoul Razak<br>
+                <strong>Client :</strong> <span class="highlight">[NOM DE LA STRUCTURE CLIENTE]</span><br>
+                <strong>Projet :</strong> Portail Web E-commerce pour Bijoux et Colis<br>
+                <strong>Technologie :</strong> ReactJS + Backend Node.js<br>
+                <strong>Durée estimée :</strong> 3 semaines (21 jours ouvrables)<br>
+                <strong>Date de début :</strong> <span class="highlight">[À COMPLÉTER]</span><br>
+                <strong>Date de livraison :</strong> <span class="highlight">[À COMPLÉTER]</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">2. OBJECTIFS DU PROJET</div>
+            <ul class="feature-list">
+                <li>Créer une plateforme moderne et attractive pour la vente en ligne de bijoux et colis</li>
+                <li>Offrir une expérience utilisateur fluide et intuitive</li>
+                <li>Permettre la gestion autonome des produits par le client</li>
+                <li>Optimiser la visibilité des produits avec un design responsive</li>
+                <li>Faciliter le processus de commande et de paiement</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">3. FONCTIONNALITÉS PRÉVUES</div>
+            
+            <div class="subsection-title">3.1 Interface Client (Front-end)</div>
+            <ul class="feature-list">
+                <li><strong>Page d'accueil :</strong> Design attractif avec produits vedettes et promotions</li>
+                <li><strong>Catalogue produits :</strong> Affichage en grille avec images, prix et descriptions</li>
+                <li><strong>Filtres et recherche :</strong> Par catégorie (bijoux/colis), prix, disponibilité</li>
+                <li><strong>Page détail produit :</strong> Galerie photos, description complète, caractéristiques</li>
+                <li><strong>Panier d'achat :</strong> Ajout/suppression articles, calcul automatique du total</li>
+                <li><strong>Formulaire de commande :</strong> Coordonnées client, adresse de livraison</li>
+                <li><strong>Espace client :</strong> Inscription, connexion, historique des commandes</li>
+                <li><strong>Design responsive :</strong> Adapté mobile, tablette et desktop</li>
+            </ul>
+
+            <div class="subsection-title">3.2 Interface Administrateur (Back-office)</div>
+            <ul class="feature-list">
+                <li><strong>Tableau de bord :</strong> Statistiques des ventes et commandes</li>
+                <li><strong>Gestion produits :</strong> Ajout, modification, suppression avec upload d'images</li>
+                <li><strong>Gestion catégories :</strong> Organisation bijoux et colis</li>
+                <li><strong>Gestion commandes :</strong> Consultation, validation, suivi des statuts</li>
+                <li><strong>Gestion clients :</strong> Liste des utilisateurs inscrits</li>
+            </ul>
+
+            <div class="subsection-title">3.3 Fonctionnalités Techniques</div>
+            <ul class="feature-list">
+                <li>Système d'authentification sécurisé (JWT)</li>
+                <li>Base de données relationnelle (PostgreSQL/MySQL)</li>
+                <li>API RESTful pour la communication Front/Back</li>
+                <li>Upload et optimisation d'images</li>
+                <li>Système de notification par email</li>
+                <li>Hébergement et mise en ligne</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">4. PLANNING DÉTAILLÉ - 3 SEMAINES</div>
+            
+            <div class="timeline-item">
+                <div class="timeline-week">📅 SEMAINE 1 : Conception & Architecture (Jours 1-7)</div>
+                <ul class="feature-list">
+                    <li><strong>Jours 1-2 :</strong> Analyse des besoins détaillés avec le client</li>
+                    <li><strong>Jours 3-4 :</strong> Conception de la maquette UI/UX (design)</li>
+                    <li><strong>Jours 5-6 :</strong> Architecture technique et structure de la base de données</li>
+                    <li><strong>Jour 7 :</strong> Validation du design et des spécifications avec le client</li>
+                </ul>
+                <div class="note">
+                    <strong>Livrable :</strong> Maquettes approuvées + Architecture validée
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-week">📅 SEMAINE 2 : Développement Core (Jours 8-14)</div>
+                <ul class="feature-list">
+                    <li><strong>Jours 8-9 :</strong> Configuration environnement + Setup projet ReactJS</li>
+                    <li><strong>Jours 10-11 :</strong> Développement interface client (catalogue, détails produits)</li>
+                    <li><strong>Jours 12-13 :</strong> Développement backend (API, base de données)</li>
+                    <li><strong>Jour 14 :</strong> Intégration panier d'achat et formulaire commande</li>
+                </ul>
+                <div class="note">
+                    <strong>Livrable :</strong> Version alpha fonctionnelle (partie cliente)
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-week">📅 SEMAINE 3 : Back-office & Finalisation (Jours 15-21)</div>
+                <ul class="feature-list">
+                    <li><strong>Jours 15-16 :</strong> Développement interface administrateur</li>
+                    <li><strong>Jours 17-18 :</strong> Système d'authentification et gestion utilisateurs</li>
+                    <li><strong>Jour 19 :</strong> Tests complets et corrections de bugs</li>
+                    <li><strong>Jour 20 :</strong> Optimisation, sécurité et performance</li>
+                    <li><strong>Jour 21 :</strong> Déploiement, formation client et livraison finale</li>
+                </ul>
+                <div class="note">
+                    <strong>Livrable :</strong> Application complète en production + Documentation
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">5. LIVRABLES FINAUX</div>
+            <ul class="feature-list">
+                <li>✅ Portail web ReactJS complet et fonctionnel</li>
+                <li>✅ Interface d'administration complète</li>
+                <li>✅ Code source commenté et documenté</li>
+                <li>✅ Application déployée et accessible en ligne</li>
+                <li>✅ Documentation technique et guide utilisateur</li>
+                <li>✅ Formation à l'utilisation de l'interface admin (2h)</li>
+                <li>✅ Support technique 1 mois après livraison</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">6. RESPONSABILITÉS</div>
+            
+            <div class="subsection-title">Abdoul Razak s'engage à :</div>
+            <ul class="feature-list">
+                <li>Développer l'application selon les spécifications validées</li>
+                <li>Respecter les délais convenus</li>
+                <li>Assurer la qualité et la sécurité du code</li>
+                <li>Former le client à l'utilisation de la plateforme</li>
+                <li>Fournir un support post-livraison d'un mois</li>
+            </ul>
+
+            <div class="subsection-title">Le Client s'engage à :</div>
+            <ul class="feature-list">
+                <li>Fournir tous les contenus nécessaires (textes, images, logos)</li>
+                <li>Être disponible pour les validations aux étapes clés</li>
+                <li>Respecter le calendrier de paiement convenu</li>
+                <li>Tester et valider les livrables dans les délais impartis</li>
+            </ul>
+        </div>
+
+        <div class="signatures">
+            <div class="signature-bloc">
+                <strong>Pour Le Prestataire</strong>
+                <div>Adamou Oumarou Abdoul Razak</div>
+                <div class="signature-ligne">Date et signature</div>
+            </div>
+            
+            <div class="signature-bloc">
+                <strong>Pour le Client</strong>
+                <div><span class="highlight">[NOM DU REPRÉSENTANT]</span></div>
+                <div class="signature-ligne">Date et signature</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DOCUMENT 2: DESCRIPTION TECHNIQUE -->
+    <div class="document">
+        <div class="header">
+            <h1>Description Technique de la Solution</h1>
+            <div class="subtitle">Portail E-commerce - Architecture & Technologies</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">1. VUE D'ENSEMBLE</div>
+            <p>
+                Le portail e-commerce sera développé comme une application web moderne basée sur une architecture 
+                <strong>Single Page Application (SPA)</strong> utilisant ReactJS pour le front-end et Node.js/Express 
+                pour le back-end. Cette solution garantit une expérience utilisateur fluide, des performances optimales 
+                et une maintenance facilitée.
+            </p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">2. ARCHITECTURE TECHNIQUE</div>
+            
+            <div class="subsection-title">2.1 Architecture Globale</div>
+            <p style="margin-bottom: 15px;">L'application suivra une architecture <strong>client-serveur en 3 tiers :</strong></p>
+            <ul class="feature-list">
+                <li><strong>Couche Présentation :</strong> Interface utilisateur ReactJS</li>
+                <li><strong>Couche Application :</strong> API RESTful Node.js/Express</li>
+                <li><strong>Couche Données :</strong> Base de données relationnelle (PostgreSQL/MySQL)</li>
+            </ul>
+
+            <div class="subsection-title">2.2 Stack Technologique</div>
+            
+            <table>
+                <tr>
+                    <th>Composant</th>
+                    <th>Technologie</th>
+                    <th>Version</th>
+                </tr>
+                <tr>
+                    <td><strong>Front-end Framework</strong></td>
+                    <td>ReactJS</td>
+                    <td>18.x</td>
+                </tr>
+                <tr>
+                    <td><strong>Gestion d'état</strong></td>
+                    <td>Redux Toolkit / Context API</td>
+                    <td>Latest</td>
+                </tr>
+                <tr>
+                    <td><strong>Routage</strong></td>
+                    <td>React Router</td>
+                    <td>6.x</td>
+                </tr>
+                <tr>
+                    <td><strong>Styling</strong></td>
+                    <td>Tailwind CSS / Material-UI</td>
+                    <td>Latest</td>
+                </tr>
+                <tr>
+                    <td><strong>Back-end Runtime</strong></td>
+                    <td>Node.js</td>
+                    <td>18.x LTS</td>
+                </tr>
+                <tr>
+                    <td><strong>Framework Back-end</strong></td>
+                    <td>Express.js</td>
+                    <td>4.x</td>
+                </tr>
+                <tr>
+                    <td><strong>Base de données</strong></td>
+                    <td>PostgreSQL / MySQL</td>
+                    <td>14.x / 8.x</td>
+                </tr>
+                <tr>
+                    <td><strong>ORM</strong></td>
+                    <td>Prisma / Sequelize</td>
+                    <td>Latest</td>
+                </tr>
+                <tr>
+                    <td><strong>Authentification</strong></td>
+                    <td>JWT (JSON Web Tokens)</td>
+                    <td>9.x</td>
+                </tr>
+                <tr>
+                    <td><strong>Upload Fichiers</strong></td>
+                    <td>Multer + Cloudinary</td>
+                    <td>Latest</td>
+                </tr>
+                <tr>
+                    <td><strong>Hébergement</strong></td>
+                    <td>Vercel (Front) / Railway (Back)</td>
+                    <td>-</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="section-title">3. MODULES FONCTIONNELS</div>
+            
+            <div class="subsection-title">3.1 Module Catalogue Produits</div>
+            <ul class="feature-list">
+                <li><strong>Affichage dynamique</strong> des produits avec pagination</li>
+                <li><strong>Système de filtrage</strong> multi-critères (catégorie, prix, disponibilité)</li>
+                <li><strong>Recherche en temps réel</strong> avec auto-complétion</li>
+                <li><strong>Galerie d'images</strong> avec zoom et navigation</li>
+                <li><strong>Tri des produits</strong> (nouveautés, prix croissant/décroissant, popularité)</li>
+            </ul>
+
+            <div class="subsection-title">3.2 Module Panier & Commande</div>
+            <ul class="feature-list">
+                <li><strong>Gestion du panier</strong> persistant (localStorage + base de données)</li>
+                <li><strong>Calcul automatique</strong> des totaux et sous-totaux</li>
+                <li><strong>Formulaire de commande</strong> avec validation en temps réel</li>
+                <li><strong>Récapitulatif de commande</strong> avant validation</li>
+                <li><strong>Notification email</strong> automatique après commande</li>
+            </ul>
+
+            <div class="subsection-title">3.3 Module Authentification</div>
+            <ul class="feature-list">
+                <li><strong>Inscription utilisateur</strong> avec validation email</li>
+                <li><strong>Connexion sécurisée</strong> avec tokens JWT</li>
+                <li><strong>Gestion de profil</strong> utilisateur</li>
+                <li><strong>Historique des commandes</strong> personnalisé</li>
+                <li><strong>Récupération de mot de passe</strong> par email</li>
+            </ul>
+
+            <div class="subsection-title">3.4 Module Administration</div>
+            <ul class="feature-list">
+                <li><strong>Dashboard analytique</strong> avec graphiques de vente</li>
+                <li><strong>CRUD complet produits</strong> (Create, Read, Update, Delete)</li>
+                <li><strong>Gestion des images</strong> avec upload multiple</li>
+                <li><strong>Gestion des catégories</strong> et sous-catégories</li>
+                <li><strong>Suivi des commandes</strong> avec changement de statut</li>
+                <li><strong>Gestion des utilisateurs</strong> et permissions</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">4. SÉCURITÉ</div>
+            <ul class="feature-list">
+                <li><strong>Authentification JWT</strong> avec refresh tokens</li>
+                <li><strong>Hashage des mots de passe</strong> avec bcrypt</li>
+                <li><strong>Validation des données</strong> côté client et serveur</li>
+                <li><strong>Protection CORS</strong> configurée</li>
+                <li><strong>Protection contre les injections SQL</strong> via ORM</li>
+                <li><strong>Limitation du taux de requêtes</strong> (rate limiting)</li>
+                <li><strong>HTTPS</strong> obligatoire en production</li>
+                <li><strong>Sanitisation des entrées utilisateur</strong></li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">5. PERFORMANCE & OPTIMISATION</div>
+            <ul class="feature-list">
+                <li><strong>Code splitting</strong> et lazy loading des composants React</li>
+                <li><strong>Compression des images</strong> automatique</li>
+                <li><strong>Mise en cache</strong> des ressources statiques</li>
+                <li><strong>Optimisation du bundle</strong> JavaScript</li>
+                <li><strong>CDN</strong> pour les assets statiques</li>
+                <li><strong>Pagination</strong> des requêtes base de données</li>
+                <li><strong>Indexation</strong> des tables fréquemment utilisées</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">6. RESPONSIVE DESIGN</div>
+            <p>L'application sera entièrement responsive et optimisée pour :</p>
+            <ul class="feature-list">
+                <li><strong>Mobile</strong> : Smartphones (320px - 767px)</li>
+                <li><strong>Tablette</strong> : iPad et similaires (768px - 1023px)</li>
+                <li><strong>Desktop</strong> : Écrans larges (1024px et +)</li>
+            </ul>
+            <p style="margin-top: 15px;">
+                Design <strong>Mobile-First</strong> garantissant une expérience optimale sur tous les appareils.
+            </p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">7. HÉBERGEMENT & DÉPLOIEMENT</div>
+            
+            <div class="subsection-title">7.1 Environnements</div>
+            <ul class="feature-list">
+                <li><strong>Développement</strong> : Localhost avec hot-reload</li>
+                <li><strong>Staging</strong> : Environnement de test pré-production</li>
+                <li><strong>Production</strong> : Serveurs optimisés et sécurisés</li>
+            </ul>
+
+            <div class="subsection-title">7.2 Infrastructure Proposée</div>
+            <ul class="feature-list">
+                <li><strong>Front-end</strong> : Vercel / Netlify (déploiement automatique)</li>
+                <li><strong>Back-end</strong> : Railway / Render / DigitalOcean</li>
+                <li><strong>Base de données</strong> : PostgreSQL hébergé (ElephantSQL / Supabase)</li>
+                <li><strong>Stockage images</strong> : Cloudinary (CDN intégré)</li>
+                <li><strong>Domain & SSL</strong> : Nom de domaine personnalisé + Certificat HTTPS gratuit</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">8. MAINTENANCE & ÉVOLUTIVITÉ</div>
+            <ul class="feature-list">
+                <li><strong>Code modulaire</strong> facilitant les évolutions futures</li>
+                <li><strong>Documentation complète</strong> du code et de l'API</li>
+                <li><strong>Versioning Git</strong> avec historique complet</li>
+                <li><strong>Tests unitaires</strong> pour les fonctions critiques</li>
+                <li><strong>Logs d'erreurs</strong> centralisés pour le débogage</li>
+                <li><strong>Système de backup</strong> automatique de la base de données</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-title">9. EXTENSIONS FUTURES POSSIBLES</div>
+            <p style="margin-bottom: 10px;">Le système est conçu pour accueillir facilement :</p>
+            <ul class="feature-list">
+                <li>Intégration de paiement en ligne (Stripe, PayPal, Mobile Money)</li>
+                <li>Système de wishlist (liste de souhaits)</li>
+                <li>Programme de fidélité et codes promo</li>
+                <li>Avis et notations clients</li>
+                <li>Chatbot d'assistance</li>
+                <li>Notifications push</li>
+                <li>Multi-langues</li>
+                <li>Application mobile native (React Native)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- DOCUMENT 3: DEVIS -->
+    <div class="document">
+        <div class="header">
+            <h1>Devis</h1>
+            <div class="subtitle">Développement Portail E-commerce</div>
+        </div>
+
+        <div class="section">
+            <div class="info-block">
+                <strong>N° Devis :</strong> SMART-<span class="highlight">[XXXX]</span><br>
+                <strong>Date d'émission :</strong> <span class="highlight">[JJ/MM/AAAA]</span><br>
+                <strong>Validité :</strong> 30 jours<br><br>
+                
+                <strong>Prestataire :</strong><br>
+                SmartLimb<br>
+                Représentant : Adamou Oumarou Abdoul Razak<br>
+                Contact : <span>abdoulrazak9323@gmail.com / +227 87727501</span><br><br>
+                
+                <strong>Client :</strong><br>
+                <span class="highlight">[NOM DE LA STRUCTURE]</span><br>
+                Représentant : <span class="highlight">[NOM DU REPRÉSENTANT]</span><br>
+                Contact : <span class="highlight">[Téléphone / Email]</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">DÉTAIL DES PRESTATIONS</div>
+            
+            <table>
+                <tr>
+                    <th style="width: 50%;">Désignation</th>
+                    <th style="width: 20%;">Quantité</th>
+                    <th style="width: 15%;">Prix Unit.</th>
+                    <th style="width: 15%;">Total</th>
+                </tr>
+<tr>
+                    <td><strong>1. Conception & Design</strong><br>
+                        - Analyse des besoins<br>
+                        - Maquettes UI/UX<br>
+                        - Architecture technique
+                    </td>
+                    <td style="text-align: center;">1</td>
+                    <td style="text-align: right;">25 000 FCFA</td>
+                    <td style="text-align: right;"><strong>25 000 FCFA</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>2. Développement Front-end (ReactJS)</strong><br>
+                        - Interface client responsive<br>
+                        - Catalogue produits avec filtres<br>
+                        - Panier d'achat dynamique<br>
+                        - Formulaire de commande<br>
+                        - Espace utilisateur
+                    </td>
+                    <td style="text-align: center;">1</td>
+                    <td style="text-align: right;">55 000 FCFA</td>
+                    <td style="text-align: right;"><strong>55 000 FCFA</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>3. Développement Back-end (Node.js)</strong><br>
+                        - API RESTful complète<br>
+                        - Base de données<br>
+                        - Système d'authentification<br>
+                        - Gestion des commandes<br>
+                        - Upload et gestion d'images
+                    </td>
+                    <td style="text-align: center;">1</td>
+                    <td style="text-align: right;">45 000 FCFA</td>
+                    <td style="text-align: right;"><strong>45 000 FCFA</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>4. Interface d'Administration</strong><br>
+                        - Dashboard avec statistiques<br>
+                                - Gestion des produits (CRUD)<br>
+        - Gestion des catégories<br>
+        - Gestion des commandes<br>
+        - Gestion des utilisateurs 
+    </td>
+    <td style="text-align: center;">1</td>
+    <td style="text-align: right;">35 000 FCFA</td>
+    <td style="text-align: right;"><strong>35 000 FCFA</strong></td>
+</tr>
+
+<tr>
+    <td><strong>5. Hébergement & Déploiement</strong><br>
+        - Configuration du serveur<br>
+        - Mise en ligne du site<br>
+        - Configuration du domaine
+    </td>
+    <td style="text-align: center;">1</td>
+    <td style="text-align: right;">10 000 FCFA</td>
+    <td style="text-align: right;"><strong>10 000 FCFA</strong></td>
+</tr>
+
+<tr>
+    <td><strong>6. Maintenance (1 mois)</strong><br>
+        - Corrections et mises à jour mineures<br>
+        - Assistance technique
+    </td>
+    <td style="text-align: center;">1</td>
+    <td style="text-align: right;">10 000 FCFA</td>
+    <td style="text-align: right;"><strong>10 000 FCFA</strong></td>
+</tr>
+
+<tr class="total-row">
+    <td colspan="3" style="text-align: right;"><strong>Total général :</strong></td>
+    <td style="text-align: right;"><strong>180 000 FCFA</strong></td>
+</tr>
+</table>
+</div>
+
+<div class="footer">
+    Fait à Niamey, le <strong>26/11/2025</strong><br><br>
+
+    <div style="display: flex; justify-content: space-between; margin-top: 40px;">
+        <div>
+            <strong>Signature du Prestataire</strong><br><br><br>
+            _______________________________<br>
+            Adamou Oumarou Abdoul Razak<br>
+        </div>
+
+        <div>
+            <strong>Signature du Client</strong><br><br><br>
+            _______________________________<br>
+            [Nom du Client]<br>
+            [Structure]
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

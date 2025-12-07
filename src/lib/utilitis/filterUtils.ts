@@ -25,9 +25,15 @@ export function filterItems(items: Item[], filters: Filters): Item[] {
     // Filtre promotion
     if (filters.promotedOnly && !item.promoted) return false;
 
-    // Filtre localisation
-    if (filters.location !== 'all' && !item.location.toLowerCase().includes(filters.location)) {
-      return false;
+    // Filtre localisation - recherche flexible
+    if (filters.location !== 'all' && filters.location.trim() !== '') {
+      const locationFilter = filters.location.toLowerCase().trim();
+      const itemLocation = item.location.toLowerCase();
+      
+      // Ne filtre que si la localisation de l'item ne contient pas le terme recherché
+      if (!itemLocation.includes(locationFilter)) {
+        return false;
+      }
     }
 
     return true;
@@ -58,7 +64,7 @@ export function sortItems(items: Item[], sortBy: string): Item[] {
   }
 }
 
-export const ITEMS_PER_PAGE = 4;
+export const ITEMS_PER_PAGE = 10;
 
 export function paginateItems(items: Item[], page: number): Item[] {
   const startIndex = (page - 1) * ITEMS_PER_PAGE;
