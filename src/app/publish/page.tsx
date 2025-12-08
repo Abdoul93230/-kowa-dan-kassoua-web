@@ -1,16 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
 import { PublishForm } from '../../components/publish/PublishForm';
 
 export default function PublishPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Header />
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">

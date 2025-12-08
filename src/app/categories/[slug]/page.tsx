@@ -38,8 +38,8 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
   const { slug } = use(params);
   
   const searchParams = useSearchParams();
-  const queryParam = searchParams.get('q') || '';
-  const locationParam = searchParams.get('location') || 'all';
+  const queryParam = searchParams?.get('q') || '';
+  const locationParam = searchParams?.get('location') || 'all';
   
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -59,9 +59,9 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
   
   // Mettre à jour les filtres quand les paramètres changent
   useEffect(() => {
-    const query = searchParams.get('q') || '';
-    const location = searchParams.get('location') || 'all';
-    const type = searchParams.get('type'); // 'product' ou 'service'
+    const query = searchParams?.get('q') || '';
+    const location = searchParams?.get('location') || 'all';
+    const type = searchParams?.get('type'); // 'product' ou 'service'
     
     setSearchQuery(query);
     
@@ -90,7 +90,7 @@ const normalizeString = (str: string): string => {
 };
 
 // Filtrer par sous-catégorie si spécifié dans l'URL
-const subcategoryParam = searchParams.get('subcategory');
+const subcategoryParam = searchParams?.get('subcategory');
 const subcategoryFilteredItems = subcategoryParam 
   ? allItems.filter(item => 
       item.subcategory && 
@@ -195,7 +195,7 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Header />
       
       <div className="container mx-auto px-4 py-8">
         <Breadcrumb category="Électronique" />

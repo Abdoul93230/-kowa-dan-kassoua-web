@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 import { colors, fonts, spacing, borderRadius, shadows, breakpoints, zIndex } from "./src/lib/design-system";
 
 const config: Config = {
-  darkMode: ["class"],
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
