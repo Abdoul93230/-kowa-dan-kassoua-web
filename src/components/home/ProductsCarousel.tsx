@@ -1,6 +1,6 @@
 'use client';
 
-import { Star, MapPin } from 'lucide-react';
+import { Star, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { mockItems } from '../../../lib/mockData';
@@ -17,19 +17,23 @@ export function ProductsCarousel() {
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
-      const scrollAmount = 400;
+      const scrollAmount = 450;
       scrollContainerRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
       });
+      // Mettre à jour les boutons après le scroll
+      setTimeout(() => {
+        updateScrollButtons();
+      }, 100);
     }
   };
 
   const updateScrollButtons = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
     }
   };
 
@@ -38,52 +42,49 @@ export function ProductsCarousel() {
     if (container) {
       container.addEventListener('scroll', updateScrollButtons);
       updateScrollButtons();
-      return () => container.removeEventListener('scroll', updateScrollButtons);
+      
+      // Vérifier régulièrement pour s'assurer que les boutons sont à jour
+      const interval = setInterval(updateScrollButtons, 500);
+      
+      return () => {
+        container.removeEventListener('scroll', updateScrollButtons);
+        clearInterval(interval);
+      };
     }
   }, []);
 
   return (
     <section className="py-16 bg-white">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              Découvrez nos annonces
-            </h2>
-            <p className="text-lg text-gray-600">
-              Produits et services populaires
-            </p>
-          </div>
+      <div className="container mx-auto px-4 relative">
+        {/* Bouton gauche */}
+        <button
+          onClick={() => scroll('left')}
+          disabled={!canScrollLeft}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 p-4 rounded-full transition-all shadow-2xl ${
+            canScrollLeft
+              ? 'bg-white hover:bg-[#ec5a13] hover:text-white border-2 border-gray-200 hover:border-[#ec5a13] hover:scale-110'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
+          }`}
+        >
+          <ChevronLeft className="h-7 w-7" />
+        </button>
 
-          <div className="hidden md:flex gap-2">
-            <button
-              onClick={() => scroll('left')}
-              disabled={!canScrollLeft}
-              className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all ${
-                canScrollLeft
-                  ? 'border-[#ec5a13] text-[#ec5a13] hover:bg-orange-50'
-                  : 'border-gray-200 text-gray-300 cursor-not-allowed'
-              }`}
-            >
-              ←
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              disabled={!canScrollRight}
-              className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all ${
-                canScrollRight
-                  ? 'border-[#ec5a13] text-[#ec5a13] hover:bg-orange-50'
-                  : 'border-gray-200 text-gray-300 cursor-not-allowed'
-              }`}
-            >
-              →
-            </button>
-          </div>
-        </div>
+        {/* Bouton droit */}
+        <button
+          onClick={() => scroll('right')}
+          disabled={!canScrollRight}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 p-4 rounded-full transition-all shadow-2xl ${
+            canScrollRight
+              ? 'bg-white hover:bg-[#ec5a13] hover:text-white border-2 border-gray-200 hover:border-[#ec5a13] hover:scale-110'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200 opacity-50'
+          }`}
+        >
+          <ChevronRight className="h-7 w-7" />
+        </button>
 
         <div
           ref={scrollContainerRef}
-          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+          className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-16"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {allItems.slice(0, 12).map((item) => (

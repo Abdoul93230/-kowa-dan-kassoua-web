@@ -13,7 +13,7 @@ export function HomePage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <HeroSection />
-      <FeaturedSection />
+      {/* <FeaturedSection /> */}
       <CategoriesSection />
       <ProductsCarousel />
       <CTASection />

@@ -18,7 +18,7 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 md:gap-8">
             <div 
               className="flex items-center gap-2 cursor-pointer"
               onClick={() => handleNavigation('/')}
@@ -26,6 +26,13 @@ export function Header() {
               <ShoppingBag className="h-8 w-8 text-[#ec5a13]" />
               <span className="text-2xl font-bold text-gray-900">MarketHub</span>
             </div>
+
+            <Button 
+              onClick={() => handleNavigation('/publish')}
+              className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white hidden md:inline-flex"
+            >
+              Publier une annonce
+            </Button>
 
             <nav className="hidden md:flex items-center gap-6">
               <button 
@@ -50,12 +57,6 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button 
-              onClick={() => handleNavigation('/publish')}
-              className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white hidden md:inline-flex"
-            >
-              Publier une annonce
-            </Button>
             <Button 
               onClick={() => handleNavigation('/login')}
               variant="outline" 
