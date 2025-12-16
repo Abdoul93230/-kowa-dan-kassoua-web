@@ -85,7 +85,7 @@ export function HeroProductCarousel() {
         {allItems.slice(0, 8).map((item) => {
           const distance = getDistance(item.id);
           return (
-            <Link href={`/items/${item.id}`} key={item.id} className="flex-shrink-0 w-[calc(100vw-80px)] sm:w-[calc(50vw-60px)] md:w-[calc(33.333vw-50px)] lg:w-[calc(25vw-60px)] max-w-[340px]">
+            <Link href={`/items/${item.id}`} key={item.id} className="flex-shrink-0 w-[calc(100vw-80px)] sm:w-[calc(50vw-60px)] md:w-[calc(33.333vw-50px)] lg:w-[calc(25vw-60px)] xl:w-[calc(25vw-60px)] max-w-[340px]">
               <Card className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] h-full bg-white p-0 gap-0">
                 <div className="relative h-40 sm:h-44 md:h-48 lg:h-52 xl:h-56 overflow-hidden bg-gray-200">
                   <img
@@ -100,8 +100,8 @@ export function HeroProductCarousel() {
                   </Badge>
                   
                   {item.promoted && (
-                    <Badge className="absolute top-12 sm:top-14 md:top-16 left-2 sm:left-3 md:left-4 bg-[#ec5a13] hover:bg-orange-600 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 shadow-lg">
-                      ⭐ En vedette
+                    <Badge className="absolute bottom-2 left-2 sm:left-3 bg-[#ec5a13] hover:bg-orange-600 text-[10px] sm:text-xs px-2 py-0.5 sm:py-1 shadow-lg">
+                      ⭐ Vedette
                     </Badge>
                   )}
                 </div>
@@ -113,12 +113,17 @@ export function HeroProductCarousel() {
                       item.type === 'service' ? 'text-blue-600' : 'text-[#ec5a13]'
                     }`}>
                       {item.type === 'service' ? (
-                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                          <path d="M19.707 14.707A1 1 0 0019 13h-1v-1a1 1 0 00-2 0v1h-1a1 1 0 000 2h1v1a1 1 0 002 0v-1h1a1 1 0 00.707-1.707z"/>
                         </svg>
                       ) : (
-                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd" />
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z"/>
+                          <circle cx="6.5" cy="6.5" r="1.5"/>
+                          <circle cx="17.5" cy="6.5" r="1.5"/>
+                          <circle cx="6.5" cy="17.5" r="1.5"/>
+                          <circle cx="17.5" cy="17.5" r="1.5"/>
                         </svg>
                       )}
                     </div>
@@ -127,7 +132,7 @@ export function HeroProductCarousel() {
                     </h3>
                   </div>
 
-                  {/* Localité + Note */}
+                  {/* Localité + Distance */}
                   <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                     <div className="flex items-center gap-1 sm:gap-1.5">
                       <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-[#ec5a13] flex-shrink-0" />
@@ -135,14 +140,19 @@ export function HeroProductCarousel() {
                     </div>
                     <span className="text-gray-400">•</span>
                     <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-amber-400 text-amber-400" />
-                      <span className="text-xs sm:text-sm font-bold text-gray-700">{item.rating}</span>
+                      <Navigation className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-bold text-blue-600">{distance.toFixed(1)} km</span>
                     </div>
                   </div>
 
-                  {/* Nom de la boutique */}
+                  {/* Nom de la boutique + Note */}
                   <div className="flex items-center gap-1.5 mb-3 sm:mb-4">
                     <span className="text-xs sm:text-sm text-gray-600 font-medium truncate">{item.seller.name}</span>
+                    <span className="text-gray-400">•</span>
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-amber-400 text-amber-400" />
+                      <span className="text-xs sm:text-sm font-bold text-gray-700">{item.rating}</span>
+                    </div>
                   </div>
 
                   {/* Prix - Plus visible */}
