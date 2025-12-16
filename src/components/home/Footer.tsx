@@ -6,7 +6,7 @@ export function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="container mx-auto px-4 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-3">
               <ShoppingBag className="h-7 w-7 text-[#ec5a13]" />
@@ -26,16 +26,6 @@ export function Footer() {
                 <Instagram className="h-4 w-4" />
               </a>
             </div>
-          </div>
-
-          <div>
-            <h3 className="text-white font-semibold mb-3 text-sm">Catégories populaires</h3>
-            <ul className="space-y-1.5 text-sm">
-              <li><a href="#" className="hover:text-[#ec5a13] transition-colors">Électronique</a></li>
-              <li><a href="#" className="hover:text-[#ec5a13] transition-colors">Alimentation</a></li>
-              <li><a href="#" className="hover:text-[#ec5a13] transition-colors">Immobilier</a></li>
-              <li><a href="#" className="hover:text-[#ec5a13] transition-colors">Services à domicile</a></li>
-            </ul>
           </div>
 
           <div>

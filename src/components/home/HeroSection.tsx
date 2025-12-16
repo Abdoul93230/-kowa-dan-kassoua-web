@@ -67,7 +67,7 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative py-12 lg:py-20 overflow-hidden">
+    <section className="relative py-2 sm:py-3 overflow-hidden">
       {/* Arrière-plan avec vraie image - Style marché informel */}
       <div className="absolute inset-0">
         {/* Image de fond - Marché/Commerce local */}
@@ -106,103 +106,33 @@ export function HeroSection() {
       <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-orange-200 rounded-full blur-2xl opacity-15"></div>
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Bandeau dynamique carousel élargi - Au-dessus de la barre de recherche */}
-        <div className="max-w-6xl mx-auto mb-10 overflow-hidden">
-          <div className="relative bg-gradient-to-r from-[#ec5a13] via-orange-600 to-amber-500 rounded-3xl shadow-2xl border-4 border-orange-200 p-1.5">
-            {/* Bordure dorée style marché */}
-            <div className="bg-gradient-to-br from-orange-50 via-amber-50 to-white rounded-2xl p-10 md:p-12 lg:p-16 relative overflow-hidden">
-              {/* Motif décoratif arrière-plan - Plus visible */}
-              <div className="absolute inset-0 opacity-8">
-                <div className="absolute top-0 left-0 w-32 h-32 border-8 border-[#ec5a13] rounded-full"></div>
-                <div className="absolute bottom-0 right-0 w-40 h-40 border-8 border-orange-400 rounded-full"></div>
-                <div className="absolute top-1/2 left-1/2 w-24 h-24 border-8 border-amber-400 rounded-full"></div>
-                <div className="absolute top-10 right-20 w-20 h-20 bg-orange-200 rounded-full blur-xl"></div>
-                <div className="absolute bottom-10 left-20 w-28 h-28 bg-amber-200 rounded-full blur-xl"></div>
-              </div>
-              
-              {/* Carousel animé - Plus grand */}
-              <div className="relative h-24 md:h-28 flex items-center justify-center">
-                  {carouselMessages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 transition-all duration-700 ${
-                        index === currentSlide
-                          ? 'opacity-100 translate-y-0 scale-100'
-                          : index < currentSlide
-                          ? 'opacity-0 -translate-y-12 scale-95'
-                          : 'opacity-0 translate-y-12 scale-95'
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-4">
-                        <div className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-[#ec5a13] via-orange-600 to-amber-600 rounded-2xl text-white shadow-2xl transform hover:scale-110 transition-transform">
-                          {message.icon}
-                        </div>
-                        <div className="text-center md:text-left">
-                          <h3 className="text-xl md:text-2xl lg:text-3xl font-extrabold bg-gradient-to-r from-[#ec5a13] via-orange-600 to-amber-600 bg-clip-text text-transparent mb-1">
-                            {message.title}
-                          </h3>
-                          <p className="text-sm md:text-base lg:text-lg text-gray-700 font-medium">
-                            {message.subtitle}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Indicateurs de pagination - Plus visibles */}
-                <div className="flex justify-center gap-3 mt-6">
-                  {carouselMessages.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentSlide(index)}
-                      className={`h-2.5 rounded-full transition-all duration-300 shadow-md ${
-                        index === currentSlide
-                          ? 'w-12 bg-gradient-to-r from-[#ec5a13] to-orange-600 shadow-lg'
-                          : 'w-2.5 bg-orange-300 hover:bg-orange-400 hover:w-6'
-                      }`}
-                      aria-label={`Slide ${index + 1}`}
-                    />
-                  ))}
-                </div>
-
-                {/* Badge "Nouveau" ou "Tendance" animé */}
-                <div className="absolute top-4 right-4 md:top-6 md:right-6">
-                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-lg animate-bounce">
-                    🔥 Tendance
-                  </div>
-                </div>
-            </div>
-          </div>
-        </div>
-
         {/* Barre de recherche - Container plus petit */}
         <div className="max-w-4xl mx-auto">
-          <div className="mb-6">
+          <div className="mb-2 sm:mb-3">
             <form onSubmit={handleSearch}>
-              <div className="bg-white rounded-2xl shadow-xl p-2 border border-gray-200">
-                <div className="flex flex-col md:flex-row gap-2">
+              <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-1 sm:p-1.5 border border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                   {/* Champ de recherche principal */}
                   <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                     <input
                       type="text"
                       placeholder="Que recherchez-vous ?"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-50 border-0 focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 placeholder:text-gray-500"
+                      className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl bg-gray-50 border-0 focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
                     />
                   </div>
 
                   {/* Champ de localisation */}
-                  <div className="md:w-64 relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <div className="sm:w-48 md:w-64 relative">
+                    <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                     <input
                       type="text"
                       placeholder="Localisation"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-50 border-0 focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 placeholder:text-gray-500"
+                      className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl bg-gray-50 border-0 focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
                     />
                   </div>
 
@@ -210,7 +140,7 @@ export function HeroSection() {
                   <Button 
                     type="submit"
                     size="lg" 
-                    className="btn-primary px-8 py-4 rounded-xl text-base font-semibold whitespace-nowrap"
+                    className="btn-primary px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold whitespace-nowrap"
                   >
                     Rechercher
                   </Button>
@@ -219,40 +149,122 @@ export function HeroSection() {
             </form>
 
             {/* Suggestions de recherche */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
-              <span className="text-gray-600 font-medium">Populaire :</span>
-              <button 
-                type="button"
-                onClick={() => handlePopularSearch('Electronique')}
-                className="px-3 py-1 rounded-full bg-white border border-gray-200 hover:border-[#ec5a13] hover:text-[#ec5a13] hover:bg-orange-50 transition-colors"
-              >
-                Téléphones
-              </button>
-              <button 
-                type="button"
-                onClick={() => handlePopularSearch('Immobilier')}
-                className="px-3 py-1 rounded-full bg-white border border-gray-200 hover:border-[#ec5a13] hover:text-[#ec5a13] hover:bg-orange-50 transition-colors"
-              >
-                Immobilier
-              </button>
-              <button 
-                type="button"
-                onClick={() => handlePopularSearch('Services à domicile')}
-                className="px-3 py-1 rounded-full bg-white border border-gray-200 hover:border-[#ec5a13] hover:text-[#ec5a13] hover:bg-orange-50 transition-colors"
-              >
-                Services
-              </button>
-              <button 
-                type="button"
-                onClick={() => handlePopularSearch('Automobile')}
-                className="px-3 py-1 rounded-full bg-white border border-gray-200 hover:border-[#ec5a13] hover:text-[#ec5a13] hover:bg-orange-50 transition-colors"
-              >
-                Véhicules
-              </button>
+            <div className="mt-2 flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-center gap-1.5 text-xs px-2 sm:px-0">
+              <span className="text-gray-600 font-semibold w-full sm:w-auto text-center sm:text-left mb-1 sm:mb-0">Populaire :</span>
+              <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+                <button 
+                  type="button"
+                  onClick={() => handlePopularSearch('Electronique')}
+                  className="px-3 py-1.5 rounded-full bg-white border border-gray-200 hover:border-[#ec5a13] hover:text-[#ec5a13] hover:bg-orange-50 transition-colors text-xs sm:text-sm"
+                >
+                  Téléphones
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => handlePopularSearch('Immobilier')}
+                  className="px-3 py-1.5 rounded-full bg-white border border-gray-200 hover:border-[#ec5a13] hover:text-[#ec5a13] hover:bg-orange-50 transition-colors text-xs sm:text-sm"
+                >
+                  Immobilier
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => handlePopularSearch('Services à domicile')}
+                  className="px-3 py-1.5 rounded-full bg-white border border-gray-200 hover:border-[#ec5a13] hover:text-[#ec5a13] hover:bg-orange-50 transition-colors text-xs sm:text-sm"
+                >
+                  Services
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => handlePopularSearch('Automobile')}
+                  className="px-3 py-1.5 rounded-full bg-white border border-gray-200 hover:border-[#ec5a13] hover:text-[#ec5a13] hover:bg-orange-50 transition-colors text-xs sm:text-sm"
+                >
+                  Véhicules
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
+      {/* Bandeau dynamique carousel élargi - Toute la largeur en bas de la barre de recherche */}
+      <div className="w-full mt-3 sm:mt-4 mb-3 sm:mb-4 relative z-10">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="relative bg-gradient-to-r from-[#ec5a13] via-orange-600 to-amber-500 rounded-2xl sm:rounded-3xl overflow-hidden" style={{boxShadow: '0 10px 40px rgba(236, 90, 19, 0.3), 0 0 0 2px rgba(251, 146, 60, 0.4), 0 0 0 4px rgba(253, 186, 116, 0.2)'}}>
+            {/* Bordure dorée style marché */}
+            <div className="bg-gradient-to-br from-orange-50 via-amber-50 to-white rounded-xl sm:rounded-2xl relative overflow-hidden">
+              {/* Motif décoratif arrière-plan - Plus visible */}
+              <div className="absolute inset-0 opacity-8 hidden lg:block pointer-events-none">
+                <div className="absolute top-4 left-8 w-24 h-24 border-6 border-[#ec5a13] rounded-full"></div>
+                <div className="absolute bottom-4 right-8 w-28 h-28 border-6 border-orange-400 rounded-full"></div>
+                <div className="absolute top-1/2 left-1/3 w-20 h-20 bg-orange-200 rounded-full blur-xl"></div>
+                <div className="absolute top-1/2 right-1/3 w-24 h-24 bg-amber-200 rounded-full blur-xl"></div>
+              </div>
+              
+              {/* Carousel animé avec défilement horizontal - un seul contenu visible */}
+              <div className="relative py-4 sm:py-5 md:py-6 px-4 sm:px-6 md:px-8">
+                <div className="relative overflow-hidden min-h-[100px] sm:min-h-[120px] md:min-h-[140px] flex items-center">
+                  <div className="flex transition-transform duration-700 ease-in-out w-full">
+                    {carouselMessages.map((message, index) => (
+                      <div
+                        key={index}
+                        className={`w-full flex-shrink-0 transition-all duration-700 ${
+                          index === currentSlide
+                            ? 'opacity-100 scale-100'
+                            : 'opacity-0 scale-95'
+                        }`}
+                        style={{
+                          transform: `translateX(-${currentSlide * 100}%)`
+                        }}
+                      >
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 md:gap-5 max-w-3xl mx-auto">
+                          <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-[#ec5a13] via-orange-600 to-amber-600 rounded-xl sm:rounded-2xl text-white shadow-2xl flex-shrink-0 transform hover:scale-110 transition-transform">
+                            <div className="scale-110 sm:scale-125">
+                              {message.icon}
+                            </div>
+                          </div>
+                          <div className="text-center sm:text-left flex-1 min-w-0">
+                            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold bg-gradient-to-r from-[#ec5a13] via-orange-600 to-amber-600 bg-clip-text text-transparent mb-1 sm:mb-2 leading-tight">
+                              {message.title}
+                            </h3>
+                            <p className="text-xs sm:text-sm md:text-base text-gray-700 font-medium leading-relaxed">
+                              {message.subtitle}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Indicateurs de pagination - Plus visibles et interactifs */}
+                <div className="flex justify-center gap-2 mt-4 sm:mt-5">
+                  {carouselMessages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`h-2 sm:h-2.5 md:h-3 rounded-full transition-all duration-300 shadow-md hover:shadow-lg ${
+                        index === currentSlide
+                          ? 'w-10 sm:w-12 md:w-16 bg-gradient-to-r from-[#ec5a13] to-orange-600 shadow-lg'
+                          : 'w-2 sm:w-2.5 md:w-3 bg-orange-300 hover:bg-orange-400 hover:w-6 sm:hover:w-8'
+                      }`}
+                      aria-label={`Slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Badge "Nouveau" ou "Tendance" animé */}
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6 z-10">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 md:px-5 md:py-2.5 rounded-full text-xs sm:text-sm md:text-base font-bold shadow-lg animate-bounce">
+                  🔥 Tendance
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 relative z-10">
         {/* Carousel de produits - Section élargie */}
         <div className="max-w-7xl mx-auto">
           <HeroProductCarousel />

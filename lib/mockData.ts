@@ -279,7 +279,7 @@ export const mockItems: Record<string, Item[]> = {
     {
       id: 2,
       title: 'Réparation & Maintenance Informatique',
-      price: 'À partir de 15 000 FCFA',
+      price: '15 000 FCFA',
       negotiable: true,
       location: 'Plateau, Dakar',
       images: [
@@ -550,7 +550,7 @@ export const mockItems: Record<string, Item[]> = {
     {
       id: 103,
       title: 'Pâtisserie & Gâteaux sur commande',
-      price: 'À partir de 25 000 FCFA',
+      price: '25 000 FCFA',
       negotiable: true,
       location: 'Point E, Dakar',
       images: ['https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg'],
@@ -855,7 +855,7 @@ export const mockItems: Record<string, Item[]> = {
     {
       id: 305,
       title: 'Location voiture mariage & événements',
-      price: 'À partir de 80 000 FCFA/jour',
+      price: '80 000 FCFA/jour',
       negotiable: true,
       location: 'Almadies, Dakar',
       images: ['https://images.pexels.com/photos/1164773/pexels-photo-1164773.jpeg'],

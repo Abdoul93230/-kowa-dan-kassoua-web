@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 
 export function CTASection() {
   return (
-    <section className="py-20 bg-gradient-to-br from-[#ffe9de] via-orange-100 to-orange-200 relative overflow-hidden">
+    <section className="py-20 bg-gradient-to-br from-[#ffe9de] via-orange-100 to-orange-200 relative overflow-hidden max-w-[90%] lg:max-w-[95%] mx-auto mb-8">
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNlYzVhMTMiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMTZjMC04LjgzNy03LjE2My0xNi0xNi0xNlM0IDE1LjE2MyA0IDE2czcuMTYzIDE2IDE2IDE2IDE2LTcuMTYzIDE2LTE2eiIvPjwvZz48L2c+PC9zdmc+')] opacity-40"></div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -13,9 +13,9 @@ export function CTASection() {
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
             Prêt à commencer votre aventure ?
           </h2>
-          <p className="text-lg md:text-xl text-gray-700 mb-10 max-w-2xl mx-auto">
+          {/* <p className="text-lg md:text-xl text-gray-700 mb-10 max-w-2xl mx-auto">
             Rejoignez des milliers de vendeurs et acheteurs qui ont déjà trouvé leur bonheur sur MarketHub
-          </p>
+          </p> */}
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Button

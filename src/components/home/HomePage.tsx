@@ -15,7 +15,7 @@ export function HomePage() {
       <HeroSection />
       {/* <FeaturedSection /> */}
       <CategoriesSection />
-      <ProductsCarousel />
+      {/* <ProductsCarousel /> */}
       <CTASection />
       <Footer />
     </div>

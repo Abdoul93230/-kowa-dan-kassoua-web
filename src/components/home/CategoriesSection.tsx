@@ -25,12 +25,12 @@ const categories = [
   { name: 'Automobile', icon: Car, count: '1,256', color: 'bg-red-100 text-red-600', slug: 'vehicules' },
   { name: 'Mode & Beauté', icon: Shirt, count: '3,421', color: 'bg-pink-100 text-pink-600', slug: 'mode' },
   { name: 'Services à domicile', icon: Wrench, count: '1,643', color: 'bg-emerald-100 text-emerald-600', slug: 'services-domicile' },
-  { name: 'Informatique', icon: Laptop, count: '2,178', color: 'bg-slate-100 text-slate-600', slug: 'informatique' },
-  { name: 'Sport & Loisirs', icon: Dumbbell, count: '1,532', color: 'bg-amber-100 text-amber-600', slug: 'loisirs' },
-  { name: 'Enfants & Bébés', icon: Baby, count: '1,089', color: 'bg-purple-100 text-purple-600', slug: 'enfants' },
-  { name: 'Animaux', icon: PawPrint, count: '876', color: 'bg-teal-100 text-teal-600', slug: 'animaux' },
-  { name: 'Livres & Média', icon: Book, count: '1,234', color: 'bg-indigo-100 text-indigo-600', slug: 'livres' },
-  { name: 'Art & Collection', icon: Palette, count: '654', color: 'bg-rose-100 text-rose-600', slug: 'art' },
+  // { name: 'Informatique', icon: Laptop, count: '2,178', color: 'bg-slate-100 text-slate-600', slug: 'informatique' },
+  // { name: 'Sport & Loisirs', icon: Dumbbell, count: '1,532', color: 'bg-amber-100 text-amber-600', slug: 'loisirs' },
+  // { name: 'Enfants & Bébés', icon: Baby, count: '1,089', color: 'bg-purple-100 text-purple-600', slug: 'enfants' },
+  // { name: 'Animaux', icon: PawPrint, count: '876', color: 'bg-teal-100 text-teal-600', slug: 'animaux' },
+  // { name: 'Livres & Média', icon: Book, count: '1,234', color: 'bg-indigo-100 text-indigo-600', slug: 'livres' },
+  // { name: 'Art & Collection', icon: Palette, count: '654', color: 'bg-rose-100 text-rose-600', slug: 'art' },
 ];
 
 export function CategoriesSection() {
@@ -43,9 +43,7 @@ export function CategoriesSection() {
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             Explorez par catégorie
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Découvrez des milliers de produits et services organisés dans des catégories pour faciliter votre recherche
-          </p>
+         
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
