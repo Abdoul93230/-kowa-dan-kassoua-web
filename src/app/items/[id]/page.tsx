@@ -637,31 +637,101 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Annonces similaires</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedItems.map((relatedItem) => (
-                <Card
-                  key={relatedItem.id}
-                  className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
-                  onClick={() => router.push(`/items/${relatedItem.id}`)}
-                >
-                  <div className="relative h-48 overflow-hidden bg-gray-100">
-                    <img
-                      src={relatedItem.mainImage}
-                      alt={relatedItem.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#ec5a13] transition-colors">
-                      {relatedItem.title}
-                    </h3>
-                    <p className="text-xl font-bold text-[#ec5a13] mb-2">{relatedItem.price}</p>
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{relatedItem.location}</span>
+              {relatedItems.map((relatedItem) => {
+                const isRelatedService = relatedItem.type === 'service';
+                const getDistance = (itemId: number) => {
+                  const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
+                  return distances[itemId % distances.length];
+                };
+                const distance = getDistance(relatedItem.id);
+                
+                return (
+                  <Card
+                    key={relatedItem.id}
+                    className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] p-0"
+                    onClick={() => router.push(`/items/${relatedItem.id}`)}
+                  >
+                    <div className="relative h-48 sm:h-52 overflow-hidden bg-gray-200">
+                      <img
+                        src={relatedItem.mainImage}
+                        alt={relatedItem.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      {/* Badge de temps en haut à gauche */}
+                      <Badge className="absolute top-2 left-2 bg-gray-800 hover:bg-gray-900 text-white flex items-center gap-1 shadow-lg text-xs px-2 py-1">
+                        <Clock className="h-3 w-3" />
+                        <span className="font-medium">Il y a {relatedItem.postedTime}</span>
+                      </Badge>
+                      
+                      {/* Badge en vedette en bas */}
+                      {relatedItem.promoted && (
+                        <Badge className="absolute bottom-2 left-2 bg-[#ec5a13] hover:bg-orange-600 text-[10px] px-2 py-0.5 shadow-lg">
+                          ⭐ Vedette
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-                </Card>
-              ))}
+                    <div className="p-3">
+                      {/* Icône produit/service + Titre */}
+                      <div className="flex items-start gap-2 mb-2">
+                        <div className={`flex-shrink-0 mt-0.5 ${
+                          isRelatedService ? 'text-blue-600' : 'text-[#ec5a13]'
+                        }`}>
+                          {isRelatedService ? (
+                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                              <path d="M19.707 14.707A1 1 0 0019 13h-1v-1a1 1 0 00-2 0v1h-1a1 1 0 000 2h1v1a1 1 0 002 0v-1h1a1 1 0 00.707-1.707z"/>
+                            </svg>
+                          ) : (
+                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z"/>
+                              <circle cx="6.5" cy="6.5" r="1.5"/>
+                              <circle cx="17.5" cy="6.5" r="1.5"/>
+                              <circle cx="6.5" cy="17.5" r="1.5"/>
+                              <circle cx="17.5" cy="17.5" r="1.5"/>
+                            </svg>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#ec5a13] transition-colors line-clamp-2 leading-tight flex-1">
+                          {relatedItem.title}
+                        </h3>
+                      </div>
+
+                      {/* Localité + Distance */}
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-[#ec5a13] flex-shrink-0" />
+                          <span className="text-xs text-gray-700 font-semibold truncate">{relatedItem.location}</span>
+                        </div>
+                        <span className="text-gray-400">•</span>
+                        <div className="flex items-center gap-1">
+                          <svg className="h-3 w-3 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-xs font-bold text-blue-600">{distance.toFixed(1)} km</span>
+                        </div>
+                      </div>
+
+                      {/* Nom de la boutique + Note */}
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <span className="text-xs text-gray-600 font-medium truncate">{relatedItem.seller.name}</span>
+                        {relatedItem.seller.verified && (
+                          <CheckCircle2 className="h-3 w-3 text-[#ec5a13] flex-shrink-0" />
+                        )}
+                        <span className="text-gray-400">•</span>
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                          <span className="text-xs font-bold text-gray-700">{relatedItem.rating}</span>
+                        </div>
+                      </div>
+
+                      {/* Prix */}
+                      <div className="pt-2 border-t-2 border-gray-100">
+                        <p className="text-base sm:text-lg font-extrabold text-[#ec5a13]">{relatedItem.price.replace(/À partir de /gi, '')}</p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         )}

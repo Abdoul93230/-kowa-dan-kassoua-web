@@ -157,7 +157,7 @@ export function HeroProductCarousel() {
 
                   {/* Prix - Plus visible */}
                   <div className="pt-2 sm:pt-3 border-t-2 border-gray-100">
-                    <p className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
+                    <p className="text-sm sm:text-base md:text-lg font-extrabold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
                   </div>
                 </div>
               </Card>

@@ -52,14 +52,14 @@ export function CategoriesSection() {
             <Card
               className="group cursor-pointer border-gray-200 hover:border-[#ec5a13] card-leboncoin"
             >
-              <div className="p-6 flex flex-col items-center text-center">
-                <div className={`w-16 h-16 rounded-full ${category.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  <category.icon className="h-8 w-8" />
+              <div className="p-4 flex flex-col items-center text-center">
+                <div className={`w-12 h-12 rounded-full ${category.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
+                  <category.icon className="h-6 w-6" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-[#ec5a13] transition-colors">
+                <h3 className="text-sm font-semibold text-gray-900 mb-1 group-hover:text-[#ec5a13] transition-colors">
                   {category.name}
                 </h3>
-                <p className="text-sm text-gray-600">{category.count} offres</p>
+                <p className="text-xs text-gray-600">{category.count} offres</p>
               </div>
             </Card>
             </Link>
