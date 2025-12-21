@@ -46,20 +46,20 @@ export function CategoriesSection() {
          
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 max-w-5xl mx-auto">
           {categories.map((category) => (
             <Link href={`/categories/${category.slug}`} key={category.name}>
             <Card
               className="group cursor-pointer border-gray-200 hover:border-[#ec5a13] card-leboncoin"
             >
               <div className="p-2 flex flex-col items-center text-center">
-                <div className={`w-12 h-12 rounded-full ${category.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
-                  <category.icon className="h-6 w-6" />
+                <div className={`w-8 h-8 rounded-full ${category.color} flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform duration-300`}>
+                  <category.icon className="h-4 w-4" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-1 group-hover:text-[#ec5a13] transition-colors">
+                <h3 className="text-xs font-semibold text-gray-900 mb-0.5 group-hover:text-[#ec5a13] transition-colors">
                   {category.name}
                 </h3>
-                <p className="text-xs text-gray-600">{category.count} offres</p>
+                <p className="text-[10px] text-gray-600">{category.count} offres</p>
               </div>
             </Card>
             </Link>
