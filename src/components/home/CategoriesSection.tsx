@@ -37,10 +37,10 @@ export function CategoriesSection() {
   const router = useRouter();
 
   return (
-    <section className="py-5 bg-white">
+    <section className="py-4 bg-white">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-5">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
             Explorez par catégorie
           </h2>
          
@@ -66,7 +66,7 @@ export function CategoriesSection() {
           ))}
         </div>
 
-        <div className="text-center mt-10">
+        <div className="text-center mt-7">
           <Link 
             href="/categories-list"
             className="link-orange text-lg font-medium inline-flex items-center gap-2 hover:gap-3 transition-all"
