@@ -272,12 +272,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     <p className="text-4xl font-bold text-[#ec5a13]">{item.price}</p>
                     {isService && <p className="text-xs text-gray-500 mt-1">Tarif indicatif</p>}
                   </div>
-                  {item.negotiable && (
+                  {/* {item.negotiable && (
                     <Badge className="bg-green-100 text-green-700 text-sm px-3 py-1">
                       <Tag className="h-3 w-3 mr-1" />
                       Négociable
                     </Badge>
-                  )}
+                  )} */}
                 </div>
               </div>
 
