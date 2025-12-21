@@ -37,7 +37,7 @@ export function CategoriesSection() {
   const router = useRouter();
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-5 bg-white">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -52,7 +52,7 @@ export function CategoriesSection() {
             <Card
               className="group cursor-pointer border-gray-200 hover:border-[#ec5a13] card-leboncoin"
             >
-              <div className="p-4 flex flex-col items-center text-center">
+              <div className="p-2 flex flex-col items-center text-center">
                 <div className={`w-12 h-12 rounded-full ${category.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300`}>
                   <category.icon className="h-6 w-6" />
                 </div>

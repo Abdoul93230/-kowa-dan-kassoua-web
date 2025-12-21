@@ -10,6 +10,7 @@ export function HeroSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSearchFixed, setIsSearchFixed] = useState(false);
   const router = useRouter();
 
   // Messages pour le carousel - Plus d'impact et d'informations
@@ -47,6 +48,20 @@ export function HeroSection() {
       setCurrentSlide((prev) => (prev + 1) % carouselMessages.length);
     }, 4000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Gestion du scroll pour fixer la barre de recherche
+  useEffect(() => {
+    const handleScroll = () => {
+      const heroSection = document.getElementById('hero-search-bar');
+      if (heroSection) {
+        const rect = heroSection.getBoundingClientRect();
+        setIsSearchFixed(rect.top <= 0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleSearch = (e?: React.FormEvent) => {
@@ -107,7 +122,7 @@ export function HeroSection() {
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Barre de recherche - Container plus petit */}
-        <div className="max-w-4xl mx-auto">
+        <div id="hero-search-bar" className="max-w-4xl mx-auto">
           <div className="mb-2 sm:mb-3">
             <form onSubmit={handleSearch}>
               <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-1 sm:p-1.5 border border-gray-200">
@@ -185,6 +200,53 @@ export function HeroSection() {
           </div>
         </div>
       </div>
+
+      {/* Barre de recherche fixe lors du scroll */}
+      {isSearchFixed && (
+        <div className="fixed top-16 left-0 right-0 z-40 bg-white shadow-lg border-b border-gray-200 py-2 sm:py-3 animate-in slide-in-from-top duration-300">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <form onSubmit={handleSearch}>
+                <div className="flex gap-2">
+                  {/* Champ de recherche principal */}
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Que recherchez-vous ?"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 sm:py-2.5 rounded-lg bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 placeholder:text-gray-500 text-sm"
+                    />
+                  </div>
+
+                  {/* Champ de localisation - caché sur mobile */}
+                  <div className="hidden sm:block w-48 relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Localisation"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 placeholder:text-gray-500 text-sm"
+                    />
+                  </div>
+
+                  {/* Bouton de recherche */}
+                  <Button 
+                    type="submit"
+                    size="lg" 
+                    className="btn-primary px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap"
+                  >
+                    <Search className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">Rechercher</span>
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bandeau dynamique carousel élargi - Toute la largeur en bas de la barre de recherche */}
       <div className="w-full mt-3 sm:mt-4 mb-3 sm:mb-4 relative z-10">
