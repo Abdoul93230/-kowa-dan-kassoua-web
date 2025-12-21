@@ -408,7 +408,7 @@ export const mockItems: Record<string, Item[]> = {
       title: 'PlayStation 5 Slim + 2 manettes + FIFA 25',
       price: '485 000 FCFA',
       negotiable: true,
-      location: 'Parcelles Assainies, Dakar',
+      location: 'Parcelles, Dakar',
       images: ['https://images.pexels.com/photos/1298601/pexels-photo-1298601.jpeg'],
       mainImage: 'https://images.pexels.com/photos/1298601/pexels-photo-1298601.jpeg',
       category: 'Électronique',
