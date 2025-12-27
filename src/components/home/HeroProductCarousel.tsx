@@ -102,32 +102,26 @@ export function HeroProductCarousel() {
 
                 <div className="p-3">
                   {/* Icône + Titre */}
-                  <div className="flex items-start gap-1 mb-2">
-                    <span className="text-base flex-shrink-0">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-sm sm:text-base flex-shrink-0">
                       {item.type === 'service' ? '🛠️' : '📦'}
                     </span>
-                    <h3 className="font-semibold text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors line-clamp-2 leading-snug flex-1">
+                    <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
                       {item.title}
                     </h3>
                   </div>
 
                   {/* Localité + Distance */}
-                  <div className="flex items-center gap-1.5 mb-3 text-sm text-gray-600">
-                    <MapPin className="h-3.5 w-3.5 text-[#ec5a13] flex-shrink-0" />
+                  <div className="flex items-center gap-1.5 mb-3 text-xs sm:text-sm text-gray-600">
+                    <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13] flex-shrink-0" />
                     <span className="truncate">{item.location}</span>
                     <span className="text-gray-400">•</span>
-                    <span>{distance.toFixed(1)} km</span>
+                    <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
                   </div>
 
-                  {/* Prix | Vendeur + Note */}
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <p className="text-lg font-bold text-[#ec5a13] whitespace-nowrap">{item.price.replace(/À partir de /gi, '')}</p>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-gray-300">|</span>
-                      <span className="text-gray-700 truncate">{item.seller.name}</span>
-                      <span className="text-amber-400 text-base">⭐</span>
-                      <span className="font-semibold text-gray-700">{item.rating}</span>
-                    </div>
+                  {/* Prix */}
+                  <div>
+                    <p className="text-base sm:text-lg md:text-xl font-bold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
                   </div>
                 </div>
               </Card>

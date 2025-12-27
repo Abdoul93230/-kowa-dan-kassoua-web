@@ -278,7 +278,7 @@ export const mockItems: Record<string, Item[]> = {
     },
     {
       id: 2,
-      title: 'Réparation & Maintenance Informatique',
+      title: 'Réparation & Maintenance Informatiquedjfksdfuieosriof4rjfwei',
       price: '15 000 FCFA',
       negotiable: true,
       location: 'Plateau, Dakar',

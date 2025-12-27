@@ -39,12 +39,12 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
     return (
       <Card 
         onClick={handleCardClick}
-        className="group overflow-hidden border-gray-200 hover:border-[#ec5a13] hover:shadow-xl transition-all duration-300 cursor-pointer bg-white p-0"
+        className="group overflow-hidden border-gray-200 hover:border-[#ec5a13] hover:shadow-xl transition-all duration-300 cursor-pointer bg-white p-0 gap-0"
       >
         {/* Version mobile - style grille */}
         <div className="md:hidden">
           {/* Image container */}
-          <div className="relative h-48 overflow-hidden bg-gray-200">
+          <div className="relative h-40 sm:h-44 md:h-48 lg:h-52 xl:h-56 overflow-hidden bg-gray-200">
             <img
               src={item.mainImage}
               alt={item.title}
@@ -56,8 +56,8 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
             />
             
             {/* Badge de temps en haut à gauche */}
-            <Badge className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-gray-700 flex items-center gap-1 shadow-md text-xs px-2 py-1 rounded-lg border-0">
-              <Clock className="h-3 w-3" />
+            <Badge className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 bg-white/90 backdrop-blur-sm text-gray-700 flex items-center gap-1 sm:gap-1.5 shadow-md text-xs px-2 py-1 rounded-lg border-0">
+              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               <span className="font-medium">Il y a {item.postedTime}</span>
             </Badge>
             
@@ -72,32 +72,26 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
           {/* Content */}
           <div className="p-3">
             {/* Icône + Titre */}
-            <div className="flex items-start gap-1.5 mb-2">
-              <span className="text-base flex-shrink-0">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-sm sm:text-base flex-shrink-0">
                 {isService ? '🔧' : '📦'}
               </span>
-              <h3 className="font-semibold text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors line-clamp-2 leading-snug flex-1">
+              <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
                 {item.title}
               </h3>
             </div>
 
             {/* Localité + Distance */}
-            <div className="flex items-center gap-1.5 mb-3 text-sm text-gray-600">
-              <MapPin className="h-3.5 w-3.5 text-[#ec5a13] flex-shrink-0" />
+            <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-600">
+              <MapPin className="h-3 w-3 text-[#ec5a13] flex-shrink-0" />
               <span className="truncate">{item.location}</span>
               <span className="text-gray-400">•</span>
-              <span>{distance.toFixed(1)} km</span>
+              <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
             </div>
 
-            {/* Prix | Vendeur + Note */}
-            <div className="flex items-center justify-between gap-2 text-sm">
-              <p className="text-lg font-bold text-[#ec5a13] whitespace-nowrap">{item.price.replace(/À partir de /gi, '')}</p>
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-gray-300">|</span>
-                <span className="text-gray-700 truncate">{item.seller.name}</span>
-                <span className="text-amber-400 text-base">⭐</span>
-                <span className="font-semibold text-gray-700">{item.rating}</span>
-              </div>
+            {/* Prix */}
+            <div>
+              <p className="text-base sm:text-lg font-bold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
             </div>
           </div>
         </div>
@@ -134,11 +128,11 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
           {/* Content */}
           <div className="flex-1 flex flex-col p-5">
             {/* Icône + Titre */}
-            <div className="flex items-start gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-3">
               <span className="text-xl flex-shrink-0">
                 {isService ? '🔧' : '📦'}
               </span>
-              <h3 className="font-semibold text-lg text-gray-900 group-hover:text-[#ec5a13] transition-colors line-clamp-2 leading-snug flex-1">
+              <h3 className="font-semibold text-base sm:text-lg text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
                 {item.title}
               </h3>
             </div>
@@ -148,21 +142,12 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
               <MapPin className="h-4 w-4 text-[#ec5a13] flex-shrink-0" />
               <span className="truncate">{item.location}</span>
               <span className="text-gray-400">•</span>
-              <span>{distance.toFixed(1)} km</span>
+              <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
             </div>
 
-            {/* Prix | Vendeur + Note */}
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <p className="text-2xl font-bold text-[#ec5a13] whitespace-nowrap">{item.price.replace(/À partir de /gi, '')}</p>
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-gray-300">|</span>
-                <span className="text-sm text-gray-700 truncate">{item.seller.name}</span>
-                {item.seller.verified && (
-                  <CheckCircle className="h-4 w-4 text-[#ec5a13] flex-shrink-0" />
-                )}
-                <span className="text-amber-400 text-lg">⭐</span>
-                <span className="text-sm font-semibold text-gray-700">{item.rating}</span>
-              </div>
+            {/* Prix */}
+            <div className="mb-4">
+              <p className="text-xl sm:text-2xl font-bold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
             </div>
 
             {/* Description (optionnelle) */}
@@ -186,10 +171,10 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
   return (
     <Card 
       onClick={handleCardClick}
-      className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-white p-0"
+      className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] h-full bg-white p-0 gap-0"
     >
       {/* Image container */}
-      <div className="relative h-48 sm:h-52 md:h-56 lg:h-60 overflow-hidden bg-gray-200">
+      <div className="relative h-40 sm:h-44 md:h-48 lg:h-52 xl:h-56 overflow-hidden bg-gray-200">
         <img
           src={item.mainImage}
           alt={item.title}
@@ -201,7 +186,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
         />
         
         {/* Badge de temps en haut à gauche */}
-        <Badge className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-white/90 backdrop-blur-sm text-gray-700 flex items-center gap-1 shadow-md text-xs px-2 py-1 rounded-lg border-0">
+        <Badge className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 bg-white/90 backdrop-blur-sm text-gray-700 flex items-center gap-1 sm:gap-1.5 shadow-md text-xs px-2 py-1 rounded-lg border-0">
           <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           <span className="font-medium">Il y a {item.postedTime}</span>
         </Badge>
@@ -217,32 +202,26 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
       {/* Content */}
       <div className="p-3">
         {/* Icône + Titre */}
-        <div className="flex items-start gap-1.5 mb-2">
-          <span className="text-base flex-shrink-0">
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="text-sm sm:text-base flex-shrink-0">
             {isService ? '🔧' : '📦'}
           </span>
-          <h3 className="font-semibold text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors line-clamp-2 leading-snug flex-1">
+          <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
             {item.title}
           </h3>
         </div>
 
         {/* Localité + Distance */}
-        <div className="flex items-center gap-1.5 mb-3 text-sm text-gray-600">
-          <MapPin className="h-3.5 w-3.5 text-[#ec5a13] flex-shrink-0" />
+        <div className="flex items-center gap-1.5 mb-3 text-xs sm:text-sm text-gray-600">
+          <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13] flex-shrink-0" />
           <span className="truncate">{item.location}</span>
           <span className="text-gray-400">•</span>
-          <span>{distance.toFixed(1)} km</span>
+          <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
         </div>
 
-        {/* Prix | Vendeur + Note */}
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <p className="text-lg font-bold text-[#ec5a13] whitespace-nowrap">{item.price.replace(/À partir de /gi, '')}</p>
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-gray-300">|</span>
-            <span className="text-gray-700 truncate">{item.seller.name}</span>
-            <span className="text-amber-400 text-base">⭐</span>
-            <span className="font-semibold text-gray-700">{item.rating}</span>
-          </div>
+        {/* Prix */}
+        <div>
+          <p className="text-base sm:text-lg md:text-xl font-bold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
         </div>
       </div>
     </Card>
