@@ -651,7 +651,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] h-full bg-white p-0 gap-0"
                     onClick={() => router.push(`/items/${relatedItem.id}`)}
                   >
-                    <div className="relative h-40 sm:h-44 md:h-48 lg:h-52 xl:h-56 overflow-hidden bg-gray-200">
+                    <div className="relative h-28 sm:h-32 md:h-36 lg:h-40 xl:h-44 overflow-hidden bg-gray-200">
                       <img
                         src={relatedItem.mainImage}
                         alt={relatedItem.title}

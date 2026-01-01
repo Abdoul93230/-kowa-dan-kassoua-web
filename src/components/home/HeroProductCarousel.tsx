@@ -87,7 +87,7 @@ export function HeroProductCarousel() {
           return (
             <Link href={`/items/${item.id}`} key={item.id} className="flex-shrink-0 w-[calc(100vw-80px)] sm:w-[calc(50vw-60px)] md:w-[calc(33.333vw-50px)] lg:w-[calc(25vw-60px)] xl:w-[calc(25vw-60px)] max-w-[340px]">
               <Card className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] h-full bg-white p-0 gap-0">
-                <div className="relative h-40 sm:h-44 md:h-48 lg:h-52 xl:h-56 overflow-hidden bg-gray-200">
+                <div className="relative h-28 sm:h-32 md:h-36 lg:h-40 xl:h-44 overflow-hidden bg-gray-200">
                   <img
                     src={item.mainImage}
                     alt={item.title}
