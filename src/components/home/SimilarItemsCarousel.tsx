@@ -1,16 +1,17 @@
 'use client';
 
-import { Star, Clock, Navigation, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Star, Clock, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockItems } from '../../../lib/mockData';
 import { Item } from '../../../types';
 import Link from 'next/link';
 
-const allItems: Item[] = Object.values(mockItems).flat();
+interface SimilarItemsCarouselProps {
+  relatedItems: Item[];
+}
 
-export function HeroProductCarousel() {
+export function SimilarItemsCarousel({ relatedItems }: SimilarItemsCarouselProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -82,7 +83,7 @@ export function HeroProductCarousel() {
         className="flex gap-3 sm:gap-4 md:gap-5 lg:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-8 sm:px-10 md:px-12 lg:px-16"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {allItems.slice(0, 8).map((item) => {
+        {relatedItems.map((item) => {
           const distance = getDistance(item.id);
           return (
             <Link href={`/items/${item.id}`} key={item.id} className="flex-shrink-0 w-[calc(100vw-80px)] sm:w-[calc(50vw-60px)] md:w-[calc(33.333vw-50px)] lg:w-[calc(25vw-60px)] xl:w-[calc(25vw-60px)] max-w-[340px]">
@@ -131,15 +132,6 @@ export function HeroProductCarousel() {
             </Link>
           );
         })}
-      </div>
-      
-      {/* Bouton Voir toutes les annonces */}
-      <div className="flex justify-center mt-4 sm:mt-6">
-        <Link href="/categories/tous">
-          <button className="px-5 py-2.5 sm:px-6 sm:py-3 bg-white border-2 border-[#ec5a13] text-[#ec5a13] rounded-lg hover:bg-[#ec5a13] hover:text-white transition-colors duration-200 font-semibold text-xs sm:text-sm">
-            Voir toutes les annonces
-          </button>
-        </Link>
       </div>
     </div>
   );

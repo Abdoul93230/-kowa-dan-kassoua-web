@@ -4,6 +4,7 @@ import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '../../../components/home/Header';
 import { Footer } from '../../../components/home/Footer';
+import { SimilarItemsCarousel } from '../../../components/home/SimilarItemsCarousel';
 import { mockItems, itemReviews } from '../../../../lib/mockData';
 import { Item } from '../../../../types/index';
 import {
@@ -96,20 +97,14 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   <div className="bg-blue-600 p-2 rounded-lg">
                     <Briefcase className="h-6 w-6 text-white" />
                   </div>
-                  <div>
-                    <span className="text-xl font-bold text-blue-900 block">SERVICE PROFESSIONNEL</span>
-                    <span className="text-sm text-blue-700">Prestation de service qualifiée</span>
-                  </div>
+                  <span className="text-xl font-bold text-blue-900">SERVICE PROFESSIONNEL</span>
                 </>
               ) : (
                 <>
                   <div className="bg-[#ec5a13] p-2 rounded-lg">
                     <Package className="h-6 w-6 text-white" />
                   </div>
-                  <div>
-                    <span className="text-xl font-bold text-[#ec5a13] block">PRODUIT À VENDRE</span>
-                    <span className="text-sm text-orange-700">Article en vente</span>
-                  </div>
+                  <span className="text-xl font-bold text-[#ec5a13]">PRODUIT À VENDRE</span>
                 </>
               )}
             </div>
@@ -152,7 +147,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 <img
                   src={item.images[selectedImage]}
                   alt={item.title}
-                  className="w-full h-[500px] object-contain"
+                  className="w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px] object-contain"
                 />
                 <div className="absolute top-4 right-4 flex gap-2">
                   <Button
@@ -171,13 +166,6 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     <Share2 className="h-5 w-5" />
                   </Button>
                 </div>
-                {item.promoted && (
-                  <div className="absolute top-4 left-4">
-                    <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-base px-4 py-2 shadow-lg">
-                      ⭐ EN VEDETTE
-                    </Badge>
-                  </div>
-                )}
               </div>
               <div className="p-4 flex gap-2 overflow-x-auto bg-white">
                 {item.images.map((img, idx) => (
@@ -195,46 +183,56 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             </Card>
 
             {/* Titre et infos principales */}
-            <Card className="p-6 border-gray-200 shadow-sm">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-3">{item.title}</h1>
+            <Card className="p-3 sm:p-4 md:p-6 border-gray-200 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex-1">{item.title}</h1>
+                    <p className="text-lg sm:text-xl font-bold text-[#ec5a13] whitespace-nowrap flex-shrink-0">{item.price}</p>
+                  </div>
+                  {isService && <p className="text-xs text-gray-500 mb-3">Tarif indicatif</p>}
+                  
+                  {/* Condition du produit - Info primordiale */}
+                  {!isService && item.condition && (
+                    <div className="mb-3">
+                      <div 
+                        className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold text-sm sm:text-base ${
+                          item.condition === 'new' 
+                            ? 'bg-green-100 text-green-800 border-2 border-green-500' 
+                            : 'bg-amber-100 text-amber-800 border-2 border-amber-500'
+                        }`}
+                      >
+                        <span className="text-base sm:text-xl">{item.condition === 'new' ? '🆕' : '📦'}</span>
+                        <span>{item.condition === 'new' ? 'État : NEUF' : 'État : OCCASION'}</span>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Tags visibles */}
                   {item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3">
                       {item.tags.map((tag, idx) => (
-                        <Badge key={idx} className={`${isService ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-orange-100 text-orange-700 border-orange-300'} text-sm px-3 py-1.5 border`}>
+                        <Badge key={idx} className={`${isService ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-orange-100 text-orange-700 border-orange-300'} text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 border`}>
                           #{tag}
                         </Badge>
                       ))}
                     </div>
                   )}
                   
-                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3">
                     <Badge 
                       variant="outline" 
-                      className="border-[#ec5a13] text-[#ec5a13] text-sm px-3 py-1"
+                      className="border-[#ec5a13] text-[#ec5a13] text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1"
                     >
                       {item.category}
                     </Badge>
                     {item.subcategory && (
-                      <Badge variant="outline" className="text-sm px-3 py-1">
+                      <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1">
                         {item.subcategory}
                       </Badge>
                     )}
-                    {!isService && item.condition && (
-                      <Badge 
-                        variant="outline"
-                        className={`text-sm px-3 py-1 ${
-                          item.condition === 'new' ? 'border-green-500 text-green-700' : 'border-amber-500 text-amber-700'
-                        }`}
-                      >
-                        {item.condition === 'new' ? '🆕 Neuf' : '📦 Occasion'}
-                      </Badge>
-                    )}
                     {!isService && item.brand && (
-                      <Badge variant="outline" className="text-sm px-3 py-1">
+                      <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1">
                         <Award className="h-3 w-3 mr-1" />
                         {item.brand}
                       </Badge>
@@ -243,87 +241,68 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-6">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                 <div className="flex items-center gap-1">
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>{item.views.toLocaleString()} vues</span>
                 </div>
                 <span>•</span>
                 <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  <span>Publié il y a {item.postedTime}</span>
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="whitespace-nowrap">Il y a {item.postedTime}</span>
                 </div>
-                <span>•</span>
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{item.location}</span>
+                <span className="hidden sm:inline">•</span>
+                <div className="flex items-center gap-1 w-full sm:w-auto">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="truncate">{item.location}</span>
                 </div>
               </div>
 
-              <Separator className="my-6" />
-
-              {/* Prix */}
-              <div className="bg-gradient-to-r from-[#ffe9de] to-white p-6 rounded-lg border-2 border-[#ec5a13] mb-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      {isService ? 'Tarif' : 'Prix'} {item.negotiable && '(négociable)'}
-                    </p>
-                    <p className="text-4xl font-bold text-[#ec5a13]">{item.price}</p>
-                    {isService && <p className="text-xs text-gray-500 mt-1">Tarif indicatif</p>}
-                  </div>
-                  {/* {item.negotiable && (
-                    <Badge className="bg-green-100 text-green-700 text-sm px-3 py-1">
-                      <Tag className="h-3 w-3 mr-1" />
-                      Négociable
-                    </Badge>
-                  )} */}
-                </div>
-              </div>
+              <Separator className="my-3 sm:my-4" />
 
               {/* Actions rapides */}
-              <div className="grid grid-cols-2 gap-3">
-                <Button className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white py-6 text-lg">
-                  <Phone className="h-5 w-5 mr-2" />
-                  Appeler
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <Button className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg">
+                  <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Appeler</span>
+                  <span className="sm:hidden">Appel</span>
                 </Button>
-                <Button variant="outline" className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-6 text-lg">
-                  <MessageCircle className="h-5 w-5 mr-2" />
-                  Message
+                <Button variant="outline" className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg">
+                  <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                  <span>Message</span>
                 </Button>
               </div>
             </Card>
 
             {/* Description */}
-            <Card className="p-6 border-gray-200 shadow-sm">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Info className="h-6 w-6 text-[#ec5a13]" />
+            <Card className="p-3 sm:p-4 md:p-6 border-gray-200 shadow-sm">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                <Info className="h-5 w-5 sm:h-6 sm:w-6 text-[#ec5a13]" />
                 Description
               </h2>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-line">{item.description}</p>
+              <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-line">{item.description}</p>
             </Card>
 
             {/* Spécifications produit OU Détails service */}
             {isService ? (
-              <Card className="p-8 border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-white shadow-lg">
-                <div className="bg-blue-600 text-white p-4 rounded-lg mb-6 -mt-8 -mx-8">
-                  <h2 className="text-2xl font-bold flex items-center gap-3">
-                    <div className="bg-white/20 p-2 rounded">
-                      <Briefcase className="h-7 w-7" />
+              <Card className="p-3 sm:p-4 md:p-6 lg:p-8 border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-white shadow-lg">
+                <div className="bg-blue-100 border-b-4 border-blue-600 p-3 sm:p-4 rounded-lg mb-4 sm:mb-6 -mt-3 sm:-mt-4 md:-mt-6 lg:-mt-8 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold flex items-center gap-2 sm:gap-3 text-blue-900">
+                    <div className="bg-blue-600 p-1.5 sm:p-2 rounded">
+                      <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white" />
                     </div>
-                    Détails du service professionnel
+                    <span className="text-sm sm:text-base md:text-xl lg:text-2xl">Détails du service professionnel</span>
                   </h2>
-                  <p className="text-blue-100 text-sm mt-1 ml-14">Prestation qualifiée avec engagement</p>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {item.duration && (
-                    <div className="flex items-start gap-4 bg-white p-4 rounded-lg border border-blue-200">
-                      <div className="bg-blue-100 p-2 rounded-lg">
-                        <CalendarDays className="h-6 w-6 text-blue-600" />
+                    <div className="flex items-start gap-2 sm:gap-3 md:gap-4 bg-white p-3 sm:p-4 rounded-lg border border-blue-200">
+                      <div className="bg-blue-100 p-1.5 sm:p-2 rounded-lg flex-shrink-0">
+                        <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">Durée</p>
-                        <p className="text-gray-700">{item.duration}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm sm:text-base text-gray-900">Durée</p>
+                        <p className="text-sm sm:text-base text-gray-700">{item.duration}</p>
                       </div>
                     </div>
                   )}
@@ -366,72 +345,90 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               </Card>
             ) : (
-              <Card className="p-6 border-[#ec5a13]/30 bg-[#ffe9de]/30 shadow-sm">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="bg-[#ec5a13] p-2 rounded-lg">
-                    <Package className="h-6 w-6 text-white" />
+              <Card className="p-3 sm:p-4 md:p-6 border-[#ec5a13]/30 bg-[#ffe9de]/30 shadow-sm">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-5 md:mb-6 flex items-center gap-2 sm:gap-3">
+                  <div className="bg-[#ec5a13] p-1.5 sm:p-2 rounded-lg">
+                    <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
                   Caractéristiques du produit
                 </h2>
-                <div className="space-y-4">
-                  {item.quantity && (
-                    <div className="flex items-start gap-3">
-                      <Package className="h-5 w-5 text-[#ec5a13] mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Quantité disponible</p>
-                        <p className="text-gray-700">{item.quantity} unité(s)</p>
-                      </div>
-                    </div>
-                  )}
-                  {item.warranty && (
-                    <div className="flex items-start gap-3">
-                      <Shield className="h-5 w-5 text-[#ec5a13] mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Garantie</p>
-                        <p className="text-gray-700">{item.warranty}</p>
-                      </div>
-                    </div>
-                  )}
-                  {item.returnPolicy && (
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-[#ec5a13] mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Politique de retour</p>
-                        <p className="text-gray-700">{item.returnPolicy}</p>
-                      </div>
-                    </div>
-                  )}
-                  {item.delivery && (
-                    <div className="flex items-start gap-3">
-                      <TruckIcon className="h-5 w-5 text-[#ec5a13] mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Livraison</p>
-                        <p className="text-gray-700">
-                          {item.delivery.available ? `Disponible - ${item.delivery.cost}` : 'Non disponible'}
-                        </p>
-                        {item.delivery.available && (
-                          <>
-                            <p className="text-gray-600 text-sm">Zones: {item.delivery.areas.join(', ')}</p>
-                            <p className="text-gray-600 text-sm">Délai: {item.delivery.estimatedTime}</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {item.specifications && Object.keys(item.specifications).length > 0 && (
-                    <div className="border-t border-[#ec5a13]/30 pt-4 mt-4">
-                      <p className="font-semibold text-gray-900 mb-3">Spécifications techniques</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {Object.entries(item.specifications).map(([key, value]) => (
-                          <div key={key} className="bg-white p-3 rounded-lg border border-[#ec5a13]/20">
-                            <p className="text-sm text-gray-600">{key}</p>
-                            <p className="font-medium text-gray-900">{value}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                
+                {/* Tableau pour les 4 caractéristiques principales */}
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-4">
+                  <table className="w-full">
+                    <tbody className="divide-y divide-gray-200">
+                      {item.quantity && (
+                        <tr className="hover:bg-gray-50 transition-colors">
+                          <td className="px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm font-medium text-gray-900 w-1/2">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#ec5a13] flex-shrink-0" />
+                              <span>Quantité disponible</span>
+                            </div>
+                          </td>
+                          <td className="px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm text-gray-700 w-1/2">{item.quantity} unité(s)</td>
+                        </tr>
+                      )}
+                      {item.warranty && (
+                        <tr className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 w-1/2">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-[#ec5a13]" />
+                              Garantie
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 w-1/2">{item.warranty}</td>
+                        </tr>
+                      )}
+                      {item.returnPolicy && (
+                        <tr className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 w-1/2">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-4 w-4 text-[#ec5a13]" />
+                              Politique de retour
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 w-1/2">{item.returnPolicy}</td>
+                        </tr>
+                      )}
+                      {item.delivery && (
+                        <tr className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 w-1/2">
+                            <div className="flex items-center gap-2">
+                              <TruckIcon className="h-4 w-4 text-[#ec5a13]" />
+                              Livraison
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 w-1/2">
+                            <div>
+                              <p>{item.delivery.available ? `Disponible - ${item.delivery.cost}` : 'Non disponible'}</p>
+                              {item.delivery.available && (
+                                <>
+                                  <p className="text-xs text-gray-600 mt-1">Zones: {item.delivery.areas.join(', ')}</p>
+                                  <p className="text-xs text-gray-600">Délai: {item.delivery.estimatedTime}</p>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
+
+                {/* Spécifications techniques */}
+                {item.specifications && Object.keys(item.specifications).length > 0 && (
+                  <div className="border-t border-[#ec5a13]/30 pt-4 mt-4">
+                    <p className="font-semibold text-gray-900 mb-3">Spécifications techniques</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Object.entries(item.specifications).map(([key, value]) => (
+                        <div key={key} className="bg-white p-3 rounded-lg border border-[#ec5a13]/20">
+                          <p className="text-sm text-gray-600">{key}</p>
+                          <p className="font-medium text-gray-900">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </Card>
             )}
 
@@ -439,21 +436,21 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
             {/* Avis */}
             {reviews.length > 0 && (
-              <Card className="p-6 border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <Star className="h-6 w-6 text-amber-400 fill-amber-400" />
+              <Card className="p-3 sm:p-4 md:p-6 border-gray-200 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Star className="h-5 w-5 sm:h-6 sm:w-6 text-amber-400 fill-amber-400" />
                     Avis clients
                   </h2>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <div className="flex items-center gap-2">
-                      <span className="text-3xl font-bold text-gray-900">{item.rating}</span>
+                      <span className="text-2xl sm:text-3xl font-bold text-gray-900">{item.rating}</span>
                       <div>
                         <div className="flex items-center gap-1">
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-4 w-4 ${
+                              className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${
                                 i < Math.floor(item.rating)
                                   ? 'text-amber-400 fill-amber-400'
                                   : 'text-gray-300'
@@ -466,34 +463,89 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  {reviews.slice(0, 3).map((review) => (
-                    <div key={review.id} className="border-t border-gray-200 pt-4 first:border-t-0 first:pt-0">
-                      <div className="flex items-start gap-3">
-                        <Avatar>
-                          <AvatarImage src={review.userAvatar} />
-                          <AvatarFallback>{review.userName[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-semibold text-gray-900">{review.userName}</p>
-                            <div className="flex items-center gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-4 w-4 ${
-                                    i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'
-                                  }`}
-                                />
-                              ))}
+                
+                {/* Indicateur de scroll pour mobile */}
+                <div className="md:hidden flex items-center justify-between mb-3 px-1">
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                    <span>Glissez pour voir plus</span>
+                    <ChevronRight className="h-3 w-3 animate-pulse" />
+                  </p>
+                  <div className="flex gap-1">
+                    {reviews.slice(0, 3).map((_, idx) => (
+                      <div key={idx} className="h-1.5 w-1.5 rounded-full bg-gray-300"></div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Carousel sur mobile, liste sur desktop */}
+                <div className="md:space-y-4">
+                  {/* Version mobile : Carousel avec gradient indicateur */}
+                  <div className="relative md:hidden">
+                    <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2 -mx-3 px-3 snap-x snap-mandatory">
+                      {reviews.slice(0, 3).map((review) => (
+                        <div key={review.id} className="flex-shrink-0 w-[85vw] sm:w-[70vw] snap-start">
+                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <div className="flex items-start gap-3">
+                              <Avatar className="flex-shrink-0">
+                                <AvatarImage src={review.userAvatar} />
+                                <AvatarFallback>{review.userName[0]}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between mb-2 gap-2">
+                                  <p className="font-semibold text-sm text-gray-900 truncate">{review.userName}</p>
+                                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-3 w-3 ${
+                                          i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className="text-sm text-gray-700 mb-2 line-clamp-3">{review.comment}</p>
+                                <p className="text-xs text-gray-500">{review.date}</p>
+                              </div>
                             </div>
                           </div>
-                          <p className="text-gray-700 mb-2">{review.comment}</p>
-                          <p className="text-sm text-gray-500">{review.date}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Gradient indicateur sur le bord droit */}
+                    <div className="absolute top-0 right-0 bottom-2 w-12 bg-gradient-to-l from-white via-white/50 to-transparent pointer-events-none"></div>
+                  </div>
+
+                  {/* Version desktop : Liste */}
+                  <div className="hidden md:block space-y-4">
+                    {reviews.slice(0, 3).map((review) => (
+                      <div key={review.id} className="border-t border-gray-200 pt-4 first:border-t-0 first:pt-0">
+                        <div className="flex items-start gap-3">
+                          <Avatar>
+                            <AvatarImage src={review.userAvatar} />
+                            <AvatarFallback>{review.userName[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-semibold text-gray-900">{review.userName}</p>
+                              <div className="flex items-center gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-gray-700 mb-2">{review.comment}</p>
+                            <p className="text-sm text-gray-500">{review.date}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </Card>
             )}
@@ -504,39 +556,39 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             <div className="sticky top-24 space-y-6">
               <Card className="p-0 border-2 border-gray-200 shadow-lg overflow-hidden">
                 {/* Header vendeur avec fond coloré */}
-                <div className={`${isService ? 'bg-gradient-to-br from-blue-600 to-blue-500' : 'bg-gradient-to-br from-[#ec5a13] to-orange-600'} text-white p-6 text-center`}>
-                  <Avatar className="w-24 h-24 mx-auto mb-3 border-4 border-white shadow-lg">
+                <div className={`${isService ? 'bg-blue-100 border-b-4 border-blue-600' : 'bg-[#ffe9de] border-b-4 border-[#ec5a13]'} p-4 sm:p-5 md:p-6 text-center`}>
+                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-3 border-3 sm:border-4 border-gray-300 shadow-lg">
                     <AvatarImage src={seller.avatar} />
-                    <AvatarFallback className="bg-white text-gray-900 text-3xl font-bold">
+                    <AvatarFallback className="bg-white text-gray-900 text-2xl sm:text-3xl font-bold">
                       {seller.name[0]}
                     </AvatarFallback>
                   </Avatar>
-                  <h3 className="text-2xl font-bold mb-2">{seller.name}</h3>
+                  <h3 className={`text-xl sm:text-2xl font-bold mb-2 ${isService ? 'text-blue-900' : 'text-[#ec5a13]'}`}>{seller.name}</h3>
                   {seller.verified && (
-                    <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/40 border">
-                      <BadgeCheck className="h-4 w-4 mr-1" />
+                    <Badge className={`${isService ? 'bg-blue-200 text-blue-900 border-blue-400' : 'bg-orange-200 text-[#ec5a13] border-orange-400'} border text-xs sm:text-sm`}>
+                      <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                       Vendeur Vérifié
                     </Badge>
                   )}
-                  <div className="flex items-center justify-center gap-2 mt-3">
-                    <Star className="h-5 w-5 fill-yellow-300 text-yellow-300" />
-                    <span className="text-xl font-bold">{seller.rating}</span>
-                    <span className="text-white/80 text-sm">({seller.totalReviews} avis)</span>
+                  <div className="flex items-center justify-center gap-2 mt-2 sm:mt-3">
+                    <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-yellow-500 text-yellow-500" />
+                    <span className="text-lg sm:text-xl font-bold text-gray-900">{seller.rating}</span>
+                    <span className="text-gray-600 text-xs sm:text-sm">({seller.totalReviews} avis)</span>
                   </div>
                 </div>
                 
                 {/* Corps de la carte */}
-                <div className="p-6">
+                <div className="p-3 sm:p-4 md:p-6">
 
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center justify-between text-sm">
+                <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-gray-600">Membre depuis</span>
                     <span className="font-semibold text-gray-900">{seller.memberSince}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  {/* <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Taux de réponse</span>
                     <span className="font-semibold text-gray-900">{seller.responseRate}%</span>
-                  </div>
+                  </div> */}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Temps de réponse</span>
                     <span className="font-semibold text-gray-900">{seller.responseTime}</span>
@@ -554,7 +606,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 <Separator className="my-4" />
 
                 <div className="space-y-2">
-                  <Button className="w-full bg-[#ec5a13] hover:bg-[#d94f0f] text-white">
+                  <Button className={`w-full ${isService ? 'bg-blue-100 hover:bg-blue-200 text-blue-900 border-2 border-blue-600' : 'bg-[#ffe9de] hover:bg-orange-100 text-[#ec5a13] border-2 border-[#ec5a13]'}`}>
                     <Phone className="h-4 w-4 mr-2" />
                     {seller.contactInfo.phone}
                   </Button>
@@ -636,61 +688,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
         {relatedItems.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Annonces similaires</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedItems.map((relatedItem) => {
-                const isRelatedService = relatedItem.type === 'service';
-                const getDistance = (itemId: number) => {
-                  const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
-                  return distances[itemId % distances.length];
-                };
-                const distance = getDistance(relatedItem.id);
-                
-                return (
-                  <Card
-                    key={relatedItem.id}
-                    className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] h-full bg-white p-0 gap-0"
-                    onClick={() => router.push(`/items/${relatedItem.id}`)}
-                  >
-                    <div className="relative h-28 sm:h-32 md:h-36 lg:h-40 xl:h-44 overflow-hidden bg-gray-200">
-                      <img
-                        src={relatedItem.mainImage}
-                        alt={relatedItem.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      {/* Badge de temps en haut à gauche */}
-                      <Badge className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 bg-white/90 backdrop-blur-sm text-gray-700 flex items-center gap-1 sm:gap-1.5 shadow-md text-xs px-2 py-1 rounded-lg border-0">
-                        <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                        <span className="font-medium">Il y a {relatedItem.postedTime}</span>
-                      </Badge>
-                    </div>
-                    <div className="p-3">
-                      {/* Icône + Titre */}
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <span className="text-sm sm:text-base flex-shrink-0">
-                          {isRelatedService ? '🔧' : '📦'}
-                        </span>
-                        <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
-                          {relatedItem.title}
-                        </h3>
-                      </div>
-
-                      {/* Localité + Distance */}
-                      <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-600">
-                        <MapPin className="h-3 w-3 text-[#ec5a13] flex-shrink-0" />
-                        <span className="truncate">{relatedItem.location}</span>
-                        <span className="text-gray-400">•</span>
-                        <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
-                      </div>
-
-                      {/* Prix */}
-                      <div>
-                        <p className="text-base sm:text-lg font-bold text-[#ec5a13]">{relatedItem.price.replace(/À partir de /gi, '')}</p>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+            <SimilarItemsCarousel relatedItems={relatedItems} />
           </div>
         )}
       </div>
