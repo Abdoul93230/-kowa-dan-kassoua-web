@@ -1,7 +1,7 @@
 // app/categories/[slug]/page.tsx
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from "../../../components/home/Header";
 import { Footer } from '../../../components/home/Footer';
@@ -196,7 +196,9 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+        <Header />
+      </Suspense>
       
       <div className="container mx-auto px-4 py-8">
         <Breadcrumb category="Électronique" />

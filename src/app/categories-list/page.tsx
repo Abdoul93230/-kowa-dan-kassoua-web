@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
 import { categories } from '../../../lib/mockData';
@@ -58,7 +58,9 @@ export default function CategoriesListPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+        <Header />
+      </Suspense>
       
       <div className="container mx-auto px-4 py-12">
         {/* En-tête */}

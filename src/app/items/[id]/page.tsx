@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '../../../components/home/Header';
 import { Footer } from '../../../components/home/Footer';
@@ -56,7 +56,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   if (!item) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
+        <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+          <Header />
+        </Suspense>
         <div className="container mx-auto px-4 py-16 text-center">
           <div className="bg-white p-12 rounded-lg shadow-sm max-w-md mx-auto">
             <AlertCircle className="h-16 w-16 text-[#ec5a13] mx-auto mb-4" />
@@ -85,7 +87,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+        <Header />
+      </Suspense>
 
       {/* Bandeau type produit/service */}
       <div className={`border-b-4 ${isService ? 'border-blue-600 bg-blue-100' : 'border-[#ec5a13] bg-[#ffe9de]'}`}>
