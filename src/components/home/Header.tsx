@@ -3,11 +3,15 @@
 import { Menu, ShoppingBag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  const urlType = searchParams?.get('type');
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -37,21 +41,30 @@ export function Header() {
             <nav className="hidden md:flex items-center gap-6">
               <button 
                 onClick={() => handleNavigation('/categories/tous?type=product')}
-                className="text-gray-600 hover:text-[#ec5a13] font-medium transition-colors"
+                className="relative text-gray-600 hover:text-[#ec5a13] font-medium transition-colors pb-1"
               >
                 Produits
+                {pathname === '/categories/tous' && urlType === 'product' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
+                )}
               </button>
               <button 
                 onClick={() => handleNavigation('/categories/tous?type=service')}
-                className="text-gray-600 hover:text-[#ec5a13] font-medium transition-colors"
+                className="relative text-gray-600 hover:text-[#ec5a13] font-medium transition-colors pb-1"
               >
                 Services
+                {pathname === '/categories/tous' && urlType === 'service' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
+                )}
               </button>
               <button 
                 onClick={() => handleNavigation('/categories-list')}
-                className="text-gray-600 hover:text-[#ec5a13] font-medium transition-colors"
+                className="relative text-gray-600 hover:text-[#ec5a13] font-medium transition-colors pb-1"
               >
                 Catégories
+                {pathname === '/categories-list' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
+                )}
               </button>
             </nav>
           </div>
@@ -81,19 +94,31 @@ export function Header() {
             <nav className="flex flex-col gap-4">
               <button 
                 onClick={() => handleNavigation('/categories/tous?type=product')}
-                className="text-left text-gray-600 hover:text-[#ec5a13] font-medium transition-colors py-2"
+                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 ${
+                  pathname === '/categories/tous' && urlType === 'product'
+                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
+                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
+                }`}
               >
                 Produits
               </button>
               <button 
                 onClick={() => handleNavigation('/categories/tous?type=service')}
-                className="text-left text-gray-600 hover:text-[#ec5a13] font-medium transition-colors py-2"
+                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 ${
+                  pathname === '/categories/tous' && urlType === 'service'
+                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
+                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
+                }`}
               >
                 Services
               </button>
               <button 
                 onClick={() => handleNavigation('/categories-list')}
-                className="text-left text-gray-600 hover:text-[#ec5a13] font-medium transition-colors py-2"
+                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 ${
+                  pathname === '/categories-list'
+                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
+                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
+                }`}
               >
                 Catégories
               </button>

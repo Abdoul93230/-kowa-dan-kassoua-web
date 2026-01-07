@@ -28,12 +28,14 @@ export function FiltersSidebar({
   onClose, 
   isMobile = false,
   filters,
-  setFilters 
+  setFilters,
+  urlType
 }: { 
   onClose?: () => void; 
   isMobile?: boolean;
   filters: any;
   setFilters: (filters: any) => void;
+  urlType?: string | null;
 }) {
   return (
     <div className={`bg-white ${isMobile ? 'p-4' : 'rounded-lg border border-gray-200 p-6 shadow-sm'}`}>
@@ -207,8 +209,8 @@ export function FiltersSidebar({
         variant="ghost" 
         className="w-full mt-2"
         onClick={() => setFilters({
-          showProducts: true,
-          showServices: true,
+          showProducts: urlType === 'service' ? false : true,
+          showServices: urlType === 'product' ? false : true,
           priceMin: '',
           priceMax: '',
           location: 'all',

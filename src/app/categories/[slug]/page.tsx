@@ -40,6 +40,7 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
   const searchParams = useSearchParams();
   const queryParam = searchParams?.get('q') || '';
   const locationParam = searchParams?.get('location') || 'all';
+  const urlType = searchParams?.get('type'); // 'product' ou 'service'
   
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -281,6 +282,7 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
               <FiltersSidebar 
                 filters={filters} 
                 setFilters={setFilters}
+                urlType={urlType}
               />
             </div>
           </aside>
@@ -294,6 +296,7 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
                   isMobile 
                   filters={filters}
                   setFilters={setFilters}
+                  urlType={urlType}
                 />
               </div>
             </div>

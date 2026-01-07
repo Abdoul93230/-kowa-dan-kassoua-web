@@ -63,11 +63,6 @@ export default function CategoriesListPage() {
       <div className="container mx-auto px-4 py-12">
         {/* En-tête */}
         <div className="text-center mb-12">
-          <div className="flex justify-center mb-4">
-            <div className="bg-[#ffe9de] p-4 rounded-full">
-              <Grid3x3 className="h-12 w-12 text-[#ec5a13]" />
-            </div>
-          </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Toutes les catégories
           </h1>
@@ -91,7 +86,7 @@ export default function CategoriesListPage() {
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="hidden grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <Card className="p-6 text-center bg-white shadow-sm border-gray-200">
             <div className="text-3xl font-bold text-[#ec5a13] mb-2">
               {categories.length}
@@ -139,11 +134,11 @@ export default function CategoriesListPage() {
               return (
                 <Card 
                   key={category.id} 
-                  className="group hover:shadow-xl transition-all duration-300 border-gray-200 bg-white overflow-hidden"
+                  className="group hover:shadow-xl transition-all duration-300 border-gray-200 bg-white overflow-hidden py-0 gap-0"
                 >
                   {/* En-tête de la catégorie */}
                   <div 
-                    className="p-6 bg-gradient-to-r from-[#ffe9de] to-white border-b border-gray-200 cursor-pointer"
+                    className="px-6 pb-6 pt-6 bg-gradient-to-r from-[#ffe9de] to-white border-b border-gray-200 cursor-pointer"
                     onClick={() => handleCategoryClick(category.slug)}
                   >
                     <div className="flex items-start justify-between">

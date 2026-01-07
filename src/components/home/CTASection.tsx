@@ -10,9 +10,10 @@ export function CTASection() {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
             Prêt à commencer votre aventure ?
           </h2>
+
           {/* <p className="text-lg md:text-xl text-gray-700 mb-10 max-w-2xl mx-auto">
             Rejoignez des milliers de vendeurs et acheteurs qui ont déjà trouvé leur bonheur sur MarketHub
           </p> */}

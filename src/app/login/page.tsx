@@ -212,21 +212,21 @@ function LoginPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#ffe9de]/30 via-white to-orange-50/30 flex items-center justify-center p-4">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-slate-200">
+      <div className="absolute top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-[#ec5a13] rounded-lg flex items-center justify-center">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-xl text-slate-900">MarketPlace</span>
+              <span className="font-bold text-xl text-gray-900">MarketHub</span>
             </div>
             <Button
               variant="ghost"
               onClick={() => router.push('/')}
-              className="text-slate-600 hover:text-slate-900"
+              className="text-gray-600 hover:text-gray-900"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour à l'accueil
@@ -238,7 +238,7 @@ function LoginPageContent() {
       <div className="w-full max-w-md mt-20">
         {/* Message de succès */}
         {successMessage && (
-          <div className="mb-4 p-4 bg-green-100 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
             {successMessage}
           </div>
@@ -248,13 +248,13 @@ function LoginPageContent() {
         {!showForgotPassword ? (
           <Card className="p-8 shadow-xl border-0">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="h-8 w-8 text-emerald-600" />
+              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="h-8 w-8 text-[#ec5a13]" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Bienvenue de retour
               </h2>
-              <p className="text-slate-600">
+              <p className="text-gray-600">
                 Connectez-vous pour accéder à votre compte
               </p>
             </div>
@@ -262,14 +262,14 @@ function LoginPageContent() {
             <form onSubmit={handleLogin} className="space-y-6">
               {/* Type de connexion */}
               <div>
-                <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
                   <button
                     type="button"
                     onClick={() => setLoginData({ ...loginData, loginType: 'phone' })}
                     className={`flex-1 py-2 px-4 rounded-md transition-all ${
                       loginData.loginType === 'phone'
-                        ? 'bg-white shadow-sm text-emerald-600 font-medium'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white shadow-sm text-[#ec5a13] font-medium'
+                        : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     <Smartphone className="h-4 w-4 inline mr-2" />
@@ -280,8 +280,8 @@ function LoginPageContent() {
                     onClick={() => setLoginData({ ...loginData, loginType: 'email' })}
                     className={`flex-1 py-2 px-4 rounded-md transition-all ${
                       loginData.loginType === 'email'
-                        ? 'bg-white shadow-sm text-emerald-600 font-medium'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white shadow-sm text-[#ec5a13] font-medium'
+                        : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     <Mail className="h-4 w-4 inline mr-2" />
@@ -293,7 +293,7 @@ function LoginPageContent() {
               {/* Champ téléphone/email */}
               {loginData.loginType === 'phone' ? (
                 <div>
-                  <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">
                     Numéro de téléphone
                   </Label>
                   <div className="flex gap-2">
@@ -332,11 +332,11 @@ function LoginPageContent() {
                 </div>
               ) : (
                 <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 mb-2 block">
                     Adresse email
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       id="email"
                       type="email"
@@ -352,11 +352,11 @@ function LoginPageContent() {
 
               {/* Mot de passe */}
               <div>
-                <Label htmlFor="password" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">
                   Mot de passe
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -368,7 +368,7 @@ function LoginPageContent() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -383,12 +383,12 @@ function LoginPageContent() {
                     checked={loginData.rememberMe}
                     onCheckedChange={(checked) => setLoginData({ ...loginData, rememberMe: checked })}
                   />
-                  <span className="text-sm text-slate-700">Se souvenir de moi</span>
+                  <span className="text-sm text-gray-700">Se souvenir de moi</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                  className="text-sm text-[#ec5a13] hover:text-[#d94f0f] font-medium"
                 >
                   Mot de passe oublié ?
                 </button>
@@ -408,7 +408,7 @@ function LoginPageContent() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 py-3"
+                className="w-full bg-[#ec5a13] hover:bg-[#d94f0f] py-3"
               >
                 {isLoading ? (
                   <>
@@ -427,7 +427,7 @@ function LoginPageContent() {
             {/* Séparateur */}
             <div className="relative my-6">
               <Separator className="my-4" />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-slate-500">
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-gray-500">
                 ou continuer avec
               </span>
             </div>
@@ -438,7 +438,7 @@ function LoginPageContent() {
                 variant="outline"
                 onClick={() => handleSocialLogin('google')}
                 disabled={isLoading}
-                className="hover:bg-slate-50"
+                className="hover:bg-gray-50"
               >
                 <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -452,7 +452,7 @@ function LoginPageContent() {
                 variant="outline"
                 onClick={() => handleSocialLogin('facebook')}
                 disabled={isLoading}
-                className="hover:bg-slate-50"
+                className="hover:bg-gray-50"
               >
                 <svg className="w-4 h-4 mr-2" fill="#1877F2" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -463,9 +463,9 @@ function LoginPageContent() {
 
             {/* Lien vers l'inscription */}
             <div className="text-center mt-6">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-gray-600">
                 Pas encore de compte ? 
-                <a href="/register" className="ml-1 text-emerald-600 hover:text-emerald-700 font-medium">
+                <a href="/register" className="ml-1 text-[#ec5a13] hover:text-[#d94f0f] font-medium">
                   Créer un compte
                 </a>
               </p>
@@ -476,7 +476,7 @@ function LoginPageContent() {
               <Button
                 variant="ghost"
                 onClick={() => router.push('/')}
-                className="text-sm text-slate-600 hover:text-slate-900"
+                className="text-sm text-gray-600 hover:text-gray-900"
               >
                 <User className="h-4 w-4 mr-2" />
                 Continuer en tant qu'invité
@@ -487,15 +487,15 @@ function LoginPageContent() {
           /* Formulaire de mot de passe oublié */
           <Card className="p-8 shadow-xl border-0">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <RefreshCw className="h-8 w-8 text-blue-600" />
+              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
+                <RefreshCw className="h-8 w-8 text-[#ec5a13]" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {resetStep === 'request' && 'Mot de passe oublié'}
                 {resetStep === 'verify' && 'Vérification'}
                 {resetStep === 'new' && 'Nouveau mot de passe'}
               </h2>
-              <p className="text-slate-600">
+              <p className="text-gray-600">
                 {resetStep === 'request' && 'Entrez votre email pour recevoir un code de réinitialisation'}
                 {resetStep === 'verify' && 'Entrez le code envoyé à votre email'}
                 {resetStep === 'new' && 'Choisissez votre nouveau mot de passe'}
@@ -505,11 +505,11 @@ function LoginPageContent() {
             <div className="space-y-6">
               {resetStep === 'request' && (
                 <div>
-                  <Label htmlFor="resetEmail" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="resetEmail" className="text-sm font-medium text-gray-700 mb-2 block">
                     Adresse email
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       id="resetEmail"
                       type="email"
@@ -522,7 +522,7 @@ function LoginPageContent() {
 
               {resetStep === 'verify' && (
                 <div>
-                  <Label htmlFor="verificationCode" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="verificationCode" className="text-sm font-medium text-gray-700 mb-2 block">
                     Code de vérification
                   </Label>
                   <Input
@@ -540,11 +540,11 @@ function LoginPageContent() {
               {resetStep === 'new' && (
                 <>
                   <div>
-                    <Label htmlFor="newPassword" className="text-sm font-medium text-slate-700 mb-2 block">
+                    <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700 mb-2 block">
                       Nouveau mot de passe
                     </Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <Input
                         id="newPassword"
                         type={showPassword ? "text" : "password"}
@@ -556,7 +556,7 @@ function LoginPageContent() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -564,11 +564,11 @@ function LoginPageContent() {
                   </div>
 
                   <div>
-                    <Label htmlFor="confirmNewPassword" className="text-sm font-medium text-slate-700 mb-2 block">
+                    <Label htmlFor="confirmNewPassword" className="text-sm font-medium text-gray-700 mb-2 block">
                       Confirmer le mot de passe
                     </Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <Input
                         id="confirmNewPassword"
                         type={showPassword ? "text" : "password"}
@@ -601,7 +601,7 @@ function LoginPageContent() {
                 <Button
                   onClick={handleForgotPassword}
                   disabled={isLoading}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  className="flex-1 bg-[#ec5a13] hover:bg-[#d94f0f]"
                 >
                   {isLoading ? (
                     <>
@@ -628,7 +628,7 @@ function LoginPageContent() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[#ec5a13]" />
           <p className="text-gray-600">Chargement...</p>

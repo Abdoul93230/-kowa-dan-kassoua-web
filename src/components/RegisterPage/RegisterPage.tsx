@@ -260,20 +260,20 @@ export default function RegisterPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#ffe9de]/30 via-white to-orange-50/30">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-[#ec5a13] rounded-lg flex items-center justify-center">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-xl text-slate-900">MarketPlace</span>
+              <span className="font-bold text-xl text-gray-900">MarketHub</span>
             </div>
-            <div className="text-sm text-slate-600">
+            <div className="text-sm text-gray-600">
               Déjà un compte ? 
-              <a href="/login" className="ml-1 text-emerald-600 hover:text-emerald-700 font-medium">
+              <a href="/login" className="ml-1 text-[#ec5a13] hover:text-[#d94f0f] font-medium">
                 Se connecter
               </a>
             </div>
@@ -290,8 +290,8 @@ export default function RegisterPage() {
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
                     currentStep >= step || (currentStep === 2.5 && step === 2)
-                      ? 'bg-emerald-600 text-white shadow-lg'
-                      : 'bg-slate-200 text-slate-600'
+                      ? 'bg-[#ec5a13] text-white shadow-lg'
+                      : 'bg-gray-200 text-gray-600'
                   }`}
                 >
                   {step === 1 && <User className="h-5 w-5" />}
@@ -301,8 +301,8 @@ export default function RegisterPage() {
                 <span
                   className={`ml-3 text-sm font-medium ${
                     currentStep >= step || (currentStep === 2.5 && step === 2)
-                      ? 'text-slate-900'
-                      : 'text-slate-500'
+                      ? 'text-gray-900'
+                      : 'text-gray-500'
                   }`}
                 >
                   {step === 1 && 'Compte'}
@@ -313,8 +313,8 @@ export default function RegisterPage() {
                   <div
                     className={`flex-1 h-1 mx-6 w-20 ${
                       currentStep > step || (currentStep === 2.5 && step === 1)
-                        ? 'bg-emerald-600'
-                        : 'bg-slate-200'
+                        ? 'bg-[#ec5a13]'
+                        : 'bg-gray-200'
                     }`}
                   />
                 )}
@@ -327,24 +327,24 @@ export default function RegisterPage() {
         {currentStep === 1 && (
           <Card className="p-8 shadow-xl border-0">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="h-8 w-8 text-emerald-600" />
+              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="h-8 w-8 text-[#ec5a13]" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Créez votre compte
               </h2>
-              <p className="text-slate-600">
+              <p className="text-gray-600">
                 Rejoignez des milliers de vendeurs et commencez à vendre dès aujourd'hui
               </p>
             </div>
 
             <div className="space-y-6">
               <div>
-                <Label htmlFor="name" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">
                   Nom complet *
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     id="name"
                     placeholder="Ex: Ali Traoré"
@@ -357,7 +357,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Numéro de téléphone *
                 </Label>
                 <div className="flex gap-2">
@@ -396,7 +396,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   WhatsApp (optionnel)
                 </Label>
                 <div className="flex gap-2">
@@ -434,11 +434,11 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label htmlFor="email" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700 mb-2 block">
                   Email (optionnel)
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     id="email"
                     type="email"
@@ -452,7 +452,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label htmlFor="password" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">
                   Mot de passe *
                 </Label>
                 <div className="relative">
@@ -467,7 +467,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -476,7 +476,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 mb-2 block">
                   Confirmer le mot de passe *
                 </Label>
                 <div className="relative">
@@ -491,7 +491,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -499,14 +499,14 @@ export default function RegisterPage() {
                 {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-[#ffe9de] border border-[#ec5a13]/30 rounded-lg p-4">
                 <div className="flex gap-3">
-                  <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Shield className="h-5 w-5 text-[#ec5a13] flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-blue-900 mb-1">
+                    <p className="text-sm font-medium text-[#ec5a13] mb-1">
                       Sécurité garantie
                     </p>
-                    <p className="text-xs text-blue-700">
+                    <p className="text-xs text-gray-700">
                       Vos données sont protégées par un chiffrement de bout en bout. 
                       Nous ne partageons jamais vos informations.
                     </p>
@@ -519,7 +519,7 @@ export default function RegisterPage() {
               <Button
                 onClick={handleNextStep}
                 disabled={isVerifying}
-                className="bg-emerald-600 hover:bg-emerald-700 px-8"
+                className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
               >
                 {isVerifying ? (
                   <>
@@ -541,20 +541,20 @@ export default function RegisterPage() {
         {currentStep === 2.5 && (
           <Card className="p-8 shadow-xl border-0">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-8 w-8 text-blue-600" />
+              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-[#ec5a13]" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Vérifiez votre numéro
               </h2>
-              <p className="text-slate-600">
+              <p className="text-gray-600">
                 Nous avons envoyé un code de vérification à {formatPhoneNumber(formData.phone)}
               </p>
             </div>
 
             <div className="space-y-6">
               <div>
-                <Label htmlFor="code" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="code" className="text-sm font-medium text-gray-700 mb-2 block">
                   Code de vérification
                 </Label>
                 <Input
@@ -571,7 +571,7 @@ export default function RegisterPage() {
               <div className="text-center">
                 <button
                   type="button"
-                  className="text-sm text-emerald-600 hover:text-emerald-700"
+                  className="text-sm text-[#ec5a13] hover:text-[#d94f0f]"
                 >
                   Renvoyer le code
                 </button>
@@ -588,7 +588,7 @@ export default function RegisterPage() {
               </Button>
               <Button
                 onClick={handleVerifyCode}
-                className="bg-emerald-600 hover:bg-emerald-700 px-8"
+                className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
               >
                 Vérifier
                 <CheckCircle2 className="ml-2 h-4 w-4" />
@@ -601,17 +601,17 @@ export default function RegisterPage() {
         {currentStep === 2 && (
           <Card className="p-8 shadow-xl border-0">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Store className="h-8 w-8 text-purple-600" />
+              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
+                <Store className="h-8 w-8 text-[#ec5a13]" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Votre profil vendeur
               </h2>
-              <p className="text-slate-600">
+              <p className="text-gray-600">
                 Présentez votre activité pour attirer plus de clients
               </p>
               {successMessage && (
-                <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg text-green-700 text-sm">
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
                   {successMessage}
                 </div>
               )}
@@ -619,7 +619,7 @@ export default function RegisterPage() {
 
             <div className="space-y-6">
               <div>
-                <Label className="text-sm font-medium text-slate-700 mb-3 block">
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">
                   Type de vendeur
                 </Label>
                 <div className="grid grid-cols-2 gap-4">
@@ -628,18 +628,18 @@ export default function RegisterPage() {
                     onClick={() => setFormData({ ...formData, businessType: 'individual' })}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       formData.businessType === 'individual'
-                        ? 'border-emerald-600 bg-emerald-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                        ? 'border-emerald-600 bg-[#ffe9de]/50'
+                        : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <User
                       className={`h-8 w-8 mx-auto mb-2 ${
-                        formData.businessType === 'individual' ? 'text-emerald-600' : 'text-slate-400'
+                        formData.businessType === 'individual' ? 'text-[#ec5a13]' : 'text-gray-400'
                       }`}
                     />
                     <p
                       className={`font-medium ${
-                        formData.businessType === 'individual' ? 'text-emerald-700' : 'text-slate-700'
+                        formData.businessType === 'individual' ? 'text-[#d94f0f]' : 'text-gray-700'
                       }`}
                     >
                       Particulier
@@ -650,18 +650,18 @@ export default function RegisterPage() {
                     onClick={() => setFormData({ ...formData, businessType: 'professional' })}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       formData.businessType === 'professional'
-                        ? 'border-emerald-600 bg-emerald-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                        ? 'border-emerald-600 bg-[#ffe9de]/50'
+                        : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <Briefcase
                       className={`h-8 w-8 mx-auto mb-2 ${
-                        formData.businessType === 'professional' ? 'text-emerald-600' : 'text-slate-400'
+                        formData.businessType === 'professional' ? 'text-[#ec5a13]' : 'text-gray-400'
                       }`}
                     />
                     <p
                       className={`font-medium ${
-                        formData.businessType === 'professional' ? 'text-emerald-700' : 'text-slate-700'
+                        formData.businessType === 'professional' ? 'text-[#d94f0f]' : 'text-gray-700'
                       }`}
                     >
                       Professionnel
@@ -671,11 +671,11 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label htmlFor="businessName" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="businessName" className="text-sm font-medium text-gray-700 mb-2 block">
                   Nom de votre activité *
                 </Label>
                 <div className="relative">
-                  <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     id="businessName"
                     placeholder="Ex: Ali Tech Solutions"
@@ -688,7 +688,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label htmlFor="description" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="description" className="text-sm font-medium text-gray-700 mb-2 block">
                   Description de votre activité *
                 </Label>
                 <Textarea
@@ -698,18 +698,18 @@ export default function RegisterPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="min-h-24 text-base"
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   {formData.description.length} caractères
                 </p>
                 {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
               </div>
 
               <div>
-                <Label htmlFor="location" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="location" className="text-sm font-medium text-gray-700 mb-2 block">
                   Localisation *
                 </Label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Select value={formData.location} onValueChange={(value) => setFormData({ ...formData, location: value })}>
                     <SelectTrigger className="pl-10">
                       <SelectValue placeholder="Sélectionnez votre ville" />
@@ -736,7 +736,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-slate-700 mb-3 block">
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">
                   Catégories (max 3)
                 </Label>
                 <div className="flex flex-wrap gap-2">
@@ -755,15 +755,15 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Photo de profil (optionnel)
                 </Label>
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
+                  <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                     {avatarPreview ? (
                       <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                      <Camera className="h-8 w-8 text-slate-400" />
+                      <Camera className="h-8 w-8 text-gray-400" />
                     )}
                   </div>
                   <div>
@@ -782,7 +782,7 @@ export default function RegisterPage() {
                       <Camera className="h-4 w-4 mr-2" />
                       Choisir une photo
                     </Button>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       JPG, PNG - Max 2MB
                     </p>
                   </div>
@@ -800,7 +800,7 @@ export default function RegisterPage() {
               </Button>
               <Button
                 onClick={handleNextStep}
-                className="bg-emerald-600 hover:bg-emerald-700 px-8"
+                className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
               >
                 Continuer
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -816,26 +816,26 @@ export default function RegisterPage() {
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Zap className="h-8 w-8 text-amber-600" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Préférences
               </h2>
-              <p className="text-slate-600">
+              <p className="text-gray-600">
                 Personnalisez votre expérience
               </p>
             </div>
 
             <div className="space-y-6">
               <div>
-                <Label className="text-sm font-medium text-slate-700 mb-3 block">
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">
                   Notifications
                 </Label>
                 <div className="space-y-3">
                   <label className="flex items-center justify-between cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <MessageSquare className="h-4 w-4 text-slate-400" />
+                      <MessageSquare className="h-4 w-4 text-gray-400" />
                       <div>
-                        <p className="text-sm font-medium text-slate-700">Notifications SMS</p>
-                        <p className="text-xs text-slate-500">Recevoir des alertes par SMS</p>
+                        <p className="text-sm font-medium text-gray-700">Notifications SMS</p>
+                        <p className="text-xs text-gray-500">Recevoir des alertes par SMS</p>
                       </div>
                     </div>
                     <Switch
@@ -849,10 +849,10 @@ export default function RegisterPage() {
 
                   <label className="flex items-center justify-between cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <Mail className="h-4 w-4 text-slate-400" />
+                      <Mail className="h-4 w-4 text-gray-400" />
                       <div>
-                        <p className="text-sm font-medium text-slate-700">Notifications Email</p>
-                        <p className="text-xs text-slate-500">Recevoir des mises à jour par email</p>
+                        <p className="text-sm font-medium text-gray-700">Notifications Email</p>
+                        <p className="text-xs text-gray-500">Recevoir des mises à jour par email</p>
                       </div>
                     </div>
                     <Switch
@@ -866,10 +866,10 @@ export default function RegisterPage() {
 
                   <label className="flex items-center justify-between cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <TrendingUp className="h-4 w-4 text-slate-400" />
+                      <TrendingUp className="h-4 w-4 text-gray-400" />
                       <div>
-                        <p className="text-sm font-medium text-slate-700">Promotions</p>
-                        <p className="text-xs text-slate-500">Offres spéciales et nouveautés</p>
+                        <p className="text-sm font-medium text-gray-700">Promotions</p>
+                        <p className="text-xs text-gray-500">Offres spéciales et nouveautés</p>
                       </div>
                     </div>
                     <Switch
@@ -884,7 +884,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label htmlFor="language" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="language" className="text-sm font-medium text-gray-700 mb-2 block">
                   Langue préférée
                 </Label>
                 <Select value={formData.language} onValueChange={(value) => setFormData({ ...formData, language: value })}>
@@ -902,28 +902,28 @@ export default function RegisterPage() {
 
               <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-lg p-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-[#ec5a13] rounded-full flex items-center justify-center flex-shrink-0">
                     <CheckCircle2 className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900 mb-2">
+                    <h3 className="font-semibold text-gray-900 mb-2">
                       Vous êtes prêt à commencer !
                     </h3>
-                    <ul className="space-y-2 text-sm text-slate-700">
+                    <ul className="space-y-2 text-sm text-gray-700">
                       <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-600" />
+                        <Check className="h-4 w-4 text-[#ec5a13]" />
                         <span>Publiez illimité d'annonces</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-600" />
+                        <Check className="h-4 w-4 text-[#ec5a13]" />
                         <span>Accès à des milliers d'acheteurs</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-600" />
+                        <Check className="h-4 w-4 text-[#ec5a13]" />
                         <span>Outils de promotion intégrés</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-emerald-600" />
+                        <Check className="h-4 w-4 text-[#ec5a13]" />
                         <span>Support client dédié</span>
                       </li>
                     </ul>
@@ -952,7 +952,7 @@ export default function RegisterPage() {
               <Button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="bg-emerald-600 hover:bg-emerald-700 px-8"
+                className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
               >
                 {isLoading ? (
                   <>
