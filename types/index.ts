@@ -41,7 +41,6 @@ export interface Item {
   id: number;
   title: string;
   price: string;
-  negotiable: boolean;
   location: string;
   images: string[]; // multiple images
   mainImage: string;

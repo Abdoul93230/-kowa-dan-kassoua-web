@@ -231,7 +231,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 1,
       title: 'iPhone 14 Pro Max 256GB',
       price: '850 000 FCFA',
-      negotiable: true,
       location: 'Plateau, Dakar',
       images: [
         'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=600',
@@ -280,7 +279,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 2,
       title: 'Réparation & Maintenance Informatiquedjfksdfuieosriof4rjfwei',
       price: '15 000 FCFA',
-      negotiable: true,
       location: 'Plateau, Dakar',
       images: [
         'https://images.pexels.com/photos/4195325/pexels-photo-4195325.jpeg?auto=compress&cs=tinysrgb&w=600'
@@ -319,7 +317,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 3,
       title: 'MacBook Air M2 2023',
       price: '1 200 000 FCFA',
-      negotiable: false,
       location: 'Plateau, Dakar',
       images: [
         'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600',
@@ -367,7 +364,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 7,
       title: 'Samsung Galaxy S23 Ultra 512GB',
       price: '720 000 FCFA',
-      negotiable: true,
       location: 'Fann, Dakar',
       images: [
         'https://images.pexels.com/photos/404280/pexels-photo-404280.jpeg',
@@ -407,7 +403,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 8,
       title: 'PlayStation 5 Slim + 2 manettes + FIFA 25',
       price: '485 000 FCFA',
-      negotiable: true,
       location: 'Parcelles, Dakar',
       images: ['https://images.pexels.com/photos/1298601/pexels-photo-1298601.jpeg'],
       mainImage: 'https://images.pexels.com/photos/1298601/pexels-photo-1298601.jpeg',
@@ -442,7 +437,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 9,
       title: 'Montage PC Gamer RTX 4070 Ti + Ryzen 7',
       price: '1 650 000 FCFA',
-      negotiable: false,
       location: 'Mermoz, Dakar',
       images: ['https://images.pexels.com/photos/7770011/pexels-photo-7770011.jpeg'],
       mainImage: 'https://images.pexels.com/photos/7770011/pexels-photo-7770011.jpeg',
@@ -481,7 +475,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 101,
       title: 'Restaurant Thiéboudienne traditionnelle',
       price: '2 500 FCFA',
-      negotiable: false,
       location: 'Médina, Dakar',
       images: [
         'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=600'
@@ -525,7 +518,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 102,
       title: 'Pastels + Fataya (50 pièces)',
       price: '25 000 FCFA',
-      negotiable: false,
       location: 'HLM, Dakar',
       images: ['https://images.pexels.com/photos/12773335/pexels-photo-12773335.jpeg?auto=compress&cs=tinysrgb&w=600'],
       mainImage: 'https://images.pexels.com/photos/12773335/pexels-photo-12773335.jpeg?auto=compress&cs=tinysrgb&w=600',
@@ -551,7 +543,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 103,
       title: 'Pâtisserie & Gâteaux sur commande',
       price: '25 000 FCFA',
-      negotiable: true,
       location: 'Point E, Dakar',
       images: ['https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg'],
       mainImage: 'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg',
@@ -579,7 +570,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 104,
       title: 'Dibiterie - Brochettes & Grillades',
       price: '1 500 FCFA la portion',
-      negotiable: false,
       location: 'Colobane, Dakar',
       images: ['https://images.pexels.com/photos/4106485/pexels-photo-4106485.jpeg'],
       mainImage: 'https://images.pexels.com/photos/4106485/pexels-photo-4106485.jpeg',
@@ -610,7 +600,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 201,
       title: 'Villa F4 moderne à louer',
       price: '450 000 FCFA/mois',
-      negotiable: true,
       location: 'Almadies, Dakar',
       images: [
         'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=600',
@@ -651,7 +640,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 202,
       title: 'Appartement F3 meublé - Ngor',
       price: '350 000 FCFA/mois',
-      negotiable: true,
       location: 'Ngor, Dakar',
       images: ['https://images.pexels.com/photos/584399/living-room-584399.jpeg'],
       mainImage: 'https://images.pexels.com/photos/584399/living-room-584399.jpeg',
@@ -685,7 +673,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 203,
       title: 'Terrain 300m² - Diamniadio (titre foncier)',
       price: '18 000 000 FCFA',
-      negotiable: true,
       location: 'Diamniadio',
       images: ['https://images.pexels.com/photos/460672/pexels-photo-460672.jpeg'],
       mainImage: 'https://images.pexels.com/photos/460672/pexels-photo-460672.jpeg',
@@ -720,7 +707,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 301,
       title: 'Toyota Corolla 2020',
       price: '9 500 000 FCFA',
-      negotiable: true,
       location: 'Grand Yoff, Dakar',
       images: [
         'https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=600',
@@ -765,7 +751,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 302,
       title: 'Peugeot 3008 GT Line 2019',
       price: '14 500 000 FCFA',
-      negotiable: true,
       location: 'Sicap Liberté',
       images: ['https://images.pexels.com/photos/2127733/pexels-photo-2127733.jpeg?auto=compress&cs=tinysrgb&w=600'],
       mainImage: 'https://images.pexels.com/photos/2127733/pexels-photo-2127733.jpeg?auto=compress&cs=tinysrgb&w=600',
@@ -793,7 +778,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 303,
       title: 'Hyundai Tucson 2021 Limited',
       price: '16 800 000 FCFA',
-      negotiable: true,
       location: 'Mermoz',
       images: ['https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg?auto=compress&cs=tinysrgb&w=600'],
       mainImage: 'https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg?auto=compress&cs=tinysrgb&w=600',
@@ -820,7 +804,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 304,
       title: 'Peugeot 3008 GT Line 2019',
       price: '14 800 000 FCFA',
-      negotiable: true,
       location: 'Sicap Liberté, Dakar',
       images: ['https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg'],
       mainImage: 'https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg',
@@ -856,7 +839,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 305,
       title: 'Location voiture mariage & événements',
       price: '80 000 FCFA/jour',
-      negotiable: true,
       location: 'Almadies, Dakar',
       images: ['https://images.pexels.com/photos/1164773/pexels-photo-1164773.jpeg'],
       mainImage: 'https://images.pexels.com/photos/1164773/pexels-photo-1164773.jpeg',
@@ -887,7 +869,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 401,
       title: 'Coiffure et tressage à domicile',
       price: 'À partir de 10 000 FCFA',
-      negotiable: true,
       location: 'Sacré-Coeur, Dakar',
       images: [
         'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=600'
@@ -928,7 +909,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 402,
       title: 'Maquillage permanent & Microblading',
       price: 'À partir de 80 000 FCFA',
-      negotiable: false,
       location: 'Les Almadies, Dakar',
       images: ['https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg'],
       mainImage: 'https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg',
@@ -958,7 +938,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 501,
       title: 'Femme de ménage professionnelle',
       price: '3 500 FCFA/heure',
-      negotiable: true,
       location: 'Dakar, Sénégal',
       images: [
         'https://images.pexels.com/photos/4108715/pexels-photo-4108715.jpeg?auto=compress&cs=tinysrgb&w=600'
@@ -999,7 +978,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 502,
       title: 'Cours particuliers Maths/Physique - Domicile',
       price: '10 000 FCFA/heure',
-      negotiable: true,
       location: 'Dakar & banlieue',
       images: ['https://images.pexels.com/photos/5428825/pexels-photo-5428825.jpeg'],
       mainImage: 'https://images.pexels.com/photos/5428825/pexels-photo-5428825.jpeg',
@@ -1027,7 +1005,6 @@ export const mockItems: Record<string, Item[]> = {
       id: 503,
       title: 'Plombier professionnel 24h/24',
       price: 'À partir de 15 000 FCFA',
-      negotiable: true,
       location: 'Tout Dakar',
       images: ['https://images.pexels.com/photos/5841622/pexels-photo-5841622.jpeg'],
       mainImage: 'https://images.pexels.com/photos/5841622/pexels-photo-5841622.jpeg',

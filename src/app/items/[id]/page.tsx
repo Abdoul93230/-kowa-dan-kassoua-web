@@ -147,12 +147,31 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
           <div className="lg:col-span-2 space-y-6">
             {/* Galerie d'images */}
             <Card className="overflow-hidden border-gray-200 shadow-sm">
-              <div className="relative bg-gray-100">
+              <div className="relative bg-gray-100 group">
                 <img
                   src={item.images[selectedImage]}
                   alt={item.title}
                   className="w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px] object-contain"
                 />
+                
+                {/* Boutons de navigation carousel */}
+                {item.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedImage(selectedImage === 0 ? item.images.length - 1 : selectedImage - 1)}
+                      className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                    >
+                      <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 rotate-180 text-gray-900" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedImage(selectedImage === item.images.length - 1 ? 0 : selectedImage + 1)}
+                      className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                    >
+                      <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-900" />
+                    </button>
+                  </>
+                )}
+                
                 <div className="absolute top-4 right-4 flex gap-2">
                   <Button
                     size="icon"

@@ -40,6 +40,7 @@ import {
   Edit2,
   Save,
   Trash2,
+  Eye,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
@@ -82,13 +83,11 @@ interface FormData {
   category: string;
   subcategory: string;
   price: string;
-  negotiable: boolean;
-  location: string;
   description: string;
   condition: 'new' | 'used' | '';
   brand: string;
   tags: string[];
-  images: string[];
+  images: File[];
   delivery: boolean;
   deliveryCost: string;
   deliveryAreas: string[];
@@ -118,8 +117,6 @@ export function PublishForm() {
     category: '',
     subcategory: '',
     price: '',
-    negotiable: false,
-    location: '',
     description: '',
     condition: '',
     brand: '',
@@ -153,8 +150,7 @@ export function PublishForm() {
   });
 
   const [currentTag, setCurrentTag] = useState('');
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [currentImageUrl, setCurrentImageUrl] = useState('');
+  const [imagesPreviews, setImagesPreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editContactInfo, setEditContactInfo] = useState(false);
@@ -183,7 +179,6 @@ export function PublishForm() {
       if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
         newErrors.price = 'Veuillez entrer un prix valide';
       }
-      if (!formData.location.trim()) newErrors.location = 'La localisation est requise';
       if (!formData.description.trim()) newErrors.description = 'La description est requise';
       if (formData.description.length < 20) {
         newErrors.description = 'La description doit contenir au moins 20 caractères';
@@ -245,19 +240,31 @@ export function PublishForm() {
     });
   };
 
-  const handleAddImage = () => {
-    if (currentImageUrl.trim() && imageUrls.length < 5) {
-      setImageUrls([...imageUrls, currentImageUrl.trim()]);
-      setFormData({
-        ...formData,
-        images: [...formData.images, currentImageUrl.trim()],
-      });
-      setCurrentImageUrl('');
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + formData.images.length > 5) {
+      alert('Vous pouvez ajouter maximum 5 images');
+      return;
     }
+    
+    // Créer les previews
+    const newPreviews: string[] = [];
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push(reader.result as string);
+        if (newPreviews.length === files.length) {
+          setImagesPreviews([...imagesPreviews, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    setFormData({ ...formData, images: [...formData.images, ...files] });
   };
 
   const handleRemoveImage = (index: number) => {
-    setImageUrls(imageUrls.filter((_, i) => i !== index));
+    setImagesPreviews(imagesPreviews.filter((_, i) => i !== index));
     setFormData({
       ...formData,
       images: formData.images.filter((_, i) => i !== index),
@@ -318,6 +325,28 @@ export function PublishForm() {
     }
   };
 
+  const handleToggleAllDays = () => {
+    if (formData.availability.days.length === daysOptions.length) {
+      // Désélectionner tous
+      setFormData({
+        ...formData,
+        availability: {
+          ...formData.availability,
+          days: [],
+        },
+      });
+    } else {
+      // Sélectionner tous
+      setFormData({
+        ...formData,
+        availability: {
+          ...formData.availability,
+          days: [...daysOptions],
+        },
+      });
+    }
+  };
+
   const handleAddSpecification = () => {
     if (specKey.trim() && specValue.trim()) {
       setFormData({
@@ -369,7 +398,7 @@ export function PublishForm() {
   };
 
   const isStep1Valid = formData.type && formData.title && formData.category;
-  const isStep2Valid = formData.price && formData.location && formData.description;
+  const isStep2Valid = formData.price && formData.description;
   const isStep3Valid = formData.sellerName && formData.sellerPhone.number;
 
   return (
@@ -382,15 +411,15 @@ export function PublishForm() {
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
                     currentStep >= step
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-200 text-slate-600'
+                      ? 'bg-[#ec5a13] text-white'
+                      : 'bg-gray-200 text-gray-600'
                   }`}
                 >
                   {step}
                 </div>
                 <span
                   className={`text-sm font-medium ${
-                    currentStep >= step ? 'text-slate-900' : 'text-slate-500'
+                    currentStep >= step ? 'text-gray-900' : 'text-gray-500'
                   }`}
                 >
                   {step === 1 && 'Informations de base'}
@@ -402,7 +431,7 @@ export function PublishForm() {
               {step < 4 && (
                 <div
                   className={`flex-1 h-1 mx-4 ${
-                    currentStep > step ? 'bg-emerald-600' : 'bg-slate-200'
+                    currentStep > step ? 'bg-[#ec5a13]' : 'bg-gray-200'
                   }`}
                 />
               )}
@@ -413,13 +442,13 @@ export function PublishForm() {
 
       {currentStep === 1 && (
         <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
             Que souhaitez-vous publier ?
           </h2>
 
           <div className="space-y-6">
             <div>
-              <Label className="text-sm font-medium text-slate-700 mb-3 block">
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">
                 Type d'annonce *
               </Label>
               <div className="grid grid-cols-2 gap-4">
@@ -428,18 +457,18 @@ export function PublishForm() {
                   onClick={() => setFormData({ ...formData, type: 'product' })}
                   className={`p-4 rounded-lg border-2 transition-all ${
                     formData.type === 'product'
-                      ? 'border-emerald-600 bg-emerald-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-[#ec5a13] bg-[#ffe9de]'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <Package
                     className={`h-8 w-8 mx-auto mb-2 ${
-                      formData.type === 'product' ? 'text-emerald-600' : 'text-slate-400'
+                      formData.type === 'product' ? 'text-[#ec5a13]' : 'text-gray-400'
                     }`}
                   />
                   <p
                     className={`font-medium ${
-                      formData.type === 'product' ? 'text-emerald-700' : 'text-slate-700'
+                      formData.type === 'product' ? 'text-[#ec5a13]' : 'text-gray-700'
                     }`}
                   >
                     Produit
@@ -450,18 +479,18 @@ export function PublishForm() {
                   onClick={() => setFormData({ ...formData, type: 'service' })}
                   className={`p-4 rounded-lg border-2 transition-all ${
                     formData.type === 'service'
-                      ? 'border-emerald-600 bg-emerald-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-[#ec5a13] bg-[#ffe9de]'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <Briefcase
                     className={`h-8 w-8 mx-auto mb-2 ${
-                      formData.type === 'service' ? 'text-emerald-600' : 'text-slate-400'
+                      formData.type === 'service' ? 'text-[#ec5a13]' : 'text-gray-400'
                     }`}
                   />
                   <p
                     className={`font-medium ${
-                      formData.type === 'service' ? 'text-emerald-700' : 'text-slate-700'
+                      formData.type === 'service' ? 'text-[#ec5a13]' : 'text-gray-700'
                     }`}
                   >
                     Service
@@ -472,7 +501,7 @@ export function PublishForm() {
             </div>
 
             <div>
-              <Label htmlFor="title" className="text-sm font-medium text-slate-700 mb-2 block">
+              <Label htmlFor="title" className="text-sm font-medium text-gray-700 mb-2 block">
                 Titre de l'annonce *
               </Label>
               <Input
@@ -482,7 +511,7 @@ export function PublishForm() {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="text-base"
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 Soyez précis pour attirer plus d'acheteurs
               </p>
               {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
@@ -490,7 +519,7 @@ export function PublishForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="category" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="category" className="text-sm font-medium text-gray-700 mb-2 block">
                   Catégorie *
                 </Label>
                 <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value, subcategory: '' })}>
@@ -510,7 +539,7 @@ export function PublishForm() {
 
               {selectedCategory?.subcategories && (
                 <div>
-                  <Label htmlFor="subcategory" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="subcategory" className="text-sm font-medium text-gray-700 mb-2 block">
                     Sous-catégorie
                   </Label>
                   <Select value={formData.subcategory} onValueChange={(value) => setFormData({ ...formData, subcategory: value })}>
@@ -529,41 +558,10 @@ export function PublishForm() {
               )}
             </div>
 
-            <div>
-              <Label htmlFor="location" className="text-sm font-medium text-slate-700 mb-2 block">
-                Localisation *
-              </Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Select value={formData.location} onValueChange={(value) => setFormData({ ...formData, location: value })}>
-                  <SelectTrigger className="pl-10">
-                    <SelectValue placeholder="Sélectionnez votre localisation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {nigerCities.map((city) => (
-                      <SelectItem key={city} value={`${city}, Niger`}>
-                        {city}, Niger
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="Autre">Autre...</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formData.location === 'Autre' && (
-                  <Input
-                    placeholder="Entrez votre localisation"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="mt-2"
-                  />
-                )}
-              </div>
-              {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
-            </div>
-
             {formData.type === 'product' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="condition" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="condition" className="text-sm font-medium text-gray-700 mb-2 block">
                     État *
                   </Label>
                   <Select value={formData.condition} onValueChange={(value: 'new' | 'used') => setFormData({ ...formData, condition: value })}>
@@ -579,7 +577,7 @@ export function PublishForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="brand" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="brand" className="text-sm font-medium text-gray-700 mb-2 block">
                     Marque
                   </Label>
                   <Input
@@ -591,7 +589,7 @@ export function PublishForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="quantity" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="quantity" className="text-sm font-medium text-gray-700 mb-2 block">
                     Quantité
                   </Label>
                   <Input
@@ -608,7 +606,7 @@ export function PublishForm() {
 
             {formData.type === 'service' && (
               <div>
-                <Label htmlFor="duration" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="duration" className="text-sm font-medium text-gray-700 mb-2 block">
                   Durée estimée du service
                 </Label>
                 <Input
@@ -626,7 +624,7 @@ export function PublishForm() {
               type="button"
               onClick={handleNextStep}
               disabled={!isStep1Valid}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-[#ec5a13] hover:bg-[#d94f0f]"
             >
               Suivant
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -637,12 +635,12 @@ export function PublishForm() {
 
       {currentStep === 2 && (
         <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6">Détails de l'annonce</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Détails de l'annonce</h2>
 
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="price" className="text-sm font-medium text-slate-700 mb-2 block">
+                <Label htmlFor="price" className="text-sm font-medium text-gray-700 mb-2 block">
                   Prix (FCFA) *
                 </Label>
                 <Input
@@ -655,20 +653,10 @@ export function PublishForm() {
                 />
                 {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
               </div>
-
-              <div className="flex items-end">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Switch
-                    checked={formData.negotiable}
-                    onCheckedChange={(checked) => setFormData({ ...formData, negotiable: checked })}
-                  />
-                  <span className="text-sm text-slate-700">Prix négociable</span>
-                </label>
-              </div>
             </div>
 
             <div>
-              <Label htmlFor="description" className="text-sm font-medium text-slate-700 mb-2 block">
+              <Label htmlFor="description" className="text-sm font-medium text-gray-700 mb-2 block">
                 Description *
               </Label>
               <Textarea
@@ -678,35 +666,37 @@ export function PublishForm() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="min-h-32 text-base"
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 {formData.description.length} caractères
               </p>
               {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
 
             <div>
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">
-                Images (URL) - Max 5
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                Images - Max 5
               </Label>
-              <div className="flex gap-2 mb-3">
+              <div className="mb-3">
                 <Input
-                  placeholder="Collez l'URL d'une image"
-                  value={currentImageUrl}
-                  onChange={(e) => setCurrentImageUrl(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImage())}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="cursor-pointer"
+                  disabled={formData.images.length >= 5}
                 />
-                <Button type="button" onClick={handleAddImage} variant="outline">
-                  <Upload className="h-4 w-4" />
-                </Button>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG, PNG, WEBP - Max 2MB par image
+                </p>
               </div>
-              {imageUrls.length > 0 && (
+              {imagesPreviews.length > 0 && (
                 <div className="grid grid-cols-3 gap-3">
-                  {imageUrls.map((url, index) => (
+                  {imagesPreviews.map((preview, index) => (
                     <div key={index} className="relative group">
                       <img
-                        src={url}
+                        src={preview}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border-2 border-slate-200"
+                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
                       />
                       <button
                         type="button"
@@ -722,7 +712,7 @@ export function PublishForm() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">Tags - Max 5</Label>
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Tags - Max 5</Label>
               <div className="flex gap-2 mb-3">
                 <Input
                   placeholder="Ajoutez un tag"
@@ -765,7 +755,7 @@ export function PublishForm() {
                       checked={formData.delivery}
                       onCheckedChange={(checked) => setFormData({ ...formData, delivery: checked })}
                     />
-                    <span className="text-sm font-medium text-slate-700">Livraison disponible</span>
+                    <span className="text-sm font-medium text-gray-700">Livraison disponible</span>
                   </label>
                   {formData.delivery && (
                     <div className="space-y-3 pl-7">
@@ -775,7 +765,7 @@ export function PublishForm() {
                         onChange={(e) => setFormData({ ...formData, deliveryCost: e.target.value })}
                       />
                       <div>
-                        <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                        <Label className="text-sm font-medium text-gray-700 mb-2 block">
                           Zones de livraison
                         </Label>
                         <div className="flex gap-2 mb-2">
@@ -810,7 +800,7 @@ export function PublishForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="warranty" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="warranty" className="text-sm font-medium text-gray-700 mb-2 block">
                     Garantie
                   </Label>
                   <Input
@@ -822,7 +812,7 @@ export function PublishForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="returnPolicy" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="returnPolicy" className="text-sm font-medium text-gray-700 mb-2 block">
                     Politique de retour
                   </Label>
                   <Input
@@ -834,15 +824,15 @@ export function PublishForm() {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium text-slate-700 mb-3 block">
+                  <Label className="text-sm font-medium text-gray-700 mb-3 block">
                     Spécifications
                   </Label>
-                  <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                     {Object.entries(formData.specifications).map(([key, value]) => (
                       <div key={key} className="flex items-center justify-between bg-white p-3 rounded-lg border">
                         <div className="flex-1">
-                          <span className="font-medium text-sm text-slate-700">{key}:</span>
-                          <span className="ml-2 text-sm text-slate-600">{value}</span>
+                          <span className="font-medium text-sm text-gray-700">{key}:</span>
+                          <span className="ml-2 text-sm text-gray-600">{value}</span>
                         </div>
                         <button
                           type="button"
@@ -866,7 +856,7 @@ export function PublishForm() {
                         onChange={(e) => setSpecValue(e.target.value)}
                         className="flex-1"
                       />
-                      <Button type="button" onClick={handleAddSpecification} className="bg-emerald-600 hover:bg-emerald-700">
+                      <Button type="button" onClick={handleAddSpecification} className="bg-[#ec5a13] hover:bg-[#d94f0f]">
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -878,9 +868,20 @@ export function PublishForm() {
             {formData.type === 'service' && (
               <>
                 <div>
-                  <Label className="text-sm font-medium text-slate-700 mb-2 block">
-                    Jours de disponibilité *
-                  </Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Jours de disponibilité *
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleToggleAllDays}
+                      className="text-xs"
+                    >
+                      {formData.availability.days.length === daysOptions.length ? 'Désélectionner tous' : 'Sélectionner tous'}
+                    </Button>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {daysOptions.map((day) => (
                       <Badge
@@ -897,7 +898,7 @@ export function PublishForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="availabilityHours" className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label htmlFor="availabilityHours" className="text-sm font-medium text-gray-700 mb-2 block">
                     Heures de disponibilité *
                   </Label>
                   <Input
@@ -916,7 +917,7 @@ export function PublishForm() {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">
                     Zone d'intervention
                   </Label>
                   <div className="flex gap-2 mb-2">
@@ -958,7 +959,7 @@ export function PublishForm() {
               type="button"
               onClick={handleNextStep}
               disabled={!isStep2Valid}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-[#ec5a13] hover:bg-[#d94f0f]"
             >
               Suivant
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -971,10 +972,10 @@ export function PublishForm() {
         <Card className="p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 Vos coordonnées
               </h2>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-gray-600">
                 Ces informations permettront aux acheteurs de vous contacter
               </p>
             </div>
@@ -993,11 +994,11 @@ export function PublishForm() {
 
           <div className="space-y-6">
             <div>
-              <Label htmlFor="sellerName" className="text-sm font-medium text-slate-700 mb-2 block">
+              <Label htmlFor="sellerName" className="text-sm font-medium text-gray-700 mb-2 block">
                 Votre nom ou nom de l'entreprise *
               </Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   id="sellerName"
                   placeholder="Ex: Tech Store Pro"
@@ -1011,7 +1012,7 @@ export function PublishForm() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">
                 Téléphone *
               </Label>
               <div className="flex gap-2">
@@ -1052,7 +1053,7 @@ export function PublishForm() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">
                 WhatsApp (optionnel)
               </Label>
               <div className="flex gap-2">
@@ -1092,11 +1093,11 @@ export function PublishForm() {
             </div>
 
             <div>
-              <Label htmlFor="sellerEmail" className="text-sm font-medium text-slate-700 mb-2 block">
+              <Label htmlFor="sellerEmail" className="text-sm font-medium text-gray-700 mb-2 block">
                 Email (optionnel)
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   id="sellerEmail"
                   type="email"
@@ -1115,7 +1116,7 @@ export function PublishForm() {
                 <Button
                   type="button"
                   onClick={() => setEditContactInfo(false)}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-[#ec5a13] hover:bg-[#d94f0f]"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Enregistrer
@@ -1123,14 +1124,14 @@ export function PublishForm() {
               </div>
             )}
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-[#ffe9de] border border-[#ec5a13]/30 rounded-lg p-4">
               <div className="flex gap-3">
-                <CheckCircle2 className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <CheckCircle2 className="h-5 w-5 text-[#ec5a13] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-blue-900 mb-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
                     Vos informations sont sécurisées
                   </p>
-                  <p className="text-xs text-blue-700">
+                  <p className="text-xs text-gray-700">
                     Nous ne partageons jamais vos données personnelles. Elles servent uniquement à vous mettre en contact avec les acheteurs intéressés.
                   </p>
                 </div>
@@ -1146,7 +1147,7 @@ export function PublishForm() {
               type="button"
               onClick={() => setCurrentStep(4)}
               disabled={!isStep3Valid}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-[#ec5a13] hover:bg-[#d94f0f]"
             >
               Suivant
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -1157,99 +1158,159 @@ export function PublishForm() {
 
       {currentStep === 4 && (
         <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6">Résumé de votre annonce</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Résumé de votre annonce</h2>
+
+          {/* Aperçu de la carte produit */}
+          <div className="mb-6">
+            <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Aperçu de l'annonce
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Voici comment votre annonce apparaîtra sur la page d'accueil
+            </p>
+            
+            {/* Card Preview - Style exact du HeroProductCarousel */}
+            <div className="max-w-[340px] mx-auto md:mx-0">
+              <Card className="group overflow-hidden border-gray-200 hover:shadow-2xl transition-all duration-300 h-full bg-white p-0 gap-0">
+                <div className="relative h-44 overflow-hidden bg-gray-200">
+                  {imagesPreviews.length > 0 ? (
+                    <img
+                      src={imagesPreviews[0]}
+                      alt={formData.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="h-16 w-16 text-gray-400" />
+                    </div>
+                  )}
+                  {/* Badge de temps en haut à gauche */}
+                  <Badge className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-gray-700 flex items-center gap-1.5 shadow-md text-xs px-2 py-1 rounded-lg border-0">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="font-medium">Il y a quelques instants</span>
+                  </Badge>
+                </div>
+
+                <div className="p-3 flex flex-col gap-2">
+                  {/* Icône + Titre */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base flex-shrink-0 w-5">
+                      {formData.type === 'service' ? '🛠️' : '📦'}
+                    </span>
+                    <h3 className="font-semibold text-base text-gray-900 truncate flex-1">
+                      {formData.title || 'Titre de l\'annonce'}
+                    </h3>
+                  </div>
+
+                  {/* Localité + Distance */}
+                  <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                    <div className="w-5 flex-shrink-0 flex items-center justify-center">
+                      <MapPin className="h-3.5 w-3.5 text-[#ec5a13]" />
+                    </div>
+                    <span className="truncate">{connectedSeller.location}</span>
+                    <span className="text-gray-400">•</span>
+                    <span className="whitespace-nowrap">0.5 km</span>
+                  </div>
+
+                  {/* Prix */}
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 flex-shrink-0"></div>
+                    <p className="text-sm font-semibold text-[#ec5a13]">
+                      {formData.price ? `${parseInt(formData.price).toLocaleString()} FCFA` : '0 FCFA'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
 
           <div className="space-y-6">
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h3 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 Informations générales
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-slate-600">Type:</span>
+                  <span className="text-gray-600">Type:</span>
                   <span className="ml-2 font-medium">{formData.type === 'product' ? 'Produit' : 'Service'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600">Titre:</span>
+                  <span className="text-gray-600">Titre:</span>
                   <span className="ml-2 font-medium">{formData.title}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600">Catégorie:</span>
+                  <span className="text-gray-600">Catégorie:</span>
                   <span className="ml-2 font-medium">{selectedCategory?.name}</span>
                 </div>
                 {formData.subcategory && (
                   <div>
-                    <span className="text-slate-600">Sous-catégorie:</span>
+                    <span className="text-gray-600">Sous-catégorie:</span>
                     <span className="ml-2 font-medium">
                       {selectedCategory?.subcategories?.find(sub => sub.slug === formData.subcategory)?.name}
                     </span>
                   </div>
                 )}
                 <div>
-                  <span className="text-slate-600">Prix:</span>
+                  <span className="text-gray-600">Prix:</span>
                   <span className="ml-2 font-medium">{formData.price} FCFA</span>
-                  {formData.negotiable && <span className="text-emerald-600 ml-1">(Négociable)</span>}
-                </div>
-                <div>
-                  <span className="text-slate-600">Localisation:</span>
-                  <span className="ml-2 font-medium">{formData.location}</span>
                 </div>
               </div>
             </div>
 
             {formData.type === 'product' && (
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h3 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <Package className="h-4 w-4" />
                   Détails du produit
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   {formData.condition && (
                     <div>
-                      <span className="text-slate-600">État:</span>
+                      <span className="text-gray-600">État:</span>
                       <span className="ml-2 font-medium">{formData.condition === 'new' ? 'Neuf' : 'Occasion'}</span>
                     </div>
                   )}
                   {formData.brand && (
                     <div>
-                      <span className="text-slate-600">Marque:</span>
+                      <span className="text-gray-600">Marque:</span>
                       <span className="ml-2 font-medium">{formData.brand}</span>
                     </div>
                   )}
                   {formData.quantity && (
                     <div>
-                      <span className="text-slate-600">Quantité:</span>
+                      <span className="text-gray-600">Quantité:</span>
                       <span className="ml-2 font-medium">{formData.quantity}</span>
                     </div>
                   )}
                   {formData.warranty && (
                     <div>
-                      <span className="text-slate-600">Garantie:</span>
+                      <span className="text-gray-600">Garantie:</span>
                       <span className="ml-2 font-medium">{formData.warranty}</span>
                     </div>
                   )}
                   {formData.returnPolicy && (
                     <div>
-                      <span className="text-slate-600">Politique de retour:</span>
+                      <span className="text-gray-600">Politique de retour:</span>
                       <span className="ml-2 font-medium">{formData.returnPolicy}</span>
                     </div>
                   )}
                   {formData.delivery && (
                     <>
                       <div>
-                        <span className="text-slate-600">Livraison:</span>
+                        <span className="text-gray-600">Livraison:</span>
                         <span className="ml-2 font-medium">Disponible</span>
                       </div>
                       {formData.deliveryCost && (
                         <div>
-                          <span className="text-slate-600">Coût de livraison:</span>
+                          <span className="text-gray-600">Coût de livraison:</span>
                           <span className="ml-2 font-medium">{formData.deliveryCost} FCFA</span>
                         </div>
                       )}
                       {formData.deliveryAreas.length > 0 && (
                         <div className="md:col-span-2">
-                          <span className="text-slate-600">Zones de livraison:</span>
+                          <span className="text-gray-600">Zones de livraison:</span>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {formData.deliveryAreas.map((area) => (
                               <Badge key={area} variant="outline" className="text-xs">
@@ -1264,7 +1325,7 @@ export function PublishForm() {
                 </div>
                 {Object.keys(formData.specifications).length > 0 && (
                   <div className="mt-3">
-                    <span className="text-slate-600 text-sm">Spécifications:</span>
+                    <span className="text-gray-600 text-sm">Spécifications:</span>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
                       {Object.entries(formData.specifications).map(([key, value]) => (
                         <div key={key} className="text-sm">
@@ -1279,21 +1340,21 @@ export function PublishForm() {
             )}
 
             {formData.type === 'service' && (
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h3 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <Briefcase className="h-4 w-4" />
                   Détails du service
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   {formData.duration && (
                     <div>
-                      <span className="text-slate-600">Durée:</span>
+                      <span className="text-gray-600">Durée:</span>
                       <span className="ml-2 font-medium">{formData.duration}</span>
                     </div>
                   )}
                   {formData.availability.days.length > 0 && (
                     <div className="md:col-span-2">
-                      <span className="text-slate-600">Jours de disponibilité:</span>
+                      <span className="text-gray-600">Jours de disponibilité:</span>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {formData.availability.days.map((day) => (
                           <Badge key={day} variant="outline" className="text-xs">
@@ -1305,13 +1366,13 @@ export function PublishForm() {
                   )}
                   {formData.availability.hours && (
                     <div>
-                      <span className="text-slate-600">Heures de disponibilité:</span>
+                      <span className="text-gray-600">Heures de disponibilité:</span>
                       <span className="ml-2 font-medium">{formData.availability.hours}</span>
                     </div>
                   )}
                   {formData.serviceArea.length > 0 && (
                     <div className="md:col-span-2">
-                      <span className="text-slate-600">Zone d'intervention:</span>
+                      <span className="text-gray-600">Zone d'intervention:</span>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {formData.serviceArea.map((area) => (
                           <Badge key={area} variant="outline" className="text-xs">
@@ -1325,48 +1386,48 @@ export function PublishForm() {
               </div>
             )}
 
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h3 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Vos coordonnées
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-slate-600">Nom:</span>
+                  <span className="text-gray-600">Nom:</span>
                   <span className="ml-2 font-medium">{formData.sellerName}</span>
                 </div>
                 <div>
-                  <span className="text-slate-600">Téléphone:</span>
+                  <span className="text-gray-600">Téléphone:</span>
                   <span className="ml-2 font-medium">{formatPhoneNumber(formData.sellerPhone)}</span>
                 </div>
                 {formData.sellerWhatsapp.number && (
                   <div>
-                    <span className="text-slate-600">WhatsApp:</span>
+                    <span className="text-gray-600">WhatsApp:</span>
                     <span className="ml-2 font-medium">{formatPhoneNumber(formData.sellerWhatsapp)}</span>
                   </div>
                 )}
                 {formData.sellerEmail && (
                   <div>
-                    <span className="text-slate-600">Email:</span>
+                    <span className="text-gray-600">Email:</span>
                     <span className="ml-2 font-medium">{formData.sellerEmail}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {formData.images.length > 0 && (
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h3 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
+            {imagesPreviews.length > 0 && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <Upload className="h-4 w-4" />
                   Images
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
-                  {formData.images.map((url, index) => (
+                  {imagesPreviews.map((preview, index) => (
                     <div key={index} className="relative">
                       <img
-                        src={url}
+                        src={preview}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border-2 border-slate-200"
+                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
                       />
                     </div>
                   ))}
@@ -1375,8 +1436,8 @@ export function PublishForm() {
             )}
 
             {formData.tags.length > 0 && (
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h3 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <Tag className="h-4 w-4" />
                   Tags
                 </h3>
@@ -1390,14 +1451,14 @@ export function PublishForm() {
               </div>
             )}
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="bg-[#ffe9de] border border-[#ec5a13]/30 rounded-lg p-4">
               <div className="flex gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="h-5 w-5 text-[#ec5a13] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-amber-900 mb-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
                     Vérifiez bien votre annonce
                   </p>
-                  <p className="text-xs text-amber-700">
+                  <p className="text-xs text-gray-700">
                     Une fois publiée, votre annonce sera visible par tous les utilisateurs. Assurez-vous que toutes les informations sont correctes.
                   </p>
                 </div>
@@ -1412,7 +1473,7 @@ export function PublishForm() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-[#ec5a13] hover:bg-[#d94f0f]"
             >
               {isSubmitting ? (
                 <>
@@ -1432,3 +1493,4 @@ export function PublishForm() {
     </form>
   );
 }
+

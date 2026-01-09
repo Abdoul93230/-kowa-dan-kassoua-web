@@ -39,9 +39,7 @@ import {
   X,
   AlertCircle,
   Sparkles,
-  Zap,
-  Users,
-  TrendingUp
+  Users
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
@@ -82,15 +80,6 @@ interface FormData {
   businessName: string;
   description: string;
   location: string;
-  categories: string[];
-  
-  // Étape 3: Préférences
-  notifications: {
-    sms: boolean;
-    email: boolean;
-    promotions: boolean;
-  };
-  language: string;
   avatar: string;
 }
 
@@ -122,13 +111,6 @@ export default function RegisterPage() {
     businessName: '',
     description: '',
     location: '',
-    categories: [],
-    notifications: {
-      sms: true,
-      email: false,
-      promotions: false
-    },
-    language: 'fr',
     avatar: ''
   });
 
@@ -160,7 +142,6 @@ export default function RegisterPage() {
       if (!formData.description.trim()) newErrors.description = 'La description est requise';
       if (formData.description.length < 20) newErrors.description = 'Décrivez votre activité en au moins 20 caractères';
       if (!formData.location) newErrors.location = 'La localisation est requise';
-      if (formData.categories.length === 0) newErrors.categories = 'Sélectionnez au moins une catégorie';
     }
     
     setErrors(newErrors);
@@ -212,24 +193,10 @@ export default function RegisterPage() {
     }
   };
 
-  const handleCategoryToggle = (category: string) => {
-    if (formData.categories.includes(category)) {
-      setFormData({
-        ...formData,
-        categories: formData.categories.filter(c => c !== category)
-      });
-    } else if (formData.categories.length < 3) {
-      setFormData({
-        ...formData,
-        categories: [...formData.categories, category]
-      });
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateStep(3)) return;
+    if (!validateStep(2)) return;
     
     setIsLoading(true);
     
@@ -239,8 +206,8 @@ export default function RegisterPage() {
       
       console.log('Données d\'inscription:', formData);
       
-      // Rediriger vers le tableau de bord ou la page de publication
-      router.push('/dashboard?welcome=true');
+      // Rediriger vers la page de connexion
+      router.push('/login?registered=true');
     } catch (error) {
       console.error('Erreur d\'inscription:', error);
       setErrors({ submit: 'Une erreur est survenue. Veuillez réessayer.' });
@@ -285,7 +252,7 @@ export default function RegisterPage() {
         {/* Progress indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center mb-4">
-            {[1, 2, 3].map((step) => (
+            {[1, 2].map((step) => (
               <div key={step} className="flex items-center">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
@@ -307,9 +274,8 @@ export default function RegisterPage() {
                 >
                   {step === 1 && 'Compte'}
                   {step === 2 && 'Profil'}
-                  {step === 3 && 'Finalisation'}
                 </span>
-                {step < 3 && (
+                {step < 2 && (
                   <div
                     className={`flex-1 h-1 mx-6 w-20 ${
                       currentStep > step || (currentStep === 2.5 && step === 1)
@@ -736,25 +702,6 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                  Catégories (max 3)
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {businessCategories.map((category) => (
-                    <Badge
-                      key={category}
-                      variant={formData.categories.includes(category) ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => handleCategoryToggle(category)}
-                    >
-                      {category}
-                    </Badge>
-                  ))}
-                </div>
-                {errors.categories && <p className="text-red-500 text-xs mt-1">{errors.categories}</p>}
-              </div>
-
-              <div>
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Photo de profil (optionnel)
                 </Label>
@@ -788,119 +735,8 @@ export default function RegisterPage() {
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={handlePrevStep}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Retour
-              </Button>
-              <Button
-                onClick={handleNextStep}
-                className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
-              >
-                Continuer
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Étape 3: Finalisation */}
-        {currentStep === 3 && (
-          <Card className="p-8 shadow-xl border-0">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="h-8 w-8 text-amber-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Préférences
-              </h2>
-              <p className="text-gray-600">
-                Personnalisez votre expérience
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                  Notifications
-                </Label>
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Notifications SMS</p>
-                        <p className="text-xs text-gray-500">Recevoir des alertes par SMS</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={formData.notifications.sms}
-                      onCheckedChange={(checked) => setFormData({
-                        ...formData,
-                        notifications: { ...formData.notifications, sms: checked }
-                      })}
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Notifications Email</p>
-                        <p className="text-xs text-gray-500">Recevoir des mises à jour par email</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={formData.notifications.email}
-                      onCheckedChange={(checked) => setFormData({
-                        ...formData,
-                        notifications: { ...formData.notifications, email: checked }
-                      })}
-                    />
-                  </label>
-
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <TrendingUp className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Promotions</p>
-                        <p className="text-xs text-gray-500">Offres spéciales et nouveautés</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={formData.notifications.promotions}
-                      onCheckedChange={(checked) => setFormData({
-                        ...formData,
-                        notifications: { ...formData.notifications, promotions: checked }
-                      })}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="language" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Langue préférée
-                </Label>
-                <Select value={formData.language} onValueChange={(value) => setFormData({ ...formData, language: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fr">Français</SelectItem>
-                    <SelectItem value="ha">Haoussa</SelectItem>
- <SelectItem value="dz">Djerma</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-lg p-6">
+              <div className="bg-gradient-to-r from-[#ffe9de]/50 to-orange-50/50 border border-[#ec5a13]/30 rounded-lg p-6">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-[#ec5a13] rounded-full flex items-center justify-center flex-shrink-0">
                     <CheckCircle2 className="h-6 w-6 text-white" />
@@ -973,3 +809,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+
