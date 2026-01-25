@@ -251,12 +251,8 @@ export const mockItems: Record<string, Item[]> = {
       postedDate: '2025-11-20',
       description: 'iPhone 14 Pro Max en excellent état, 256GB de stockage, couleur noir spatial. Aucune rayure, batterie à 98% de santé. Facture et accessoires d\'origine inclus (câble, chargeur, écouteurs). Le téléphone a été acheté neuf il y a 6 mois et très peu utilisé. Garantie Apple restante de 6 mois transférable.',
       condition: 'used',
-      brand: 'Apple',
       views: 1247,
       favorites: 89,
-      quantity: 1,
-      warranty: '6 mois garantie Apple',
-      returnPolicy: 'Retour possible sous 48h si défaut constaté',
       delivery: {
         available: true,
         cost: '5 000 FCFA',
@@ -272,8 +268,8 @@ export const mockItems: Record<string, Item[]> = {
         'Batterie': '4323 mAh',
         'Système': 'iOS 17'
       },
-      tags: ['iPhone', 'Apple', 'Smartphone', 'Pro Max', 'Comme neuf'],
-      status: 'active'
+      status: 'active',
+      quantity: '2'
     },
     {
       id: 2,
@@ -303,14 +299,12 @@ export const mockItems: Record<string, Item[]> = {
         hours: '8h - 19h'
       },
       serviceArea: ['Dakar', 'Pikine', 'Guédiawaye', 'Rufisque'],
-      duration: '1-3 heures selon panne',
       specifications: {
         'Intervention': 'À domicile ou en atelier',
         'Délai': 'Même jour pour urgences',
         'Garantie': '3 mois sur réparations',
         'Diagnostic': 'Gratuit'
       },
-      tags: ['Réparation PC', 'Maintenance', 'Dépannage', 'Informatique', 'Technicien'],
       status: 'active'
     },
     {
@@ -336,12 +330,8 @@ export const mockItems: Record<string, Item[]> = {
       postedTime: '1j',
       description: 'MacBook Air M2 flambant neuf, encore sous garantie Apple. Couleur Minuit. Performance exceptionnelle avec la puce M2, idéal pour le travail professionnel, montage vidéo, design graphique. Autonomie jusqu\'à 18 heures. Emballage d\'origine non ouvert, tous les accessoires inclus.',
       condition: 'new',
-      brand: 'Apple',
       views: 892,
       favorites: 67,
-      quantity: 2,
-      warranty: '1 an garantie Apple',
-      returnPolicy: 'Retour sous 14 jours',
       delivery: {
         available: true,
         cost: 'Gratuit',
@@ -357,7 +347,176 @@ export const mockItems: Record<string, Item[]> = {
         'Autonomie': 'Jusqu\'à 18h',
         'Système': 'macOS Sonoma'
       },
-      tags: ['MacBook', 'Apple', 'M2', 'Neuf', 'Portable'],
+      status: 'active',
+      quantity: '1'
+    },
+    {
+      id: 1001,
+      title: 'AirPods Pro 2ème génération',
+      price: '185 000 FCFA',
+      location: 'Plateau, Dakar',
+      images: [
+        'https://images.pexels.com/photos/4219861/pexels-photo-4219861.jpeg?auto=compress&cs=tinysrgb&w=600',
+        'https://images.pexels.com/photos/8000557/pexels-photo-8000557.jpeg?auto=compress&cs=tinysrgb&w=600'
+      ],
+      mainImage: 'https://images.pexels.com/photos/4219861/pexels-photo-4219861.jpeg?auto=compress&cs=tinysrgb&w=600',
+      category: 'Électronique',
+      subcategory: 'Accessoires',
+      type: 'product',
+      rating: 4.9,
+      totalReviews: 42,
+      seller: sellers['seller_001'],
+      sellerId: 'seller_001',
+      promoted: false,
+      featured: false,
+      postedTime: '3j',
+      postedDate: '2025-11-17',
+      description: 'AirPods Pro 2 neufs sous emballage. Réduction active du bruit, audio spatial personnalisé, étui MagSafe. Autonomie 6h avec ANC. Garantie Apple 1 an. Prix imbattable!',
+      condition: 'new',
+      views: 678,
+      favorites: 45,
+      quantity: '5',
+      delivery: {
+        available: true,
+        cost: '3 000 FCFA',
+        areas: ['Dakar', 'Pikine', 'Guédiawaye'],
+        estimatedTime: '24h'
+      },
+      specifications: {
+        'Type': 'Écouteurs intra-auriculaires',
+        'ANC': 'Réduction active du bruit',
+        'Autonomie': '6h (ANC activé)',
+        'Connectivité': 'Bluetooth 5.3',
+        'Compatibilité': 'iOS et Android',
+        'Résistance': 'IPX4'
+      },
+      status: 'active'
+    },
+    {
+      id: 1002,
+      title: 'iPad Air 5 64GB WiFi',
+      price: '520 000 FCFA',
+      location: 'Plateau, Dakar',
+      images: [
+        'https://images.pexels.com/photos/1334597/pexels-photo-1334597.jpeg?auto=compress&cs=tinysrgb&w=600',
+        'https://images.pexels.com/photos/1334598/pexels-photo-1334598.jpeg?auto=compress&cs=tinysrgb&w=600'
+      ],
+      mainImage: 'https://images.pexels.com/photos/1334597/pexels-photo-1334597.jpeg?auto=compress&cs=tinysrgb&w=600',
+      category: 'Électronique',
+      subcategory: 'Tablettes',
+      type: 'product',
+      rating: 4.8,
+      totalReviews: 18,
+      seller: sellers['seller_001'],
+      sellerId: 'seller_001',
+      promoted: false,
+      featured: false,
+      postedTime: '1 semaine',
+      postedDate: '2025-11-13',
+      description: 'iPad Air 5 comme neuf, puce M1, écran 10.9" Liquid Retina. Utilisé 2 mois, aucune rayure. Compatible Apple Pencil 2 (non inclus). Idéal pour les étudiants, designers. Avec chargeur et câble USB-C.',
+      condition: 'used',
+      views: 523,
+      favorites: 31,
+      quantity: '1',
+      delivery: {
+        available: true,
+        cost: '5 000 FCFA',
+        areas: ['Dakar', 'Pikine', 'Guédiawaye', 'Rufisque'],
+        estimatedTime: '24-48h'
+      },
+      specifications: {
+        'Écran': '10.9" Liquid Retina',
+        'Processeur': 'Apple M1',
+        'Stockage': '64GB',
+        'RAM': '8GB',
+        'Caméra': '12MP arrière, 12MP avant',
+        'Connectivité': 'WiFi 6',
+        'Batterie': '28.6 Wh'
+      },
+      status: 'expired'
+    },
+    {
+      id: 1003,
+      title: 'Apple Watch Series 8 45mm GPS',
+      price: '320 000 FCFA',
+      location: 'Plateau, Dakar',
+      images: [
+        'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=600',
+        'https://images.pexels.com/photos/393047/pexels-photo-393047.jpeg?auto=compress&cs=tinysrgb&w=600'
+      ],
+      mainImage: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=600',
+      category: 'Électronique',
+      subcategory: 'Accessoires',
+      type: 'product',
+      rating: 4.7,
+      totalReviews: 25,
+      seller: sellers['seller_001'],
+      sellerId: 'seller_001',
+      promoted: false,
+      featured: false,
+      postedTime: '4j',
+      postedDate: '2025-11-16',
+      description: 'Apple Watch Series 8 boîtier aluminium minuit, bracelet sport. Capteur température, ECG, oxymètre. État excellent, batterie 96%. Avec chargeur magnétique et boîte d\'origine.',
+      condition: 'used',
+      views: 412,
+      favorites: 28,
+      quantity: '2',
+      delivery: {
+        available: true,
+        cost: '2 500 FCFA',
+        areas: ['Dakar', 'Pikine'],
+        estimatedTime: '24h'
+      },
+      specifications: {
+        'Taille': '45mm',
+        'Écran': 'OLED Always-On',
+        'GPS': 'Intégré',
+        'Capteurs': 'ECG, SpO2, Température',
+        'Résistance': '50m étanche',
+        'Autonomie': '18 heures',
+        'Compatibilité': 'iPhone iOS 16+'
+      },
+      status: 'active'
+    },
+    {
+      id: 1004,
+      title: 'Chargeur rapide Anker 65W USB-C',
+      price: '25 000 FCFA',
+      location: 'Plateau, Dakar',
+      images: [
+        'https://images.pexels.com/photos/4219862/pexels-photo-4219862.jpeg?auto=compress&cs=tinysrgb&w=600'
+      ],
+      mainImage: 'https://images.pexels.com/photos/4219862/pexels-photo-4219862.jpeg?auto=compress&cs=tinysrgb&w=600',
+      category: 'Électronique',
+      subcategory: 'Accessoires',
+      type: 'product',
+      rating: 4.9,
+      totalReviews: 67,
+      seller: sellers['seller_001'],
+      sellerId: 'seller_001',
+      promoted: false,
+      featured: false,
+      postedTime: '2 semaines',
+      postedDate: '2025-11-06',
+      description: 'Chargeur Anker 65W GaN neuf. Compact, charge rapide iPhone, iPad, MacBook, Samsung. 3 ports (2 USB-C, 1 USB-A). Protection surtension. Câble USB-C vers USB-C 1m inclus. Garantie 18 mois.',
+      condition: 'new',
+      views: 1234,
+      favorites: 89,
+      quantity: '15',
+      delivery: {
+        available: true,
+        cost: '2 000 FCFA',
+        areas: ['Tout Dakar'],
+        estimatedTime: '24h'
+      },
+      specifications: {
+        'Puissance': '65W',
+        'Ports': '2x USB-C + 1x USB-A',
+        'Technologie': 'GaN (nitrure de gallium)',
+        'Protection': 'Surtension, surchauffe',
+        'Dimensions': '6.4 x 6.4 x 3.2 cm',
+        'Compatibilité': 'Universel'
+      },
       status: 'active'
     },
         {
@@ -383,11 +542,8 @@ export const mockItems: Record<string, Item[]> = {
       postedDate: '2025-11-20',
       description: 'S23 Ultra 512GB vert, état impeccable. Écran AMOLED 120Hz, caméra 200MP, S-Pen inclus. Batterie 95%. Avec boîte, chargeur 45W et coque Spigen. Première main, acheté chez Baobab Tech.',
       condition: 'used',
-      brand: 'Samsung',
       views: 1892,
       favorites: 112,
-      quantity: 1,
-      warranty: '3 mois boutique',
       delivery: { available: true, cost: '3 000 FCFA', areas: ['Dakar', 'Thiès'], estimatedTime: '24h' },
       specifications: {
         'Écran': '6.8" Dynamic AMOLED 2X',
@@ -396,7 +552,6 @@ export const mockItems: Record<string, Item[]> = {
         'Caméra': '200MP principal',
         'Batterie': '5000 mAh'
       },
-      tags: ['Samsung', 'S23 Ultra', '512GB', 'S-Pen', 'Haut de gamme'],
       status: 'active'
     },
     {
@@ -419,10 +574,8 @@ export const mockItems: Record<string, Item[]> = {
       postedDate: '2025-11-19',
       description: 'PS5 Slim 1To avec lecteur disque + 2ème manette DualSense noire + FIFA 25 version physique. Très peu utilisée (moins de 50h de jeu). Avec tous les câbles et boîte d\'origine.',
       condition: 'used',
-      brand: 'Sony',
       views: 3421,
       favorites: 298,
-      quantity: 1,
       delivery: { available: true, cost: 'Gratuit à Dakar', areas: ['Dakar'], estimatedTime: 'Même jour' },
       specifications: {
         'Modèle': 'PS5 Slim (CFI-2000)',
@@ -430,7 +583,6 @@ export const mockItems: Record<string, Item[]> = {
         'Jeu inclus': 'FIFA 25',
         'Manettes': '2 incluses'
       },
-      tags: ['PS5', 'PlayStation 5', 'FIFA 25', 'Comme neuf'],
       status: 'active'
     },
     {
@@ -453,11 +605,8 @@ export const mockItems: Record<string, Item[]> = {
       postedDate: '2025-11-19',
       description: 'PC Gamer haut de gamme monté sur mesure. Parfait 1440p/4K. RGB complet, watercooling AIO 360mm. Garantie 2 ans sur tous les composants.',
       condition: 'new',
-      brand: 'Custom',
       views: 2678,
       favorites: 312,
-      quantity: 1,
-      warranty: '2 ans pièces et main d\'œuvre',
       specifications: {
         'Processeur': 'Ryzen 7 7800X3D',
         'Carte graphique': 'RTX 4070 Ti 12GB',
@@ -465,7 +614,6 @@ export const mockItems: Record<string, Item[]> = {
         'Stockage': '2To NVMe Gen4',
         'Boîtier': 'Lian Li O11 Dynamic'
       },
-      tags: ['PC Gamer', 'RTX 4070 Ti', 'Ryzen', 'Haut de gamme', 'RGB'],
       status: 'active'
     }
   ],
@@ -511,7 +659,6 @@ export const mockItems: Record<string, Item[]> = {
         'Commande': 'Sur place ou par téléphone',
         'Paiement': 'Espèces, Wave, Orange Money'
       },
-      tags: ['Thiéboudienne', 'Restaurant', 'Cuisine sénégalaise', 'Livraison', 'Halal'],
       status: 'active'
     },
     {
@@ -536,7 +683,6 @@ export const mockItems: Record<string, Item[]> = {
       views: 2890,
       favorites: 421,
       delivery: { available: true, cost: '2 000 FCFA', estimatedTime: '1h',areas: ['Dakar', 'Pikine', 'Guédiawaye'], },
-      tags: ['Pastels', 'Fataya', 'Traiteur', 'Livraison'],
       status: 'active'
     },
     {
@@ -563,7 +709,6 @@ export const mockItems: Record<string, Item[]> = {
       availability: { days: ['Tous les jours'], hours: '9h - 20h' },
       serviceArea: ['Dakar et banlieue'],
       delivery: { available: true, cost: '2 000 - 5 000 FCFA', areas: ['Dakar'], estimatedTime: '24-48h' },
-      tags: ['Gâteau', 'Anniversaire', 'Mariage', 'Pâtisserie', 'Sur mesure'],
       status: 'active'
     },
     {
@@ -590,7 +735,6 @@ export const mockItems: Record<string, Item[]> = {
       availability: { days: ['Tous les jours'], hours: '18h - 3h' },
       serviceArea: ['Dakar'],
       delivery: { available: true, cost: '1 000 FCFA', areas: ['Dakar centre'], estimatedTime: '30-45min' },
-      tags: ['Dibiterie', 'Brochettes', 'Grillades', 'Nuit'],
       status: 'active'
     }
   ],
@@ -633,7 +777,6 @@ export const mockItems: Record<string, Item[]> = {
         'Climatisation': 'Toutes pièces',
         'Sécurité': '24/7 + Gardiennage'
       },
-      tags: ['Villa', 'F4', 'Piscine', 'Almadies', 'Meublé', 'Expatriés'],
       status: 'active'
     },
     {
@@ -666,7 +809,6 @@ export const mockItems: Record<string, Item[]> = {
         'WiFi': 'Fibre 100Mbps',
         'Durée min': '3 mois'
       },
-      tags: ['Ngor', 'Meublé', 'Plage', 'F3', 'Court séjour'],
       status: 'active'
     },
     {
@@ -697,7 +839,6 @@ export const mockItems: Record<string, Item[]> = {
         'Clôture': '2 côtés',
         'Accès': 'Route bitumée'
       },
-      tags: ['Terrain', 'Diamniadio', 'TF', 'Investissement'],
       status: 'active'
     }
   ],
@@ -726,11 +867,8 @@ export const mockItems: Record<string, Item[]> = {
       postedDate: '2025-11-20',
       description: 'Toyota Corolla 2020 en excellent état, première main. Kilométrage: 45 000 km. Entretien régulier avec carnet à jour. Climatisation, vitres électriques, système audio Bluetooth, airbags, ABS. Véhicule dédouané, carte grise à jour. Intérieur impeccable, aucun accident. Essai possible sur rendez-vous. Financement disponible avec apport de 30%.',
       condition: 'used',
-      brand: 'Toyota',
       views: 2145,
       favorites: 234,
-      quantity: 1,
-      warranty: '6 mois garage',
       specifications: {
         'Marque': 'Toyota',
         'Modèle': 'Corolla',
@@ -744,7 +882,6 @@ export const mockItems: Record<string, Item[]> = {
         'Places': '5',
         'État': 'Excellent'
       },
-      tags: ['Toyota', 'Corolla', '2020', 'Automatique', 'Première main'],
       status: 'active'
     },
     {
@@ -767,11 +904,9 @@ export const mockItems: Record<string, Item[]> = {
       postedDate: '2025-11-20',
       description: 'Peugeot 3008 GT Line full options, toit panoramique, caméra 360°, 42 000 km, première main.',
       condition: 'used',
-      brand: 'Peugeot',
       views: 4321,
       favorites: 567,
       specifications: { 'Année': '2019', 'Kilométrage': '42 000 km', 'Carburant': 'Diesel', 'Boîte': 'Automatique' },
-      tags: ['Peugeot', '3008', 'GT Line', 'Full options'],
       status: 'active'
     },
     {
@@ -794,10 +929,8 @@ export const mockItems: Record<string, Item[]> = {
       postedDate: '2025-11-19',
       description: 'Tucson Limited 2021 importé USA, 28 000 miles, cuir, toit ouvrant, garantie 3 mois garage.',
       condition: 'used',
-      brand: 'Hyundai',
       views: 2987,
       favorites: 412,
-      tags: ['Hyundai', 'Tucson', '2021', 'Import USA'],
       status: 'active'
     },
         {
@@ -820,11 +953,8 @@ export const mockItems: Record<string, Item[]> = {
       postedDate: '2025-11-20',
       description: '3008 GT Line full options : toit panoramique, caméra 360°, siège chauffant/massage, hayon électrique. 62 000 km. Entretien Peugeot officiel.',
       condition: 'used',
-      brand: 'Peugeot',
       views: 2987,
       favorites: 267,
-      quantity: 1,
-      warranty: '6 mois garage',
       specifications: {
         'Année': '2019',
         'Kilométrage': '62 000 km',
@@ -832,7 +962,6 @@ export const mockItems: Record<string, Item[]> = {
         'Boîte': 'Automatique',
         'Toit': 'Panoramique ouvrant'
       },
-      tags: ['Peugeot', '3008', 'GT Line', 'Full options', 'Diesel'],
       status: 'active'
     },
     {
@@ -858,8 +987,6 @@ export const mockItems: Record<string, Item[]> = {
       favorites: 98,
       availability: { days: ['Tous les jours'], hours: '24h/24' },
       serviceArea: ['Dakar', 'Saly', 'Thiès'],
-      duration: 'Journée ou weekend',
-      tags: ['Mariage', 'Location voiture', 'Prestige', 'Chauffeur'],
       status: 'active'
     }
   ],
@@ -893,7 +1020,6 @@ export const mockItems: Record<string, Item[]> = {
         hours: '9h - 20h'
       },
       serviceArea: ['Dakar', 'Pikine'],
-      duration: '2-5 heures selon coiffure',
       specifications: {
         'Tressage': 'À partir de 10 000 FCFA',
         'Mèches': 'À partir de 15 000 FCFA',
@@ -902,7 +1028,6 @@ export const mockItems: Record<string, Item[]> = {
         'Déplacement': '2 000 FCFA',
         'Paiement': 'Espèces, Mobile Money'
       },
-      tags: ['Coiffure', 'Tressage', 'Mèches', 'À domicile', 'Professionnelle'],
       status: 'active'
     },
         {
@@ -927,8 +1052,6 @@ export const mockItems: Record<string, Item[]> = {
       views: 2123,
       favorites: 289,
       availability: { days: ['Lundi', 'Mercredi', 'Vendredi', 'Samedi'], hours: '10h - 18h' },
-      duration: '2-4 heures',
-      tags: ['Microblading', 'Maquillage permanent', 'Sourcils', 'Lèvres'],
       status: 'active'
     }
   ],
@@ -962,7 +1085,6 @@ export const mockItems: Record<string, Item[]> = {
         hours: '7h - 18h'
       },
       serviceArea: ['Dakar', 'Pikine', 'Guédiawaye', 'Rufisque'],
-      duration: 'Selon surface (min 3h)',
       specifications: {
         'Tarif horaire': '3 500 FCFA',
         'Forfait 4h': '12 000 FCFA',
@@ -971,7 +1093,6 @@ export const mockItems: Record<string, Item[]> = {
         'Produits': 'Inclus ou fournis par client',
         'Personnel': 'Vérifié et formé'
       },
-      tags: ['Ménage', 'Nettoyage', 'Professionnel', 'Entreprise', 'Fiable'],
       status: 'active'
     },
         {
@@ -997,8 +1118,6 @@ export const mockItems: Record<string, Item[]> = {
       favorites: 76,
       availability: { days: ['Lundi', 'Mardi', 'Jeudi', 'Vendredi', 'Samedi'], hours: '16h - 21h' },
       serviceArea: ['Dakar', 'Pikine', 'Guédiawaye'],
-      duration: '1h30 à 2h par séance',
-      tags: ['Cours', 'Mathématiques', 'Physique', 'Domicile', 'Lycée'],
       status: 'active'
     },
     {
@@ -1024,8 +1143,6 @@ export const mockItems: Record<string, Item[]> = {
       favorites: 89,
       availability: { days: ['Tous les jours'], hours: '24h/24' },
       serviceArea: ['Dakar', 'Pikine', 'Rufisque', 'Thiès'],
-      duration: '30min à 2h',
-      tags: ['Plombier', 'Urgence', 'Fuite', 'Débouchage', '24h'],
       status: 'active'
     }
   ]

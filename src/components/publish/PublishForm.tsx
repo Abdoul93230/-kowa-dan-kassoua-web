@@ -72,6 +72,18 @@ const connectedSeller = {
   location: 'Niamey, Niger'
 };
 
+// Liste générique simplifiée pour le secteur informel
+const genericProductTypes = [
+  { id: 'electronique', label: 'Téléphones & Électronique', emoji: '📱', category: 'electronique', subcategory: '' },
+  { id: 'vehicules', label: 'Véhicules & Transport', emoji: '🚗', category: 'vehicules', subcategory: '' },
+  { id: 'maison', label: 'Maison & Mobilier', emoji: '🏠', category: 'maison', subcategory: '' },
+  { id: 'mode', label: 'Vêtements & Mode', emoji: '👕', category: 'mode', subcategory: '' },
+  { id: 'immobilier', label: 'Immobilier & Terrains', emoji: '🏢', category: 'immobilier', subcategory: '' },
+  { id: 'services', label: 'Services à domicile', emoji: '🔨', category: 'services', subcategory: '' },
+  { id: 'commerce', label: 'Commerce & Alimentation', emoji: '🛒', category: 'autres', subcategory: 'commerce' },
+  { id: 'autre', label: 'Autre', emoji: '📦', category: 'autres', subcategory: '' },
+];
+
 interface PhoneNumber {
   countryCode: string;
   number: string;
@@ -85,8 +97,6 @@ interface FormData {
   price: string;
   description: string;
   condition: 'new' | 'used' | '';
-  brand: string;
-  tags: string[];
   images: File[];
   delivery: boolean;
   deliveryCost: string;
@@ -100,10 +110,7 @@ interface FormData {
   sellerWhatsapp: PhoneNumber;
   sellerEmail: string;
   quantity?: number;
-  warranty?: string;
-  returnPolicy?: string;
   specifications: Record<string, string>;
-  duration?: string;
   serviceArea: string[];
   promoted?: boolean;
   featured?: boolean;
@@ -111,6 +118,9 @@ interface FormData {
 
 export function PublishForm() {
   const [currentStep, setCurrentStep] = useState(1);
+  const [editMode, setEditMode] = useState(false);
+  const [editItemId, setEditItemId] = useState<number | null>(null);
+  
   const [formData, setFormData] = useState<FormData>({
     type: 'product',
     title: '',
@@ -119,8 +129,6 @@ export function PublishForm() {
     price: '',
     description: '',
     condition: '',
-    brand: '',
-    tags: [],
     images: [],
     delivery: false,
     deliveryCost: '',
@@ -139,27 +147,79 @@ export function PublishForm() {
       number: '87727272'
     },
     sellerEmail: connectedSeller.email,
-    quantity: 1,
-    warranty: '',
-    returnPolicy: '',
     specifications: {},
-    duration: '',
     serviceArea: [],
     promoted: false,
     featured: false,
   });
 
-  const [currentTag, setCurrentTag] = useState('');
   const [imagesPreviews, setImagesPreviews] = useState<string[]>([]);
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editContactInfo, setEditContactInfo] = useState(false);
   const [newDeliveryArea, setNewDeliveryArea] = useState('');
   const [newServiceArea, setNewServiceArea] = useState('');
   const [specKey, setSpecKey] = useState('');
   const [specValue, setSpecValue] = useState('');
 
-  const selectedCategory = categories.find(cat => cat.slug === formData.category);
+  // Charger les données d'édition depuis localStorage
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('edit');
+    
+    if (editId) {
+      const editItemData = localStorage.getItem('editItem');
+      if (editItemData) {
+        try {
+          const item = JSON.parse(editItemData);
+          setEditMode(true);
+          setEditItemId(parseInt(editId));
+          
+          // Extraire les numéros de téléphone
+          const parsePhone = (phone: string) => {
+            const match = phone.match(/(\+\d+)\s*(.+)/);
+            return match ? { countryCode: match[1], number: match[2] } : { countryCode: '+227', number: '' };
+          };
+
+          // Pré-remplir le formulaire
+          setFormData({
+            type: item.type,
+            title: item.title,
+            category: item.category,
+            subcategory: item.subcategory || '',
+            price: item.price.replace(/[^\d]/g, ''),
+            description: item.description,
+            condition: item.condition || '',
+            images: [],
+            delivery: item.delivery?.available || false,
+            deliveryCost: item.delivery?.cost || '',
+            deliveryAreas: item.delivery?.areas || [],
+            availability: item.availability || { days: [], hours: '' },
+            sellerName: item.seller.name,
+            sellerPhone: parsePhone(item.seller.contactInfo.phone),
+            sellerWhatsapp: item.seller.contactInfo.whatsapp ? parsePhone(item.seller.contactInfo.whatsapp) : parsePhone(item.seller.contactInfo.phone),
+            sellerEmail: item.seller.contactInfo.email || '',
+            quantity: item.quantity ? parseInt(item.quantity) : undefined,
+            specifications: item.specifications || {},
+            serviceArea: item.serviceArea || [],
+            promoted: item.promoted || false,
+            featured: item.featured || false,
+          });
+
+          // Charger les images existantes
+          if (item.images && item.images.length > 0) {
+            setImagesPreviews(item.images);
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des données d\'édition:', error);
+        }
+      }
+    }
+  }, []);
+
+  const selectedProduct = genericProductTypes.find(
+    p => p.category === formData.category && (formData.subcategory ? p.subcategory === formData.subcategory : true)
+  );
   const daysOptions = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
   const formatPhoneNumber = (phone: PhoneNumber): string => {
@@ -179,21 +239,16 @@ export function PublishForm() {
       if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
         newErrors.price = 'Veuillez entrer un prix valide';
       }
-      if (!formData.description.trim()) newErrors.description = 'La description est requise';
-      if (formData.description.length < 20) {
-        newErrors.description = 'La description doit contenir au moins 20 caractères';
+      // Description optionnelle, mais limitée à 150 mots
+      if (formData.description.trim()) {
+        const wordCount = formData.description.trim().split(/\s+/).filter(word => word.length > 0).length;
+        if (wordCount > 150) {
+          newErrors.description = 'La description ne doit pas dépasser 150 mots';
+        }
       }
       
       if (formData.type === 'product' && !formData.condition) {
         newErrors.condition = "Veuillez sélectionner l'état du produit";
-      }
-      
-      if (formData.type === 'service' && !formData.availability.days.length) {
-        newErrors.availabilityDays = 'Veuillez sélectionner au moins un jour de disponibilité';
-      }
-      
-      if (formData.type === 'service' && !formData.availability.hours.trim()) {
-        newErrors.availabilityHours = 'Veuillez spécifier les heures de disponibilité';
       }
     } else if (step === 3) {
       if (!formData.sellerName.trim()) newErrors.sellerName = 'Votre nom est requis';
@@ -223,44 +278,53 @@ export function PublishForm() {
     setCurrentStep(currentStep - 1);
   };
 
-  const handleAddTag = () => {
-    if (currentTag.trim() && formData.tags.length < 5) {
-      setFormData({
-        ...formData,
-        tags: [...formData.tags, currentTag.trim()],
-      });
-      setCurrentTag('');
-    }
-  };
-
-  const handleRemoveTag = (index: number) => {
-    setFormData({
-      ...formData,
-      tags: formData.tags.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length + formData.images.length > 5) {
-      alert('Vous pouvez ajouter maximum 5 images');
-      return;
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    // Vérifier combien d'images on peut encore ajouter
+    const remainingSlots = 5 - imagesPreviews.length;
+    const filesToProcess = Math.min(files.length, remainingSlots);
+    
+    if (files.length > remainingSlots) {
+      alert(`Vous pouvez ajouter seulement ${remainingSlots} image(s) de plus (maximum 5 images)`);
     }
     
-    // Créer les previews
+    const filesToAdd = Array.from(files).slice(0, filesToProcess);
     const newPreviews: string[] = [];
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newPreviews.push(reader.result as string);
-        if (newPreviews.length === files.length) {
-          setImagesPreviews([...imagesPreviews, ...newPreviews]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    const newImages: File[] = [];
     
-    setFormData({ ...formData, images: [...formData.images, ...files] });
+    for (const file of filesToAdd) {
+      // Vérifier la taille (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`L'image "${file.name}" dépasse 5MB et ne sera pas ajoutée`);
+        continue;
+      }
+      
+      // Créer le preview
+      try {
+        const preview = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        
+        newPreviews.push(preview);
+        newImages.push(file);
+      } catch (error) {
+        console.error('Erreur lors de la lecture du fichier:', error);
+      }
+    }
+    
+    // Mettre à jour les états en une seule fois
+    if (newPreviews.length > 0) {
+      setImagesPreviews([...imagesPreviews, ...newPreviews]);
+      setFormData({ ...formData, images: [...formData.images, ...newImages] });
+    }
+    
+    // Réinitialiser l'input
+    e.target.value = '';
   };
 
   const handleRemoveImage = (index: number) => {
@@ -269,6 +333,22 @@ export function PublishForm() {
       ...formData,
       images: formData.images.filter((_, i) => i !== index),
     });
+  };
+
+  const handleImageReorder = (fromIndex: number, toIndex: number) => {
+    const newPreviews = [...imagesPreviews];
+    const newImages = [...formData.images];
+    
+    // Retirer l'élément de sa position actuelle
+    const [movedPreview] = newPreviews.splice(fromIndex, 1);
+    const [movedImage] = newImages.splice(fromIndex, 1);
+    
+    // Insérer à la nouvelle position
+    newPreviews.splice(toIndex, 0, movedPreview);
+    newImages.splice(toIndex, 0, movedImage);
+    
+    setImagesPreviews(newPreviews);
+    setFormData({ ...formData, images: newImages });
   };
 
   const handleAddDeliveryArea = () => {
@@ -384,11 +464,50 @@ export function PublishForm() {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       console.log('Données du formulaire:', formData);
-      alert('Annonce publiée avec succès! (Pour le moment, les données sont dans la console)');
       
-      // Réinitialiser le formulaire après soumission réussie
-      // setFormData({...initialState});
-      // setCurrentStep(1);
+      if (editMode && editItemId) {
+        alert('Annonce mise à jour avec succès! (Pour le moment, les données sont dans la console)');
+        // Nettoyer le localStorage
+        localStorage.removeItem('editItem');
+        // Rediriger vers mes annonces
+        window.location.href = '/mes-annonces';
+      } else {
+        alert('Annonce publiée avec succès! (Pour le moment, les données sont dans la console)');
+        // Réinitialiser le formulaire après soumission réussie
+        setFormData({
+          type: 'product',
+          title: '',
+          category: '',
+          subcategory: '',
+          price: '',
+          description: '',
+          condition: '',
+          images: [],
+          delivery: false,
+          deliveryCost: '',
+          deliveryAreas: [],
+          availability: {
+            days: [],
+            hours: '',
+          },
+          sellerName: connectedSeller.name,
+          sellerPhone: {
+            countryCode: '+227',
+            number: '87727272'
+          },
+          sellerWhatsapp: {
+            countryCode: '+227',
+            number: '87727272'
+          },
+          sellerEmail: connectedSeller.email,
+          specifications: {},
+          serviceArea: [],
+          promoted: false,
+          featured: false,
+        });
+        setImagesPreviews([]);
+        setCurrentStep(1);
+      }
     } catch (error) {
       console.error('Erreur lors de la publication:', error);
       alert('Une erreur est survenue lors de la publication. Veuillez réessayer.');
@@ -403,8 +522,47 @@ export function PublishForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+      {/* Barre de progression - Version mobile simplifiée */}
+      <div className="mb-6 md:mb-8">
+        {/* Version mobile : Affichage compact */}
+        <div className="block md:hidden">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium text-gray-600">
+              Étape {currentStep} sur 4
+            </span>
+            <span className="text-xs font-medium text-[#ec5a13]">
+              {currentStep === 1 && 'Informations de base'}
+              {currentStep === 2 && 'Détails'}
+              {currentStep === 3 && 'Vos coordonnées'}
+              {currentStep === 4 && 'Résumé'}
+            </span>
+          </div>
+          {/* Barre de progression simple */}
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-[#ec5a13] h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / 4) * 100}%` }}
+            />
+          </div>
+          {/* Points indicateurs */}
+          <div className="flex justify-between mt-3">
+            {[1, 2, 3, 4].map((step) => (
+              <div
+                key={step}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                  currentStep >= step
+                    ? 'bg-[#ec5a13] text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}
+              >
+                {step}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Version desktop : Affichage détaillé */}
+        <div className="hidden md:flex items-center justify-between">
           {[1, 2, 3, 4].map((step) => (
             <div key={step} className="flex items-center flex-1">
               <div className="flex items-center gap-3">
@@ -441,68 +599,56 @@ export function PublishForm() {
       </div>
 
       {currentStep === 1 && (
-        <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Que souhaitez-vous publier ?
+        <Card className="p-4 md:p-6 mb-6">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">
+            Informations de base
           </h2>
 
           <div className="space-y-6">
+            {/* Type d'annonce - Style Navbar */}
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">
                 Type d'annonce *
               </Label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex border-b border-gray-200">
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, type: 'product' })}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`flex-1 items-center justify-center flex gap-1 md:gap-2 px-3 md:px-6 py-3 font-medium transition-all relative text-sm md:text-base ${
                     formData.type === 'product'
-                      ? 'border-[#ec5a13] bg-[#ffe9de]'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'text-[#ec5a13]'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  <Package
-                    className={`h-8 w-8 mx-auto mb-2 ${
-                      formData.type === 'product' ? 'text-[#ec5a13]' : 'text-gray-400'
-                    }`}
-                  />
-                  <p
-                    className={`font-medium ${
-                      formData.type === 'product' ? 'text-[#ec5a13]' : 'text-gray-700'
-                    }`}
-                  >
-                    Produit
-                  </p>
+                  <span className="text-lg md:text-xl">📦</span>
+                  <span>Produit</span>
+                  {formData.type === 'product' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]" />
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, type: 'service' })}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`flex-1 items-center justify-center flex gap-1 md:gap-2 px-3 md:px-6 py-3 font-medium transition-all relative text-sm md:text-base ${
                     formData.type === 'service'
-                      ? 'border-[#ec5a13] bg-[#ffe9de]'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'text-[#ec5a13]'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  <Briefcase
-                    className={`h-8 w-8 mx-auto mb-2 ${
-                      formData.type === 'service' ? 'text-[#ec5a13]' : 'text-gray-400'
-                    }`}
-                  />
-                  <p
-                    className={`font-medium ${
-                      formData.type === 'service' ? 'text-[#ec5a13]' : 'text-gray-700'
-                    }`}
-                  >
-                    Service
-                  </p>
+                  <span className="text-lg md:text-xl">🛠️</span>
+                  <span>Service</span>
+                  {formData.type === 'service' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]" />
+                  )}
                 </button>
               </div>
               {errors.type && <p className="text-red-500 text-xs mt-1">{errors.type}</p>}
             </div>
 
+            {/* Titre de l'annonce */}
             <div>
               <Label htmlFor="title" className="text-sm font-medium text-gray-700 mb-2 block">
-                Titre de l'annonce *
+                Titre *
               </Label>
               <Input
                 id="title"
@@ -512,119 +658,110 @@ export function PublishForm() {
                 className="text-base"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Soyez précis pour attirer plus d'acheteurs
+                Soyez précis pour attirer les clients
               </p>
               {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="category" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Catégorie *
-                </Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value, subcategory: '' })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.slug}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
-              </div>
-
-              {selectedCategory?.subcategories && (
-                <div>
-                  <Label htmlFor="subcategory" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Sous-catégorie
-                  </Label>
-                  <Select value={formData.subcategory} onValueChange={(value) => setFormData({ ...formData, subcategory: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez une sous-catégorie" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedCategory.subcategories.map((sub) => (
-                        <SelectItem key={sub.id} value={sub.slug}>
-                          {sub.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
+            {/* État - Items sélectionnables (pour produits seulement) */}
             {formData.type === 'product' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="condition" className="text-sm font-medium text-gray-700 mb-2 block">
-                    État *
-                  </Label>
-                  <Select value={formData.condition} onValueChange={(value: 'new' | 'used') => setFormData({ ...formData, condition: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez l'état" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">Neuf</SelectItem>
-                      <SelectItem value="used">Occasion</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.condition && <p className="text-red-500 text-xs mt-1">{errors.condition}</p>}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                  État *
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, condition: 'new' })}
+                    className={`p-3 md:p-4 rounded-lg border-2 transition-all text-center ${
+                      formData.condition === 'new'
+                        ? 'border-[#ec5a13] bg-[#ffe9de] text-[#ec5a13]'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <span className="font-medium text-sm md:text-base">Neuf</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, condition: 'used' })}
+                    className={`p-3 md:p-4 rounded-lg border-2 transition-all text-center ${
+                      formData.condition === 'used'
+                        ? 'border-[#ec5a13] bg-[#ffe9de] text-[#ec5a13]'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <span className="font-medium text-sm md:text-base">Occasion</span>
+                  </button>
                 </div>
-
-                <div>
-                  <Label htmlFor="brand" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Marque
-                  </Label>
-                  <Input
-                    id="brand"
-                    placeholder="Ex: Apple, Samsung, Toyota..."
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="quantity" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Quantité
-                  </Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    min="1"
-                    placeholder="1"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                  />
-                </div>
+                {errors.condition && <p className="text-red-500 text-xs mt-1">{errors.condition}</p>}
               </div>
             )}
 
-            {formData.type === 'service' && (
+            {/* Quantité (pour produits seulement) */}
+            {formData.type === 'product' && (
               <div>
-                <Label htmlFor="duration" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Durée estimée du service
+                <Label htmlFor="quantity" className="text-sm font-medium text-gray-700 mb-2 block">
+                  Quantité disponible
                 </Label>
                 <Input
-                  id="duration"
-                  placeholder="Ex: 2 heures, 1 jour, Selon besoin..."
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  id="quantity"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Ex: 1, 5, 10..."
+                  value={formData.quantity || ''}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, quantity: value ? parseInt(value) : undefined });
+                  }}
+                  className="text-base"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Indiquez combien d'unités sont disponibles
+                </p>
               </div>
             )}
+
+            {/* Catégorie - Liste générique simplifiée */}
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                Que voulez-vous publier ? *
+              </Label>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+                {genericProductTypes.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, category: item.category, subcategory: item.subcategory || '' })}
+                    className={`p-3 md:p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-1.5 md:gap-2 hover:shadow-md ${
+                      formData.category === item.category && (item.subcategory ? formData.subcategory === item.subcategory : true)
+                        ? 'border-[#ec5a13] bg-[#ffe9de] shadow-md'
+                        : 'border-gray-200 hover:border-[#ec5a13]'
+                    }`}
+                  >
+                    <span className="text-2xl md:text-3xl">{item.emoji}</span>
+                    <span className={`text-xs md:text-sm font-medium text-center leading-tight ${
+                      formData.category === item.category && (item.subcategory ? formData.subcategory === item.subcategory : true)
+                        ? 'text-[#ec5a13]'
+                        : 'text-gray-700'
+                    }`}>
+                      {item.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
+            </div>
+
           </div>
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end mt-4 md:mt-6">
             <Button
               type="button"
               onClick={handleNextStep}
               disabled={!isStep1Valid}
-              className="bg-[#ec5a13] hover:bg-[#d94f0f]"
+              className="bg-[#ec5a13] hover:bg-[#d94f0f] text-sm md:text-base w-full sm:w-auto"
             >
               Suivant
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -634,21 +771,25 @@ export function PublishForm() {
       )}
 
       {currentStep === 2 && (
-        <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Détails de l'annonce</h2>
+        <Card className="p-4 md:p-6 mb-6">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">Détails de l'annonce</h2>
 
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="price" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Prix (FCFA) *
+                  Prix en FCFA *
                 </Label>
                 <Input
                   id="price"
-                  type="number"
-                  placeholder="Ex: 850000"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  type="text"
+                  placeholder="850 000"
+                  value={formData.price ? formData.price.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : ''}
+                  onChange={(e) => {
+                    // Retirer tous les caractères non numériques
+                    const numericValue = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, price: numericValue });
+                  }}
                   className="text-base"
                 />
                 {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
@@ -657,94 +798,106 @@ export function PublishForm() {
 
             <div>
               <Label htmlFor="description" className="text-sm font-medium text-gray-700 mb-2 block">
-                Description *
+                Description
               </Label>
               <Textarea
                 id="description"
-                placeholder="Décrivez votre produit ou service en détail..."
+                placeholder="Décrivez votre produit ou service en détail... (max 150 mots)"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) => {
+                  const wordCount = e.target.value.trim().split(/\s+/).filter(word => word.length > 0).length;
+                  if (wordCount <= 150 || e.target.value.length < formData.description.length) {
+                    setFormData({ ...formData, description: e.target.value });
+                  }
+                }}
                 className="min-h-32 text-base"
               />
               <p className="text-xs text-gray-500 mt-1">
-                {formData.description.length} caractères
+                {formData.description.trim().split(/\s+/).filter(word => word.length > 0).length} / 150 mots
               </p>
               {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
 
+            {/* Sélection d'images - Système avec drag & drop et upload multiple */}
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                Images - Max 5
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                Images - Max 5 *
               </Label>
-              <div className="mb-3">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="cursor-pointer"
-                  disabled={formData.images.length >= 5}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  JPG, PNG, WEBP - Max 2MB par image
-                </p>
+              <p className="text-xs text-gray-500 mb-3">
+                📸 Ajoutez jusqu'à 5 images • Glissez-déposez pour réorganiser • Upload multiple supporté
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {/* Afficher les images sélectionnées avec drag & drop */}
+                {imagesPreviews.map((preview, index) => (
+                  <div 
+                    key={index} 
+                    draggable
+                    onDragStart={(e) => {
+                      setDraggedImageIndex(index);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedImageIndex !== null && draggedImageIndex !== index) {
+                        handleImageReorder(draggedImageIndex, index);
+                      }
+                      setDraggedImageIndex(null);
+                    }}
+                    onDragEnd={() => setDraggedImageIndex(null)}
+                    className={`relative group w-24 h-24 sm:w-28 sm:h-28 cursor-move transition-all ${
+                      draggedImageIndex === index ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+                    }`}
+                  >
+                    <img
+                      src={preview}
+                      alt={`Image ${index + 1}`}
+                      className="w-full h-full object-cover rounded-lg border-2 border-[#ec5a13]"
+                    />
+                    <div className="absolute top-1 left-1 z-10">
+                      <Badge className="bg-[#ec5a13] text-white text-xs px-1.5 py-0.5">
+                        {index + 1}
+                      </Badge>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute top-1 right-1 z-10 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                
+                {/* Afficher le bouton d'upload seulement si moins de 5 images */}
+                {imagesPreviews.length < 5 && (
+                  <label className="w-24 h-24 sm:w-28 sm:h-28 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#ec5a13] hover:bg-[#ffe9de]/30 transition-all group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <Plus className="h-8 w-8 text-gray-400 group-hover:text-[#ec5a13] transition-colors" />
+                    <span className="text-xs text-gray-500 mt-1 group-hover:text-[#ec5a13] text-center px-1">
+                      Ajouter
+                    </span>
+                  </label>
+                )}
               </div>
               {imagesPreviews.length > 0 && (
-                <div className="grid grid-cols-3 gap-3">
-                  {imagesPreviews.map((preview, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs text-gray-600 mt-2 flex items-center gap-2">
+                  <span>{imagesPreviews.length} / 5 images ajoutées</span>
+                  {imagesPreviews.length > 1 && (
+                    <span className="text-[#ec5a13]">• Glissez pour réorganiser</span>
+                  )}
+                </p>
               )}
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Tags - Max 5</Label>
-              <div className="flex gap-2 mb-3">
-                <Input
-                  placeholder="Ajoutez un tag"
-                  value={currentTag}
-                  onChange={(e) => setCurrentTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddTag}
-                  variant="outline"
-                  disabled={formData.tags.length >= 5}
-                >
-                  <Tag className="h-4 w-4" />
-                </Button>
-              </div>
-              {formData.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="gap-1">
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(index)}
-                        className="ml-1 hover:text-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              {errors.images && <p className="text-red-500 text-xs mt-2">{errors.images}</p>}
             </div>
 
             {formData.type === 'product' && (
@@ -800,30 +953,6 @@ export function PublishForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="warranty" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Garantie
-                  </Label>
-                  <Input
-                    id="warranty"
-                    placeholder="Ex: 6 mois, 1 an, Non applicable..."
-                    value={formData.warranty}
-                    onChange={(e) => setFormData({ ...formData, warranty: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="returnPolicy" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Politique de retour
-                  </Label>
-                  <Input
-                    id="returnPolicy"
-                    placeholder="Ex: Retour sous 7 jours, Pas de retour..."
-                    value={formData.returnPolicy}
-                    onChange={(e) => setFormData({ ...formData, returnPolicy: e.target.value })}
-                  />
-                </div>
-
-                <div>
                   <Label className="text-sm font-medium text-gray-700 mb-3 block">
                     Spécifications
                   </Label>
@@ -868,42 +997,12 @@ export function PublishForm() {
             {formData.type === 'service' && (
               <>
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium text-gray-700">
-                      Jours de disponibilité *
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleToggleAllDays}
-                      className="text-xs"
-                    >
-                      {formData.availability.days.length === daysOptions.length ? 'Désélectionner tous' : 'Sélectionner tous'}
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {daysOptions.map((day) => (
-                      <Badge
-                        key={day}
-                        variant={formData.availability.days.includes(day) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => handleToggleAvailabilityDay(day)}
-                      >
-                        {day}
-                      </Badge>
-                    ))}
-                  </div>
-                  {errors.availabilityDays && <p className="text-red-500 text-xs mt-1">{errors.availabilityDays}</p>}
-                </div>
-
-                <div>
                   <Label htmlFor="availabilityHours" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Heures de disponibilité *
+                    Quand êtes-vous disponible ?
                   </Label>
                   <Input
                     id="availabilityHours"
-                    placeholder="Ex: 9h - 17h, 24h/24, Sur rendez-vous..."
+                    placeholder="Ex: Tous les jours 9h-17h, Sur rendez-vous, 24h/24..."
                     value={formData.availability.hours}
                     onChange={(e) => setFormData({
                       ...formData,
@@ -913,16 +1012,18 @@ export function PublishForm() {
                       }
                     })}
                   />
-                  {errors.availabilityHours && <p className="text-red-500 text-xs mt-1">{errors.availabilityHours}</p>}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Indiquez vos horaires de manière simple (facultatif)
+                  </p>
                 </div>
 
                 <div>
                   <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Zone d'intervention
+                    Quartiers
                   </Label>
                   <div className="flex gap-2 mb-2">
                     <Input
-                      placeholder="Ajoutez une zone d'intervention"
+                      placeholder="Ex: Plateau, Almadies..."
                       value={newServiceArea}
                       onChange={(e) => setNewServiceArea(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddServiceArea())}
@@ -931,6 +1032,9 @@ export function PublishForm() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Où intervenez-vous ? (facultatif)
+                  </p>
                   {formData.serviceArea.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {formData.serviceArea.map((area) => (
@@ -951,15 +1055,15 @@ export function PublishForm() {
             )}
           </div>
 
-          <div className="flex justify-between mt-6">
-            <Button type="button" onClick={handlePrevStep} variant="outline">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 mt-4 md:mt-6">
+            <Button type="button" onClick={handlePrevStep} variant="outline" className="w-full sm:w-auto text-sm md:text-base">
               Retour
             </Button>
             <Button
               type="button"
               onClick={handleNextStep}
               disabled={!isStep2Valid}
-              className="bg-[#ec5a13] hover:bg-[#d94f0f]"
+              className="bg-[#ec5a13] hover:bg-[#d94f0f] w-full sm:w-auto text-sm md:text-base"
             >
               Suivant
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -969,27 +1073,14 @@ export function PublishForm() {
       )}
 
       {currentStep === 3 && (
-        <Card className="p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                Vos coordonnées
-              </h2>
-              <p className="text-sm text-gray-600">
-                Ces informations permettront aux acheteurs de vous contacter
-              </p>
-            </div>
-            {!editContactInfo && (
-              <Button
-                type="button"
-                onClick={() => setEditContactInfo(true)}
-                variant="outline"
-                size="sm"
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Modifier
-              </Button>
-            )}
+        <Card className="p-4 md:p-6 mb-6">
+          <div className="mb-4 md:mb-6">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+              Vos coordonnées
+            </h2>
+            <p className="text-xs md:text-sm text-gray-600">
+              Ces informations permettront aux acheteurs de vous contacter
+            </p>
           </div>
 
           <div className="space-y-6">
@@ -1005,7 +1096,8 @@ export function PublishForm() {
                   value={formData.sellerName}
                   onChange={(e) => setFormData({ ...formData, sellerName: e.target.value })}
                   className="pl-10 text-base"
-                  disabled={!editContactInfo}
+                  disabled
+                  readOnly
                 />
               </div>
               {errors.sellerName && <p className="text-red-500 text-xs mt-1">{errors.sellerName}</p>}
@@ -1022,9 +1114,9 @@ export function PublishForm() {
                     ...formData,
                     sellerPhone: { ...formData.sellerPhone, countryCode: value }
                   })}
-                  disabled={!editContactInfo}
+                  disabled
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-24 md:w-32 text-sm md:text-base">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1046,7 +1138,8 @@ export function PublishForm() {
                     sellerPhone: { ...formData.sellerPhone, number: e.target.value }
                   })}
                   className="flex-1"
-                  disabled={!editContactInfo}
+                  disabled
+                  readOnly
                 />
               </div>
               {errors.sellerPhone && <p className="text-red-500 text-xs mt-1">{errors.sellerPhone}</p>}
@@ -1063,9 +1156,9 @@ export function PublishForm() {
                     ...formData,
                     sellerWhatsapp: { ...formData.sellerWhatsapp, countryCode: value }
                   })}
-                  disabled={!editContactInfo}
+                  disabled
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-24 md:w-32 text-sm md:text-base">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1087,7 +1180,8 @@ export function PublishForm() {
                     sellerWhatsapp: { ...formData.sellerWhatsapp, number: e.target.value }
                   })}
                   className="flex-1"
-                  disabled={!editContactInfo}
+                  disabled
+                  readOnly
                 />
               </div>
             </div>
@@ -1105,24 +1199,12 @@ export function PublishForm() {
                   value={formData.sellerEmail}
                   onChange={(e) => setFormData({ ...formData, sellerEmail: e.target.value })}
                   className="pl-10 text-base"
-                  disabled={!editContactInfo}
+                  disabled
+                  readOnly
                 />
               </div>
               {errors.sellerEmail && <p className="text-red-500 text-xs mt-1">{errors.sellerEmail}</p>}
             </div>
-
-            {editContactInfo && (
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  onClick={() => setEditContactInfo(false)}
-                  className="bg-[#ec5a13] hover:bg-[#d94f0f]"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Enregistrer
-                </Button>
-              </div>
-            )}
 
             <div className="bg-[#ffe9de] border border-[#ec5a13]/30 rounded-lg p-4">
               <div className="flex gap-3">
@@ -1139,15 +1221,15 @@ export function PublishForm() {
             </div>
           </div>
 
-          <div className="flex justify-between mt-6">
-            <Button type="button" onClick={handlePrevStep} variant="outline">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 mt-4 md:mt-6">
+            <Button type="button" onClick={handlePrevStep} variant="outline" className="w-full sm:w-auto text-sm md:text-base">
               Retour
             </Button>
             <Button
               type="button"
               onClick={() => setCurrentStep(4)}
               disabled={!isStep3Valid}
-              className="bg-[#ec5a13] hover:bg-[#d94f0f]"
+              className="bg-[#ec5a13] hover:bg-[#d94f0f] w-full sm:w-auto text-sm md:text-base"
             >
               Suivant
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -1157,16 +1239,16 @@ export function PublishForm() {
       )}
 
       {currentStep === 4 && (
-        <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Résumé de votre annonce</h2>
+        <Card className="p-4 md:p-6 mb-6">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">Résumé de votre annonce</h2>
 
           {/* Aperçu de la carte produit */}
-          <div className="mb-6">
-            <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+          <div className="mb-4 md:mb-6">
+            <h3 className="font-medium text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
               <Eye className="h-4 w-4" />
               Aperçu de l'annonce
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
               Voici comment votre annonce apparaîtra sur la page d'accueil
             </p>
             
@@ -1225,13 +1307,13 @@ export function PublishForm() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+          <div className="space-y-4 md:space-y-6">
+            <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+              <h3 className="font-medium text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
                 <FileText className="h-4 w-4" />
                 Informations générales
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-2 md:gap-3 text-xs md:text-sm">
                 <div>
                   <span className="text-gray-600">Type:</span>
                   <span className="ml-2 font-medium">{formData.type === 'product' ? 'Produit' : 'Service'}</span>
@@ -1242,16 +1324,8 @@ export function PublishForm() {
                 </div>
                 <div>
                   <span className="text-gray-600">Catégorie:</span>
-                  <span className="ml-2 font-medium">{selectedCategory?.name}</span>
+                  <span className="ml-2 font-medium">{selectedProduct?.label || 'Non spécifié'}</span>
                 </div>
-                {formData.subcategory && (
-                  <div>
-                    <span className="text-gray-600">Sous-catégorie:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedCategory?.subcategories?.find(sub => sub.slug === formData.subcategory)?.name}
-                    </span>
-                  </div>
-                )}
                 <div>
                   <span className="text-gray-600">Prix:</span>
                   <span className="ml-2 font-medium">{formData.price} FCFA</span>
@@ -1260,40 +1334,16 @@ export function PublishForm() {
             </div>
 
             {formData.type === 'product' && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                <h3 className="font-medium text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
                   <Package className="h-4 w-4" />
                   Détails du produit
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-2 md:gap-3 text-xs md:text-sm">
                   {formData.condition && (
                     <div>
                       <span className="text-gray-600">État:</span>
                       <span className="ml-2 font-medium">{formData.condition === 'new' ? 'Neuf' : 'Occasion'}</span>
-                    </div>
-                  )}
-                  {formData.brand && (
-                    <div>
-                      <span className="text-gray-600">Marque:</span>
-                      <span className="ml-2 font-medium">{formData.brand}</span>
-                    </div>
-                  )}
-                  {formData.quantity && (
-                    <div>
-                      <span className="text-gray-600">Quantité:</span>
-                      <span className="ml-2 font-medium">{formData.quantity}</span>
-                    </div>
-                  )}
-                  {formData.warranty && (
-                    <div>
-                      <span className="text-gray-600">Garantie:</span>
-                      <span className="ml-2 font-medium">{formData.warranty}</span>
-                    </div>
-                  )}
-                  {formData.returnPolicy && (
-                    <div>
-                      <span className="text-gray-600">Politique de retour:</span>
-                      <span className="ml-2 font-medium">{formData.returnPolicy}</span>
                     </div>
                   )}
                   {formData.delivery && (
@@ -1340,18 +1390,12 @@ export function PublishForm() {
             )}
 
             {formData.type === 'service' && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                <h3 className="font-medium text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
                   <Briefcase className="h-4 w-4" />
                   Détails du service
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  {formData.duration && (
-                    <div>
-                      <span className="text-gray-600">Durée:</span>
-                      <span className="ml-2 font-medium">{formData.duration}</span>
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 gap-2 md:gap-3 text-xs md:text-sm">
                   {formData.availability.days.length > 0 && (
                     <div className="md:col-span-2">
                       <span className="text-gray-600">Jours de disponibilité:</span>
@@ -1386,12 +1430,12 @@ export function PublishForm() {
               </div>
             )}
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+            <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+              <h3 className="font-medium text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
                 <User className="h-4 w-4" />
                 Vos coordonnées
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-2 md:gap-3 text-xs md:text-sm">
                 <div>
                   <span className="text-gray-600">Nom:</span>
                   <span className="ml-2 font-medium">{formData.sellerName}</span>
@@ -1416,18 +1460,18 @@ export function PublishForm() {
             </div>
 
             {imagesPreviews.length > 0 && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                <h3 className="font-medium text-gray-900 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
                   <Upload className="h-4 w-4" />
                   Images
                 </h3>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
                   {imagesPreviews.map((preview, index) => (
                     <div key={index} className="relative">
                       <img
                         src={preview}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
+                        className="w-full h-20 md:h-24 object-cover rounded-lg border-2 border-gray-200"
                       />
                     </div>
                   ))}
@@ -1435,27 +1479,11 @@ export function PublishForm() {
               </div>
             )}
 
-            {formData.tags.length > 0 && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <Tag className="h-4 w-4" />
-                  Tags
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="bg-[#ffe9de] border border-[#ec5a13]/30 rounded-lg p-4">
-              <div className="flex gap-3">
-                <AlertCircle className="h-5 w-5 text-[#ec5a13] flex-shrink-0 mt-0.5" />
+            <div className="bg-[#ffe9de] border border-[#ec5a13]/30 rounded-lg p-3 md:p-4">
+              <div className="flex gap-2 md:gap-3">
+                <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-[#ec5a13] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">
+                  <p className="text-xs md:text-sm font-medium text-gray-900 mb-1">
                     Vérifiez bien votre annonce
                   </p>
                   <p className="text-xs text-gray-700">
@@ -1466,14 +1494,14 @@ export function PublishForm() {
             </div>
           </div>
 
-          <div className="flex justify-between mt-6">
-            <Button type="button" onClick={handlePrevStep} variant="outline">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 mt-4 md:mt-6">
+            <Button type="button" onClick={handlePrevStep} variant="outline" className="w-full sm:w-auto text-sm md:text-base">
               Retour
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-[#ec5a13] hover:bg-[#d94f0f]"
+              className="bg-[#ec5a13] hover:bg-[#d94f0f] w-full sm:w-auto text-sm md:text-base"
             >
               {isSubmitting ? (
                 <>

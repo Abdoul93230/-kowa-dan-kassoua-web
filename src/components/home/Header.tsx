@@ -66,6 +66,15 @@ export function Header() {
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
                 )}
               </button>
+              <button 
+                onClick={() => handleNavigation('/mes-annonces')}
+                className="relative text-gray-600 hover:text-[#ec5a13] font-medium transition-colors pb-1"
+              >
+                Mes Annonces
+                {pathname === '/mes-annonces' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
+                )}
+              </button>
             </nav>
           </div>
 
@@ -121,6 +130,16 @@ export function Header() {
                 }`}
               >
                 Catégories
+              </button>
+              <button 
+                onClick={() => handleNavigation('/mes-annonces')}
+                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 ${
+                  pathname === '/mes-annonces'
+                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
+                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
+                }`}
+              >
+                Mes Annonces
               </button>
               <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">
                 <Button 

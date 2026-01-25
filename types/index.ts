@@ -58,14 +58,11 @@ export interface Item {
   lastUpdated?: string;
   description: string;
   condition?: 'new' | 'used' | 'refurbished';
-  brand?: string;
+  quantity?: string;
   views: number;
   favorites: number;
   
   // Pour les produits
-  quantity?: number;
-  warranty?: string;
-  returnPolicy?: string;
   delivery?: {
     available: boolean;
     cost: string;
@@ -79,11 +76,9 @@ export interface Item {
     hours: string;
   };
   serviceArea?: string[];
-  duration?: string;
   
   // Détails additionnels
   specifications?: Record<string, string>;
-  tags: string[];
   status: 'active' | 'pending' | 'sold' | 'expired';
 }
 

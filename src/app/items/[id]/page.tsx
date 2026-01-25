@@ -99,14 +99,14 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               {isService ? (
                 <>
                   <div className="bg-blue-600 p-2 rounded-lg">
-                    <Briefcase className="h-6 w-6 text-white" />
+                    <span className="text-2xl">🛠️</span>
                   </div>
                   <span className="text-xl font-bold text-blue-900">SERVICE PROFESSIONNEL</span>
                 </>
               ) : (
                 <>
                   <div className="bg-[#ec5a13] p-2 rounded-lg">
-                    <Package className="h-6 w-6 text-white" />
+                    <span className="text-2xl">📦</span>
                   </div>
                   <span className="text-xl font-bold text-[#ec5a13]">PRODUIT À VENDRE</span>
                 </>
@@ -231,17 +231,6 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
                   )}
                   
-                  {/* Tags visibles */}
-                  {item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3">
-                      {item.tags.map((tag, idx) => (
-                        <Badge key={idx} className={`${isService ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-orange-100 text-orange-700 border-orange-300'} text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 border`}>
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  
                   <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3">
                     <Badge 
                       variant="outline" 
@@ -252,12 +241,6 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     {item.subcategory && (
                       <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1">
                         {item.subcategory}
-                      </Badge>
-                    )}
-                    {!isService && item.brand && (
-                      <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1">
-                        <Award className="h-3 w-3 mr-1" />
-                        {item.brand}
                       </Badge>
                     )}
                   </div>
@@ -318,7 +301,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   </h2>
                 </div>
                 <div className="space-y-3 sm:space-y-4">
-                  {item.duration && (
+                  {/* {item.duration && (
                     <div className="flex items-start gap-2 sm:gap-3 md:gap-4 bg-white p-3 sm:p-4 rounded-lg border border-blue-200">
                       <div className="bg-blue-100 p-1.5 sm:p-2 rounded-lg flex-shrink-0">
                         <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
@@ -328,7 +311,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                         <p className="text-sm sm:text-base text-gray-700">{item.duration}</p>
                       </div>
                     </div>
-                  )}
+                  )} */}
                   {item.availability && (
                     <div className="flex items-start gap-4 bg-white p-4 rounded-lg border border-blue-200">
                       <div className="bg-blue-100 p-2 rounded-lg">
@@ -388,29 +371,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                               <span>Quantité disponible</span>
                             </div>
                           </td>
-                          <td className="px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm text-gray-700 w-1/2">{item.quantity} unité(s)</td>
-                        </tr>
-                      )}
-                      {item.warranty && (
-                        <tr className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900 w-1/2">
-                            <div className="flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-[#ec5a13]" />
-                              Garantie
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700 w-1/2">{item.warranty}</td>
-                        </tr>
-                      )}
-                      {item.returnPolicy && (
-                        <tr className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900 w-1/2">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="h-4 w-4 text-[#ec5a13]" />
-                              Politique de retour
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700 w-1/2">{item.returnPolicy}</td>
+                          <td className="px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm text-gray-700 w-1/2">{item.quantity}</td>
                         </tr>
                       )}
                       {item.delivery && (

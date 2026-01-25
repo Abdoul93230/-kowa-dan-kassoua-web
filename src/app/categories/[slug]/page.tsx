@@ -116,14 +116,6 @@ const performSearch = (items: Item[], query: string): Item[] => {
     // Recherche dans le prix (ex: "1000", "1000 fcfa")
     const priceMatch = item.price.toLowerCase().includes(searchTerm);
     
-    // Recherche dans les tags
-    const tagsMatch = item.tags.some(tag => 
-      tag.toLowerCase().includes(searchTerm)
-    );
-    
-    // Recherche dans la marque
-    const brandMatch = item.brand?.toLowerCase().includes(searchTerm);
-    
     // Recherche dans la condition
     const conditionMatch = item.condition?.toLowerCase().includes(searchTerm);
     
@@ -152,7 +144,7 @@ const performSearch = (items: Item[], query: string): Item[] => {
     
     // Retourner true si au moins un champ correspond
     return titleMatch || descriptionMatch || locationMatch || categoryMatch || 
-           subcategoryMatch || priceMatch || tagsMatch || brandMatch || 
+           subcategoryMatch || priceMatch || 
            conditionMatch || specsMatch || sellerMatch || deliveryMatch || 
            serviceAreaMatch || typeMatch;
   });
