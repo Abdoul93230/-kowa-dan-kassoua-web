@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
@@ -53,6 +53,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 export default function MyListingsPage() {
   const router = useRouter();
@@ -61,6 +70,10 @@ export default function MyListingsPage() {
   const [filterType, setFilterType] = useState<string>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 
   // Récupérer toutes les annonces de l'utilisateur connecté (simulé)
   const allItems: Item[] = Object.values(mockItems).flat();
@@ -83,6 +96,23 @@ export default function MyListingsPage() {
     const matchesType = filterType === 'all' || item.type === filterType;
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredListings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedListings = filteredListings.slice(startIndex, endIndex);
+
+  // Réinitialiser la page actuelle quand les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus, filterType]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll vers le haut de la liste
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleEdit = (item: Item) => {
     // Stocker les données dans localStorage pour pré-remplir le formulaire
@@ -233,6 +263,16 @@ export default function MyListingsPage() {
                   <SelectItem value="service">Services</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                <SelectTrigger className="w-full sm:w-[140px] h-12">
+                  <SelectValue placeholder="Par page" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 par page</SelectItem>
+                  <SelectItem value="10">10 par page</SelectItem>
+                  <SelectItem value="20">20 par page</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </Card>
@@ -270,9 +310,14 @@ export default function MyListingsPage() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600">
                 <span className="font-semibold text-gray-900">{filteredListings.length}</span> annonce{filteredListings.length > 1 ? 's' : ''} trouvée{filteredListings.length > 1 ? 's' : ''}
+                {filteredListings.length > itemsPerPage && (
+                  <span className="ml-2">
+                    (page {currentPage} sur {totalPages})
+                  </span>
+                )}
               </p>
             </div>
-            {filteredListings.map((item) => (
+            {paginatedListings.map((item) => (
               <Card
                 key={item.id}
                 className="overflow-hidden border-gray-200 hover:shadow-lg transition-all duration-300 hover:border-[#ec5a13]/30"
@@ -412,6 +457,60 @@ export default function MyListingsPage() {
                 </div>
               </Card>
             ))}
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      // Afficher les pages intelligemment
+                      if (
+                        page === 1 || 
+                        page === totalPages || 
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      } else if (
+                        page === currentPage - 2 || 
+                        page === currentPage + 2
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </div>
         )}
       </div>

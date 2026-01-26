@@ -296,7 +296,8 @@ export const mockItems: Record<string, Item[]> = {
       favorites: 34,
       availability: {
         days: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
-        hours: '8h - 19h'
+        openingTime: '8h',
+        closingTime: '19h'
       },
       serviceArea: ['Dakar', 'Pikine', 'Guédiawaye', 'Rufisque'],
       specifications: {
@@ -644,7 +645,8 @@ export const mockItems: Record<string, Item[]> = {
       favorites: 178,
       availability: {
         days: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
-        hours: '11h - 22h'
+        openingTime: '11h',
+        closingTime: '22h'
       },
       serviceArea: ['Dakar', 'Pikine', 'Guédiawaye'],
       delivery: {
@@ -706,7 +708,7 @@ export const mockItems: Record<string, Item[]> = {
       description: 'Gâteaux d\'anniversaire, mariage, baptême personnalisés. Number cake, layer cake, drip cake, naked cake. Goûts: vanille, chocolat, red velvet, pistache, citron. Décoration en pâte à sucre ou fleurs fraîches.',
       views: 1567,
       favorites: 201,
-      availability: { days: ['Tous les jours'], hours: '9h - 20h' },
+      availability: { days: ['Tous les jours'], openingTime: '9h', closingTime: '20h' },
       serviceArea: ['Dakar et banlieue'],
       delivery: { available: true, cost: '2 000 - 5 000 FCFA', areas: ['Dakar'], estimatedTime: '24-48h' },
       status: 'active'
@@ -732,7 +734,7 @@ export const mockItems: Record<string, Item[]> = {
       description: 'Meilleures brochettes de Dakar ! Bœuf, mouton, poulet, poisson braisé. Accompagné d\'oignons, moutarde, pain. Ouvert jusqu\'à 3h du matin.',
       views: 2891,
       favorites: 167,
-      availability: { days: ['Tous les jours'], hours: '18h - 3h' },
+      availability: { days: ['Tous les jours'], openingTime: '18h', closingTime: '3h' },
       serviceArea: ['Dakar'],
       delivery: { available: true, cost: '1 000 FCFA', areas: ['Dakar centre'], estimatedTime: '30-45min' },
       status: 'active'
@@ -985,7 +987,7 @@ export const mockItems: Record<string, Item[]> = {
       description: 'Location voitures de prestige pour mariages : Mercedes Classe E, Range Rover, BMW Série 5 décapotable. Chauffeur expérimenté en costume. Décoration fleurs offerte.',
       views: 1345,
       favorites: 98,
-      availability: { days: ['Tous les jours'], hours: '24h/24' },
+      availability: { days: ['Tous les jours'], openingTime: '00h', closingTime: '24h' },
       serviceArea: ['Dakar', 'Saly', 'Thiès'],
       status: 'active'
     }
@@ -1017,7 +1019,8 @@ export const mockItems: Record<string, Item[]> = {
       favorites: 234,
       availability: {
         days: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
-        hours: '9h - 20h'
+        openingTime: '9h',
+        closingTime: '20h'
       },
       serviceArea: ['Dakar', 'Pikine'],
       specifications: {
@@ -1051,7 +1054,7 @@ export const mockItems: Record<string, Item[]> = {
       description: 'Sourcils microblading, eyeliner permanent, lèvres full lips. Produits européens certifiés. Résultat naturel garanti. Retouche incluse après 6 semaines.',
       views: 2123,
       favorites: 289,
-      availability: { days: ['Lundi', 'Mercredi', 'Vendredi', 'Samedi'], hours: '10h - 18h' },
+      availability: { days: ['Lundi', 'Mercredi', 'Vendredi', 'Samedi'], openingTime: '10h', closingTime: '18h' },
       status: 'active'
     }
   ],
@@ -1082,7 +1085,8 @@ export const mockItems: Record<string, Item[]> = {
       favorites: 98,
       availability: {
         days: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
-        hours: '7h - 18h'
+        openingTime: '7h',
+        closingTime: '18h'
       },
       serviceArea: ['Dakar', 'Pikine', 'Guédiawaye', 'Rufisque'],
       specifications: {
@@ -1116,7 +1120,7 @@ export const mockItems: Record<string, Item[]> = {
       description: 'Professeur agrégé propose cours particuliers Maths & Physique-Chimie. Tous niveaux : collège, lycée (S, L, T), prépa, université. Méthodologie + exercices corrigés.',
       views: 987,
       favorites: 76,
-      availability: { days: ['Lundi', 'Mardi', 'Jeudi', 'Vendredi', 'Samedi'], hours: '16h - 21h' },
+      availability: { days: ['Lundi', 'Mardi', 'Jeudi', 'Vendredi', 'Samedi'], openingTime: '16h', closingTime: '21h' },
       serviceArea: ['Dakar', 'Pikine', 'Guédiawaye'],
       status: 'active'
     },
@@ -1141,7 +1145,7 @@ export const mockItems: Record<string, Item[]> = {
       description: 'Urgence plomberie 24h/24 : fuite d\'eau, débouchage canalisation, chasse d\'eau, robinetterie, chauffe-eau. Intervention rapide sous 1h.',
       views: 1654,
       favorites: 89,
-      availability: { days: ['Tous les jours'], hours: '24h/24' },
+      availability: { days: ['Tous les jours'], openingTime: '00h', closingTime: '24h' },
       serviceArea: ['Dakar', 'Pikine', 'Rufisque', 'Thiès'],
       status: 'active'
     }

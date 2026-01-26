@@ -23,7 +23,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  Sparkles,
+  ShoppingBag,
   Loader2,
   AlertCircle,
   CheckCircle2,
@@ -217,11 +217,9 @@ function LoginPageContent() {
       <div className="absolute top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-200">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#ec5a13] rounded-lg flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-bold text-xl text-gray-900">MarketHub</span>
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
+              <ShoppingBag className="h-8 w-8 text-[#ec5a13]" />
+              <span className="text-2xl font-bold text-gray-900">MarketHub</span>
             </div>
             <Button
               variant="ghost"

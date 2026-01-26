@@ -74,13 +74,13 @@ const connectedSeller = {
 
 // Liste générique simplifiée pour le secteur informel
 const genericProductTypes = [
-  { id: 'electronique', label: 'Téléphones & Électronique', emoji: '📱', category: 'electronique', subcategory: '' },
-  { id: 'vehicules', label: 'Véhicules & Transport', emoji: '🚗', category: 'vehicules', subcategory: '' },
+  { id: 'electronique', label: 'Téléphones & Électronique', emoji: '📱', category: 'Électronique', subcategory: '' },
+  { id: 'vehicules', label: 'Véhicules & Transport', emoji: '🚗', category: 'Automobile', subcategory: '' },
   { id: 'maison', label: 'Maison & Mobilier', emoji: '🏠', category: 'maison', subcategory: '' },
-  { id: 'mode', label: 'Vêtements & Mode', emoji: '👕', category: 'mode', subcategory: '' },
-  { id: 'immobilier', label: 'Immobilier & Terrains', emoji: '🏢', category: 'immobilier', subcategory: '' },
-  { id: 'services', label: 'Services à domicile', emoji: '🔨', category: 'services', subcategory: '' },
-  { id: 'commerce', label: 'Commerce & Alimentation', emoji: '🛒', category: 'autres', subcategory: 'commerce' },
+  { id: 'mode', label: 'Vêtements & Mode', emoji: '👕', category: 'Mode & Beauté', subcategory: '' },
+  { id: 'immobilier', label: 'Immobilier & Terrains', emoji: '🏢', category: 'Immobilier', subcategory: '' },
+  { id: 'services', label: 'Services à domicile', emoji: '🔨', category: 'Services à domicile', subcategory: '' },
+  { id: 'commerce', label: 'Commerce & Alimentation', emoji: '🛒', category: 'Alimentation', subcategory: '' },
   { id: 'autre', label: 'Autre', emoji: '📦', category: 'autres', subcategory: '' },
 ];
 
@@ -103,7 +103,8 @@ interface FormData {
   deliveryAreas: string[];
   availability: {
     days: string[];
-    hours: string;
+    openingTime: string;
+    closingTime: string;
   };
   sellerName: string;
   sellerPhone: PhoneNumber;
@@ -135,7 +136,8 @@ export function PublishForm() {
     deliveryAreas: [],
     availability: {
       days: [],
-      hours: '',
+      openingTime: '',
+      closingTime: '',
     },
     sellerName: connectedSeller.name,
     sellerPhone: {
@@ -194,7 +196,7 @@ export function PublishForm() {
             delivery: item.delivery?.available || false,
             deliveryCost: item.delivery?.cost || '',
             deliveryAreas: item.delivery?.areas || [],
-            availability: item.availability || { days: [], hours: '' },
+            availability: item.availability || { days: [], openingTime: '', closingTime: '' },
             sellerName: item.seller.name,
             sellerPhone: parsePhone(item.seller.contactInfo.phone),
             sellerWhatsapp: item.seller.contactInfo.whatsapp ? parsePhone(item.seller.contactInfo.whatsapp) : parsePhone(item.seller.contactInfo.phone),
@@ -488,7 +490,8 @@ export function PublishForm() {
           deliveryAreas: [],
           availability: {
             days: [],
-            hours: '',
+            openingTime: '',
+            closingTime: '',
           },
           sellerName: connectedSeller.name,
           sellerPhone: {
@@ -997,23 +1000,47 @@ export function PublishForm() {
             {formData.type === 'service' && (
               <>
                 <div>
-                  <Label htmlFor="availabilityHours" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Quand êtes-vous disponible ?
+                  <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                    Horaire de disponibilité
                   </Label>
-                  <Input
-                    id="availabilityHours"
-                    placeholder="Ex: Tous les jours 9h-17h, Sur rendez-vous, 24h/24..."
-                    value={formData.availability.hours}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      availability: {
-                        ...formData.availability,
-                        hours: e.target.value
-                      }
-                    })}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Indiquez vos horaires de manière simple (facultatif)
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="openingTime" className="text-xs text-gray-600 mb-2 block">
+                        Heure d'ouverture
+                      </Label>
+                      <Input
+                        id="openingTime"
+                        placeholder="Ex: 8h, 9h00, 8h30..."
+                        value={formData.availability.openingTime}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          availability: {
+                            ...formData.availability,
+                            openingTime: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="closingTime" className="text-xs text-gray-600 mb-2 block">
+                        Heure de fermeture
+                      </Label>
+                      <Input
+                        id="closingTime"
+                        placeholder="Ex: 17h, 18h00, 20h30..."
+                        value={formData.availability.closingTime}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          availability: {
+                            ...formData.availability,
+                            closingTime: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Indiquez vos horaires de service (facultatif)
                   </p>
                 </div>
 
@@ -1408,10 +1435,14 @@ export function PublishForm() {
                       </div>
                     </div>
                   )}
-                  {formData.availability.hours && (
+                  {(formData.availability.openingTime || formData.availability.closingTime) && (
                     <div>
                       <span className="text-gray-600">Heures de disponibilité:</span>
-                      <span className="ml-2 font-medium">{formData.availability.hours}</span>
+                      <span className="ml-2 font-medium">
+                        {formData.availability.openingTime && formData.availability.closingTime
+                          ? `${formData.availability.openingTime} - ${formData.availability.closingTime}`
+                          : formData.availability.openingTime || formData.availability.closingTime}
+                      </span>
                     </div>
                   )}
                   {formData.serviceArea.length > 0 && (

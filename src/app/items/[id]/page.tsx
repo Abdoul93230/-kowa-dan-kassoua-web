@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, use, Suspense } from 'react';
+import { useState, use, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Header } from '../../../components/home/Header';
 import { Footer } from '../../../components/home/Footer';
 import { SimilarItemsCarousel } from '../../../components/home/SimilarItemsCarousel';
@@ -35,12 +36,14 @@ import {
   Info,
   CalendarDays,
   MapPinned,
+  Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import ReviewForm from '@/components/ReviewForm';
 
 export default function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -49,9 +52,30 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [allReviews, setAllReviews] = useState<any[]>([]);
 
   const allItems: Item[] = Object.values(mockItems).flat();
   const item = allItems.find(i => i.id === itemId);
+
+  // Charger les avis (mockData + localStorage)
+  useEffect(() => {
+    const mockReviews = itemReviews[itemId] || [];
+    const localStorageKey = `reviews_${itemId}`;
+    const storedReviews = localStorage.getItem(localStorageKey);
+    const localReviews = storedReviews ? JSON.parse(storedReviews) : [];
+    
+    // Combiner les avis : localStorage en premier (plus récents)
+    setAllReviews([...localReviews, ...mockReviews]);
+  }, [itemId]);
+
+  // Recharger les avis après soumission
+  const handleReviewSubmitted = () => {
+    const mockReviews = itemReviews[itemId] || [];
+    const localStorageKey = `reviews_${itemId}`;
+    const storedReviews = localStorage.getItem(localStorageKey);
+    const localReviews = storedReviews ? JSON.parse(storedReviews) : [];
+    setAllReviews([...localReviews, ...mockReviews]);
+  };
 
   if (!item) {
     return (
@@ -78,7 +102,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const isService = item.type === 'service';
-  const reviews = itemReviews[item.id] || [];
+  const reviews = allReviews;
   const seller = item.seller;
 
   const relatedItems = allItems
@@ -320,7 +344,13 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                       <div>
                         <p className="font-semibold text-gray-900">Disponibilité</p>
                         <p className="text-gray-700">{item.availability.days.join(', ')}</p>
-                        <p className="text-gray-600 text-sm">{item.availability.hours}</p>
+                        {(item.availability.openingTime || item.availability.closingTime) && (
+                          <p className="text-gray-600 text-sm">
+                            {item.availability.openingTime && item.availability.closingTime
+                              ? `${item.availability.openingTime} - ${item.availability.closingTime}`
+                              : item.availability.openingTime || item.availability.closingTime}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -419,50 +449,56 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
 
             {/* Avis */}
-            {reviews.length > 0 && (
-              <Card className="p-3 sm:p-4 md:p-6 border-gray-200 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <Star className="h-5 w-5 sm:h-6 sm:w-6 text-amber-400 fill-amber-400" />
-                    Avis clients
-                  </h2>
-                  <div className="text-left sm:text-right">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl sm:text-3xl font-bold text-gray-900">{item.rating}</span>
-                      <div>
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${
-                                i < Math.floor(item.rating)
-                                  ? 'text-amber-400 fill-amber-400'
-                                  : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
+            <Card className="p-3 sm:p-4 md:p-6 border-gray-200 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <Star className="h-5 w-5 sm:h-6 sm:w-6 text-amber-400 fill-amber-400" />
+                  Avis clients
+                </h2>
+                <div className="flex items-center gap-3">
+                  {reviews.length > 0 && (
+                    <div className="text-left sm:text-right">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl sm:text-3xl font-bold text-gray-900">{item.rating}</span>
+                        <div>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${
+                                  i < Math.floor(item.rating)
+                                    ? 'text-amber-400 fill-amber-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-sm text-gray-600">{item.totalReviews} avis</p>
                         </div>
-                        <p className="text-sm text-gray-600">{item.totalReviews} avis</p>
                       </div>
                     </div>
-                  </div>
+                  )}
+                  <ReviewForm itemId={itemId} onReviewSubmitted={handleReviewSubmitted} />
                 </div>
+              </div>
                 
-                {/* Indicateur de scroll pour mobile */}
-                <div className="md:hidden flex items-center justify-between mb-3 px-1">
-                  <p className="text-xs text-gray-500 flex items-center gap-1">
-                    <span>Glissez pour voir plus</span>
-                    <ChevronRight className="h-3 w-3 animate-pulse" />
-                  </p>
-                  <div className="flex gap-1">
-                    {reviews.slice(0, 3).map((_, idx) => (
-                      <div key={idx} className="h-1.5 w-1.5 rounded-full bg-gray-300"></div>
-                    ))}
+              {/* Indicateur de scroll pour mobile */}
+              {reviews.length > 0 && (
+                <>
+                  <div className="md:hidden flex items-center justify-between mb-3 px-1">
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                      <span>Glissez pour voir plus</span>
+                      <ChevronRight className="h-3 w-3 animate-pulse" />
+                    </p>
+                    <div className="flex gap-1">
+                      {reviews.slice(0, 3).map((_, idx) => (
+                        <div key={idx} className="h-1.5 w-1.5 rounded-full bg-gray-300"></div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                
-                {/* Carousel sur mobile, liste sur desktop */}
-                <div className="md:space-y-4">
+                  
+                  {/* Carousel sur mobile, liste sur desktop */}
+                  <div className="md:space-y-4">
                   {/* Version mobile : Carousel avec gradient indicateur */}
                   <div className="relative md:hidden">
                     <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2 -mx-3 px-3 snap-x snap-mandatory">
@@ -531,8 +567,17 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     ))}
                   </div>
                 </div>
-              </Card>
-            )}
+                </>
+              )}
+              
+              {/* Message si aucun avis */}
+              {reviews.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">Aucun avis pour le moment</p>
+                  <ReviewForm itemId={itemId} onReviewSubmitted={handleReviewSubmitted} />
+                </div>
+              )}
+            </Card>
           </div>
 
           {/* Sidebar vendeur */}
@@ -590,6 +635,13 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 <Separator className="my-4" />
 
                 <div className="space-y-2">
+                  <Button 
+                    onClick={() => router.push(`/seller/${seller.id}`)}
+                    className="w-full bg-gradient-to-r from-[#ec5a13] to-orange-600 hover:from-[#d94f0f] hover:to-orange-700 text-white shadow-md group"
+                  >
+                    <Store className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+                    Voir toutes les annonces ({seller.totalListings})
+                  </Button>
                   <Button className={`w-full ${isService ? 'bg-blue-100 hover:bg-blue-200 text-blue-900 border-2 border-blue-600' : 'bg-[#ffe9de] hover:bg-orange-100 text-[#ec5a13] border-2 border-[#ec5a13]'}`}>
                     <Phone className="h-4 w-4 mr-2" />
                     {seller.contactInfo.phone}

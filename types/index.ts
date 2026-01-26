@@ -73,7 +73,8 @@ export interface Item {
   // Pour les services
   availability?: {
     days: string[];
-    hours: string;
+    openingTime: string;
+    closingTime: string;
   };
   serviceArea?: string[];
   
