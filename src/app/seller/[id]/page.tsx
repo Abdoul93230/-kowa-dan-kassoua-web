@@ -44,6 +44,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { SellerQRCode } from '@/components/seller/SellerQRCode';
 
 export default function SellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -61,8 +62,8 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
   const sellerItems = allItems.filter(item => item.sellerId === sellerId);
 
   // Filtrer par type
-  const filteredItems = filterType === 'all' 
-    ? sellerItems 
+  const filteredItems = filterType === 'all'
+    ? sellerItems
     : sellerItems.filter(item => item.type === filterType);
 
   // Pagination
@@ -181,8 +182,8 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
               {/* Boutons de contact */}
               <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
                 {seller.contactInfo.phone && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="bg-white text-[#ec5a13] hover:bg-[#ec5a13] hover:text-white border-2 border-[#ec5a13]"
                     onClick={() => window.location.href = `tel:${seller.contactInfo.phone}`}
                   >
@@ -191,8 +192,8 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                   </Button>
                 )}
                 {seller.contactInfo.whatsapp && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="bg-white text-green-700 hover:bg-green-600 hover:text-white border-2 border-green-600"
                     onClick={() => window.open(`https://wa.me/${seller.contactInfo.whatsapp?.replace(/\D/g, '')}`, '_blank')}
                   >
@@ -201,8 +202,8 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                   </Button>
                 )}
                 {seller.contactInfo.email && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="bg-white text-gray-700 hover:bg-gray-700 hover:text-white border-2 border-gray-300"
                     onClick={() => window.location.href = `mailto:${seller.contactInfo.email}`}
                   >
@@ -210,12 +211,16 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                     Email
                   </Button>
                 )}
+
+                {/* QR Code Button */}
+                <SellerQRCode sellerId={sellerId} sellerName={seller.name} />
+
                 {(seller.contactInfo.facebook || seller.contactInfo.instagram || seller.contactInfo.website) && (
                   <div className="flex gap-2">
                     {seller.contactInfo.facebook && (
-                      <Button 
-                        size="icon" 
-                        variant="outline" 
+                      <Button
+                        size="icon"
+                        variant="outline"
                         className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white border-2 border-blue-600 rounded-full"
                         onClick={() => window.open(seller.contactInfo.facebook, '_blank')}
                       >
@@ -223,9 +228,9 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                       </Button>
                     )}
                     {seller.contactInfo.instagram && (
-                      <Button 
-                        size="icon" 
-                        variant="outline" 
+                      <Button
+                        size="icon"
+                        variant="outline"
                         className="bg-white text-pink-600 hover:bg-pink-600 hover:text-white border-2 border-pink-600 rounded-full"
                         onClick={() => window.open(seller.contactInfo.instagram, '_blank')}
                       >
@@ -233,9 +238,9 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                       </Button>
                     )}
                     {seller.contactInfo.website && (
-                      <Button 
-                        size="icon" 
-                        variant="outline" 
+                      <Button
+                        size="icon"
+                        variant="outline"
                         className="bg-white text-gray-700 hover:bg-gray-700 hover:text-white border-2 border-gray-300 rounded-full"
                         onClick={() => window.open(seller.contactInfo.website, '_blank')}
                       >
@@ -322,19 +327,19 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
           </Card>
         ) : (
           <>
-            <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6' 
+            <div className={viewMode === 'grid'
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6'
               : 'flex flex-col gap-4'
             }>
               {paginatedItems.map((item) => {
                 const distance = getDistance(item.id);
                 const isService = item.type === 'service';
-                
+
                 // Mode liste
                 if (viewMode === 'list') {
                   return (
-                    <Link 
-                      key={item.id} 
+                    <Link
+                      key={item.id}
                       href={`/items/${item.id}`}
                       className="block group"
                     >
@@ -435,11 +440,11 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                     </Link>
                   );
                 }
-                
+
                 // Mode grille
                 return (
-                  <Link 
-                    key={item.id} 
+                  <Link
+                    key={item.id}
                     href={`/items/${item.id}`}
                     className="block group"
                   >
@@ -496,7 +501,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
-                      <PaginationPrevious 
+                      <PaginationPrevious
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
@@ -505,7 +510,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                         className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                       />
                     </PaginationItem>
-                    
+
                     {/* Première page */}
                     {currentPage > 3 && (
                       <>
@@ -531,11 +536,11 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                     {/* Pages autour de la page actuelle */}
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
                       .filter(page => {
-                        return page === currentPage || 
-                               page === currentPage - 1 || 
-                               page === currentPage - 2 ||
-                               page === currentPage + 1 ||
-                               page === currentPage + 2;
+                        return page === currentPage ||
+                          page === currentPage - 1 ||
+                          page === currentPage - 2 ||
+                          page === currentPage + 1 ||
+                          page === currentPage + 2;
                       })
                       .map((page) => (
                         <PaginationItem key={page}>
@@ -576,7 +581,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                     )}
 
                     <PaginationItem>
-                      <PaginationNext 
+                      <PaginationNext
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
