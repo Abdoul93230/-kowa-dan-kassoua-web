@@ -8,8 +8,8 @@ import { Footer } from '../../../components/home/Footer';
 import { Breadcrumb } from '../../../components/CategoryPage/Breadcrumb';
 import { FiltersSidebar } from '../../../components/CategoryPage/FiltersSidebar';
 import { ItemCard } from '../../../components/CategoryPage/ItemCard';
-import { mockItems, categories } from '../../../../lib/mockData';
-import { Item } from '../../../../types/index';
+import { mockItems, categories } from '@/lib/mockData';
+import { Item } from '@/types/index';
 import { 
   SlidersHorizontal, 
   Grid3x3,
@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {filterItems,ITEMS_PER_PAGE,sortItems,getTotalPages} from '../../../lib/utilitis/filterUtils'
-import { Filters } from '../../../../types/index';
+import { Filters } from '@/types/index';
 
 
 

@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { categories } from '../../../lib/mockData';
+import { categories } from '@/lib/mockData';
 import {
   Package,
   Briefcase,

@@ -3,8 +3,8 @@
 import { Star, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockItems } from '../../../lib/mockData';
-import { Item } from '../../../types';
+import { mockItems } from '@/lib/mockData';
+import { Item } from '@/types';
 import Link from "next/link";
 import { useEffect, useRef, useState } from 'react';
 

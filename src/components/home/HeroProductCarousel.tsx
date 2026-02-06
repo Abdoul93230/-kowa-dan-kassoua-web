@@ -4,8 +4,8 @@ import { Star, Clock, Navigation, ChevronLeft, ChevronRight, MapPin } from 'luci
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockItems } from '../../../lib/mockData';
-import { Item } from '../../../types';
+import { mockItems } from '@/lib/mockData';
+import { Item } from '@/types';
 import Link from 'next/link';
 
 const allItems: Item[] = Object.values(mockItems).flat();

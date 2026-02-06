@@ -1,4 +1,4 @@
-import { Item, Category,Seller, Review, Conversation, Message } from '../types/index';
+import { Item, Category,Seller, Review, Conversation, Message } from '@/types/index';
 
 // Catégories avec sous-catégories
 export const categories: Category[] = [

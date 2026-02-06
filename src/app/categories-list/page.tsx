@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
-import { categories } from '../../../lib/mockData';
+import { categories } from '@/lib/mockData';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

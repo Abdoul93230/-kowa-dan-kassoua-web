@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { Header } from '../../../components/home/Header';
 import { Footer } from '../../../components/home/Footer';
 import { SimilarItemsCarousel } from '../../../components/home/SimilarItemsCarousel';
-import { mockItems, itemReviews } from '../../../../lib/mockData';
-import { Item } from '../../../../types/index';
+import { mockItems, itemReviews, mockConversations } from '@/lib/mockData';
+import { Item } from '@/types/index';
+import { getOrCreateConversation } from '@/lib/utilitis/conversationUtils';
 import {
   Star,
   MapPin,
@@ -292,12 +293,23 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
               {/* Actions rapides */}
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <Button className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg">
+                <Button 
+                  className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg"
+                  onClick={() => window.open(`tel:${seller.contactInfo.phone}`)}
+                >
                   <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Appeler</span>
                   <span className="sm:hidden">Appel</span>
                 </Button>
-                <Button variant="outline" className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg">
+                <Button 
+                  variant="outline" 
+                  className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg"
+                  onClick={() => {
+                    // Obtenir ou créer une conversation pour ce vendeur et ce produit
+                    const conversation = getOrCreateConversation(seller.id, item.id);
+                    router.push(`/messages/${conversation.id}`);
+                  }}
+                >
                   <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                   <span>Message</span>
                 </Button>

@@ -1,5 +1,5 @@
 // lib/utils/filterUtils.ts
-import { Item, Filters } from '../../../types/index';
+import { Item, Filters } from '@/types/index';
 
 export function filterItems(items: Item[], filters: Filters): Item[] {
   return items.filter(item => {

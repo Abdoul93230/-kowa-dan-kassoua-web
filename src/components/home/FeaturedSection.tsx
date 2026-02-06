@@ -3,8 +3,8 @@
 import { Star, MapPin, Clock, Navigation } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockItems } from '../../../lib/mockData';
-import { Item } from '../../../types';
+import { mockItems } from '@/lib/mockData';
+import { Item } from '@/types';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 

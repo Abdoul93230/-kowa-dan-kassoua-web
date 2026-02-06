@@ -1,9 +1,11 @@
 'use client';
 
-import { Menu, ShoppingBag, X } from 'lucide-react';
+import { Menu, ShoppingBag, X, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { mockConversations } from '@/lib/mockData';
 
 export function Header() {
   const router = useRouter();
@@ -12,6 +14,9 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const urlType = searchParams?.get('type');
+  
+  // Calculer le nombre de messages non lus
+  const unreadCount = mockConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -80,6 +85,19 @@ export function Header() {
 
           <div className="flex items-center gap-4">
             <Button 
+              onClick={() => handleNavigation('/messages')}
+              variant="ghost"
+              size="icon"
+              className="relative hidden md:inline-flex hover:bg-[#ffe9de] hover:text-[#ec5a13]"
+            >
+              <MessageSquare className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-[#ec5a13] text-white text-xs">
+                  {unreadCount}
+                </Badge>
+              )}
+            </Button>
+            <Button 
               onClick={() => handleNavigation('/login')}
               variant="outline" 
               className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] hidden md:inline-flex"
@@ -140,6 +158,24 @@ export function Header() {
                 }`}
               >
                 Mes Annonces
+              </button>
+              <button 
+                onClick={() => handleNavigation('/messages')}
+                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 flex items-center justify-between ${
+                  pathname === '/messages'
+                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
+                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Messages
+                </span>
+                {unreadCount > 0 && (
+                  <Badge className="bg-[#ec5a13] text-white">
+                    {unreadCount}
+                  </Badge>
+                )}
               </button>
               <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">
                 <Button 

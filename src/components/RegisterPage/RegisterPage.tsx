@@ -139,8 +139,13 @@ export default function RegisterPage() {
       }
     } else if (step === 2) {
       if (!formData.businessName.trim()) newErrors.businessName = 'Le nom est requis';
-      if (!formData.description.trim()) newErrors.description = 'La description est requise';
-      if (formData.description.length < 20) newErrors.description = 'Décrivez votre activité en au moins 20 caractères';
+      
+      // La description n'est requise que pour les professionnels
+      if (formData.businessType === 'professional') {
+        if (!formData.description.trim()) newErrors.description = 'La description est requise';
+        if (formData.description.length < 20) newErrors.description = 'Décrivez votre activité en au moins 20 caractères';
+      }
+      
       if (!formData.location) newErrors.location = 'La localisation est requise';
     }
     
@@ -653,22 +658,25 @@ export default function RegisterPage() {
                 {errors.businessName && <p className="text-red-500 text-xs mt-1">{errors.businessName}</p>}
               </div>
 
-              <div>
-                <Label htmlFor="description" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Description de votre activité *
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder="Décrivez ce que vous proposez, votre expérience, ce qui vous rend unique..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="min-h-24 text-base"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {formData.description.length} caractères
-                </p>
-                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
-              </div>
+              {/* Description - Affiché uniquement pour les professionnels */}
+              {formData.businessType === 'professional' && (
+                <div>
+                  <Label htmlFor="description" className="text-sm font-medium text-gray-700 mb-2 block">
+                    Description de votre activité *
+                  </Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Décrivez ce que vous proposez, votre expérience, ce qui vous rend unique..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="min-h-24 text-base"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.description.length} caractères
+                  </p>
+                  {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="location" className="text-sm font-medium text-gray-700 mb-2 block">

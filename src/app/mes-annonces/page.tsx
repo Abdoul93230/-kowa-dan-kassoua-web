@@ -4,8 +4,8 @@ import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
-import { mockItems } from '../../../lib/mockData';
-import { Item } from '../../../types/index';
+import { mockItems } from '@/lib/mockData';
+import { Item } from '@/types/index';
 import {
   Package,
   Briefcase,

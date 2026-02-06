@@ -4,7 +4,7 @@ import { Star, Clock, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Item } from '../../../types';
+import { Item } from '@/types';
 import Link from 'next/link';
 
 interface SimilarItemsCarouselProps {

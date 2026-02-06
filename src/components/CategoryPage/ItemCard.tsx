@@ -16,7 +16,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Item } from '../../../types/index';
+import { Item } from '@/types/index';
 import { useRouter } from 'next/navigation';
 
 export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'list' }) {
