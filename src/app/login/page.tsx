@@ -3,6 +3,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { login, formatPhoneForAPI, isAuthenticated } from '@/lib/api/auth';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,11 +68,6 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetStep, setResetStep] = useState<'request' | 'verify' | 'new'>('request');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   
   const [loginData, setLoginData] = useState<LoginData>({
     loginType: 'phone',
@@ -84,11 +80,25 @@ function LoginPageContent() {
     rememberMe: false
   });
 
+  // Rediriger si déjà connecté
+  useEffect(() => {
+    if (isAuthenticated()) {
+      router.push('/');
+    }
+  }, [router]);
+
   // Afficher le message de bienvenue si redirection depuis l'inscription
   useEffect(() => {
     if (searchParams?.get('welcome') === 'true') {
       setSuccessMessage('Compte créé avec succès ! Connectez-vous pour commencer.');
       setTimeout(() => setSuccessMessage(''), 5000);
+    }
+    
+    // Afficher un message si la session a expiré
+    if (searchParams?.get('session_expired') === 'true') {
+      setErrors({ 
+        submit: 'Votre session a expiré. Veuillez vous reconnecter.' 
+      });
     }
   }, [searchParams]);
 
@@ -123,74 +133,44 @@ function LoginPageContent() {
     if (!validateLogin()) return;
     
     setIsLoading(true);
+    setErrors({});
     
     try {
-      // Simuler l'authentification
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 🔥 APPEL API RÉEL
+      const response = await login({
+        loginType: loginData.loginType,
+        phone: loginData.loginType === 'phone' 
+          ? formatPhoneForAPI(loginData.phone.countryCode, loginData.phone.number)
+          : undefined,
+        email: loginData.loginType === 'email' ? loginData.email : undefined,
+        password: loginData.password
+      });
       
-      // Simulation de vérification (remplacer par votre logique réelle)
-      if (loginData.password === 'password123') {
-        // Stocker la session si "remember me" est coché
-        if (loginData.rememberMe) {
-          localStorage.setItem('rememberMe', 'true');
-          localStorage.setItem('user', JSON.stringify({
-            name: 'Ali Traoré',
-            phone: loginData.loginType === 'phone' 
-              ? `${loginData.phone.countryCode} ${loginData.phone.number}`
-              : null,
-            email: loginData.loginType === 'email' ? loginData.email : null
-          }));
-        }
-        
-        router.push('/dashboard');
-      } else {
-        setErrors({ submit: 'Identifiants incorrects. Essayez password123 pour le test.' });
+      console.log('✅ Connexion réussie:', response);
+      
+      // Afficher message de succès
+      setSuccessMessage(`Bienvenue ${response.data.user.name} ! 🎉`);
+      
+      // Stocker les préférences si "remember me" est coché
+      if (loginData.rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
       }
-    } catch (error) {
-      console.error('Erreur de connexion:', error);
-      setErrors({ submit: 'Une erreur est survenue. Veuillez réessayer.' });
+      
+      // Déclencher l'événement de mise à jour pour le Header
+      window.dispatchEvent(new Event('storage'));
+      
+      // Rediriger vers la page d'accueil après 1 seconde
+      setTimeout(() => {
+        router.push('/');  // Ou '/dashboard'
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error('❌ Erreur de connexion:', error);
+      setErrors({ 
+        submit: error.message || 'Identifiants incorrects. Veuillez réessayer.' 
+      });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (resetStep === 'request') {
-      // Simuler l'envoi du code
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setIsLoading(false);
-      setResetStep('verify');
-      setSuccessMessage('Code de réinitialisation envoyé !');
-    } else if (resetStep === 'verify') {
-      if (verificationCode === '123456') {
-        setResetStep('new');
-        setSuccessMessage('Code vérifié !');
-      } else {
-        setErrors({ verification: 'Code incorrect. Essayez 123456 pour le test.' });
-      }
-    } else if (resetStep === 'new') {
-      if (newPassword !== confirmNewPassword) {
-        setErrors({ passwordMatch: 'Les mots de passe ne correspondent pas' });
-        return;
-      }
-      if (newPassword.length < 6) {
-        setErrors({ passwordLength: 'Le mot de passe doit contenir au moins 6 caractères' });
-        return;
-      }
-      
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setIsLoading(false);
-      
-      setSuccessMessage('Mot de passe réinitialisé avec succès !');
-      setTimeout(() => {
-        setShowForgotPassword(false);
-        setResetStep('request');
-        setVerificationCode('');
-        setNewPassword('');
-        setConfirmNewPassword('');
-      }, 2000);
     }
   };
 
@@ -243,8 +223,7 @@ function LoginPageContent() {
         )}
 
         {/* Formulaire de connexion */}
-        {!showForgotPassword ? (
-          <Card className="p-8 shadow-xl border-0">
+        <Card className="p-8 shadow-xl border-0">
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
                 <User className="h-8 w-8 text-[#ec5a13]" />
@@ -385,7 +364,7 @@ function LoginPageContent() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setShowForgotPassword(true)}
+                  onClick={() => router.push('/passwordreset')}
                   className="text-sm text-[#ec5a13] hover:text-[#d94f0f] font-medium"
                 >
                   Mot de passe oublié ?
@@ -485,143 +464,6 @@ function LoginPageContent() {
               </Button>
             </div>
           </Card>
-        ) : (
-          /* Formulaire de mot de passe oublié */
-          <Card className="p-8 shadow-xl border-0">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
-                <RefreshCw className="h-8 w-8 text-[#ec5a13]" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {resetStep === 'request' && 'Mot de passe oublié'}
-                {resetStep === 'verify' && 'Vérification'}
-                {resetStep === 'new' && 'Nouveau mot de passe'}
-              </h2>
-              <p className="text-gray-600">
-                {resetStep === 'request' && 'Entrez votre email pour recevoir un code de réinitialisation'}
-                {resetStep === 'verify' && 'Entrez le code envoyé à votre email'}
-                {resetStep === 'new' && 'Choisissez votre nouveau mot de passe'}
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              {resetStep === 'request' && (
-                <div>
-                  <Label htmlFor="resetEmail" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Adresse email
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="resetEmail"
-                      type="email"
-                      placeholder="contact@exemple.com"
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {resetStep === 'verify' && (
-                <div>
-                  <Label htmlFor="verificationCode" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Code de vérification
-                  </Label>
-                  <Input
-                    id="verificationCode"
-                    placeholder="123456"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    className="text-center text-2xl tracking-widest"
-                    maxLength={6}
-                  />
-                  {errors.verification && <p className="text-red-500 text-xs mt-1">{errors.verification}</p>}
-                </div>
-              )}
-
-              {resetStep === 'new' && (
-                <>
-                  <div>
-                    <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700 mb-2 block">
-                      Nouveau mot de passe
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <Input
-                        id="newPassword"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="pl-10 pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="confirmNewPassword" className="text-sm font-medium text-gray-700 mb-2 block">
-                      Confirmer le mot de passe
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <Input
-                        id="confirmNewPassword"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={confirmNewPassword}
-                        onChange={(e) => setConfirmNewPassword(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    {errors.passwordMatch && <p className="text-red-500 text-xs mt-1">{errors.passwordMatch}</p>}
-                    {errors.passwordLength && <p className="text-red-500 text-xs mt-1">{errors.passwordLength}</p>}
-                  </div>
-                </>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowForgotPassword(false);
-                    setResetStep('request');
-                    setVerificationCode('');
-                    setNewPassword('');
-                    setConfirmNewPassword('');
-                  }}
-                  className="flex-1"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  onClick={handleForgotPassword}
-                  disabled={isLoading}
-                  className="flex-1 bg-[#ec5a13] hover:bg-[#d94f0f]"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Traitement...
-                    </>
-                  ) : (
-                    <>
-                      {resetStep === 'request' && 'Envoyer le code'}
-                      {resetStep === 'verify' && 'Vérifier'}
-                      {resetStep === 'new' && 'Réinitialiser'}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
       </div>
     </div>
   );

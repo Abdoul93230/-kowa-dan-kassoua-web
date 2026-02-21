@@ -21,13 +21,15 @@ import {
   MapPin,
   Star,
   ShoppingBag,
-  ExternalLink
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
 import { mockConversations, mockMessages } from '@/lib/mockData';
-import { Message, Conversation } from '@/types';
+import { Message, Conversation, Item } from '@/types';
 import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { markConversationAsRead } from '@/lib/utilitis/conversationUtils';
+import { getProductById } from '@/lib/api/products';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -37,6 +39,7 @@ export default function ChatPage() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [productDetails, setProductDetails] = useState<Item | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +71,19 @@ export default function ChatPage() {
       
       // Marquer la conversation comme lue
       markConversationAsRead(conversationId);
+
+      // Charger les détails complets du produit si disponible
+      if (conv.item) {
+        const loadProduct = async () => {
+          try {
+            const response = await getProductById(String(conv.item!.id));
+            setProductDetails(response.data);
+          } catch (error) {
+            console.error('❌ Erreur chargement produit:', error);
+          }
+        };
+        loadProduct();
+      }
     }
   }, [conversationId]);
 
@@ -230,6 +246,16 @@ export default function ChatPage() {
           {/* Carte du produit concerné */}
           {conversation.item && (
             <Card className="mb-6 p-4 bg-gradient-to-r from-[#ffe9de]/30 to-orange-50/30 border-[#ec5a13]/20">
+              {productDetails && productDetails.status !== 'active' && (
+                <div className="mb-3 flex items-center gap-2 text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  <p className="text-xs font-medium">
+                    {productDetails.status === 'sold' && 'Cette annonce a été vendue'}
+                    {productDetails.status === 'expired' && 'Cette annonce n\'est plus disponible'}
+                    {productDetails.status === 'pending' && 'Cette annonce est en attente de validation'}
+                  </p>
+                </div>
+              )}
               <div className="flex items-center gap-4">
                 <img
                   src={conversation.item.image}

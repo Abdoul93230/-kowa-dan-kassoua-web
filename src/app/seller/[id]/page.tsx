@@ -4,12 +4,13 @@ import { Suspense, useState, use, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/home/Header';
 import { Footer } from '@/components/home/Footer';
-import { mockItems, sellers } from '@/lib/mockData';
 import { Item } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { getSellerProfile } from '@/lib/api/auth';
+import { getProducts } from '@/lib/api/products';
 import {
   Star,
   MapPin,
@@ -27,6 +28,8 @@ import {
   Grid3x3,
   List,
   Clock,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Select,
@@ -46,36 +49,77 @@ import {
 } from '@/components/ui/pagination';
 import { SellerQRCode } from '@/components/seller/SellerQRCode';
 
+interface Seller {
+  id: string;
+  name: string;
+  avatar?: string;
+  rating: number;
+  totalReviews: number;
+  verified: boolean;
+  memberSince: string;
+  responseTime: string;
+  responseRate: number;
+  location: string;
+  bio?: string;
+  contactInfo: {
+    phone?: string;
+    whatsapp?: string;
+    email?: string;
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+  };
+  totalListings: number;
+  categories: string[];
+}
+
 export default function SellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const sellerId = resolvedParams.id;
   const [filterType, setFilterType] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(12);
+  
+  // États pour les données API
+  const [seller, setSeller] = useState<Seller | null>(null);
+  const [sellerItems, setSellerItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Récupérer le vendeur
-  const seller = sellers[sellerId];
-
-  // Récupérer tous les items du vendeur
-  const allItems: Item[] = Object.values(mockItems).flat();
-  const sellerItems = allItems.filter(item => item.sellerId === sellerId);
-
-  // Filtrer par type
-  const filteredItems = filterType === 'all'
-    ? sellerItems
-    : sellerItems.filter(item => item.type === filterType);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedItems = filteredItems.slice(startIndex, endIndex);
-
-  // Réinitialiser la page actuelle quand les filtres changent
+  // Charger le profil du vendeur et ses produits
   useEffect(() => {
-    setCurrentPage(1);
-  }, [filterType, itemsPerPage]);
+    const fetchSellerData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Charger le profil du vendeur
+        const sellerResponse = await getSellerProfile(sellerId);
+        setSeller(sellerResponse.data);
+        
+        // Charger les produits du vendeur
+        const productsResponse = await getProducts({
+          seller: sellerId,
+          type: filterType === 'all' ? undefined : filterType as 'product' | 'service',
+          page: currentPage,
+          limit: itemsPerPage,
+          status: 'active',
+        });
+        
+        setSellerItems(productsResponse.data);
+        setTotalPages(productsResponse.pagination.pages);
+      } catch (err: any) {
+        console.error('❌ Erreur chargement vendeur:', err);
+        setError(err.message || 'Erreur lors du chargement des données');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSellerData();
+  }, [sellerId, filterType, currentPage, itemsPerPage]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -84,26 +128,60 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
   };
 
   // Fonction pour calculer la distance
-  const getDistance = (itemId: number) => {
+  const getDistance = (itemId: number | string) => {
     const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
+    
+    if (typeof itemId === 'string') {
+      const hash = itemId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return distances[hash % distances.length];
+    }
+    
     return distances[itemId % distances.length];
   };
 
-  if (!seller) {
+  // Loading state
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
           <Header />
         </Suspense>
-        <div className="container mx-auto px-4 py-12 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Vendeur introuvable</h1>
-          <Link href="/">
-            <Button className="bg-[#ec5a13] hover:bg-[#d94f0f]">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour à l'accueil
-            </Button>
-          </Link>
+        <div className="container mx-auto px-4 py-16">
+          <Card className="p-12 text-center">
+            <Loader2 className="h-12 w-12 text-[#ec5a13] animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Chargement du profil...</p>
+          </Card>
         </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state ou vendeur non trouvé
+  if (error || !seller) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+          <Header />
+        </Suspense>
+        <div className="container mx-auto px-4 py-16 text-center">
+          <div className="bg-white p-12 rounded-lg shadow-sm max-w-md mx-auto border-red-200">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              {error ? 'Erreur de chargement' : 'Vendeur introuvable'}
+            </h1>
+            <p className="text-gray-600 mb-6">
+              {error || "Ce vendeur n'existe pas ou n'est plus disponible."}
+            </p>
+            <Link href="/">
+              <Button className="bg-[#ec5a13] hover:bg-[#d94f0f]">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Retour à l'accueil
+              </Button>
+            </Link>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -166,7 +244,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 sm:gap-6 max-w-md mx-auto sm:mx-0 mb-6 sm:mb-8">
                 <div className="text-center sm:text-left">
-                  <div className="text-2xl sm:text-3xl font-bold text-[#ec5a13]">{sellerItems.length}</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-[#ec5a13]">{seller.totalListings}</div>
                   <div className="text-xs sm:text-sm text-gray-600">Annonces</div>
                 </div>
                 <div className="text-center sm:text-left">
@@ -261,14 +339,14 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
               Toutes les annonces
-              {filteredItems.length > itemsPerPage && (
+              {totalPages > 1 && (
                 <span className="ml-2 text-sm sm:text-base font-normal text-gray-600">
                   (page {currentPage} sur {totalPages})
                 </span>
               )}
             </h2>
             <p className="text-sm text-gray-600">
-              {filteredItems.length} annonce{filteredItems.length > 1 ? 's' : ''} trouvée{filteredItems.length > 1 ? 's' : ''}
+              {seller.totalListings} annonce{seller.totalListings > 1 ? 's' : ''} trouvée{seller.totalListings > 1 ? 's' : ''}
             </p>
           </div>
 
@@ -319,7 +397,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
         </div>
 
         {/* Liste des annonces */}
-        {filteredItems.length === 0 ? (
+        {sellerItems.length === 0 ? (
           <Card className="p-12 text-center">
             <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Aucune annonce trouvée</h3>
@@ -331,7 +409,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
               ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6'
               : 'flex flex-col gap-4'
             }>
-              {paginatedItems.map((item) => {
+              {sellerItems.map((item) => {
                 const distance = getDistance(item.id);
                 const isService = item.type === 'service';
 

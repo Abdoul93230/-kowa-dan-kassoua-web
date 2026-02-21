@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Item } from '@/types';
 import Link from 'next/link';
+import { getCityName } from '@/lib/utils';
 
 interface SimilarItemsCarouselProps {
   relatedItems: Item[];
@@ -17,8 +18,15 @@ export function SimilarItemsCarousel({ relatedItems }: SimilarItemsCarouselProps
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   // Fonction pour calculer la distance
-  const getDistance = (itemId: number) => {
+  const getDistance = (itemId: number | string) => {
     const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
+    
+    // Si l'ID est une chaîne (MongoDB ObjectId), on le convertit en nombre via hash
+    if (typeof itemId === 'string') {
+      const hash = itemId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return distances[hash % distances.length];
+    }
+    
     return distances[itemId % distances.length];
   };
 
@@ -117,7 +125,7 @@ export function SimilarItemsCarousel({ relatedItems }: SimilarItemsCarouselProps
                     <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
                       <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
                     </div>
-                    <span className="truncate">{item.location}</span>
+                    <span className="truncate">{getCityName(item.location)}</span>
                     <span className="text-gray-400">•</span>
                     <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
                   </div>

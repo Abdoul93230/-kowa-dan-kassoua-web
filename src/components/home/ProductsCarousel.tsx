@@ -1,19 +1,19 @@
 'use client';
 
 import { Star, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getCityName } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockItems } from '@/lib/mockData';
 import { Item } from '@/types';
+import { mockItems } from '@/lib/mockData';
 import Link from "next/link";
 import { useEffect, useRef, useState } from 'react';
-
-const allItems: Item[] = Object.values(mockItems).flat();
 
 export function ProductsCarousel() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const allItems: Item[] = Object.values(mockItems).flat();
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -119,7 +119,7 @@ export function ProductsCarousel() {
 
                   <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">
                     <MapPin className="h-3 w-3 flex-shrink-0" />
-                    <span className="truncate">{item.location}</span>
+                    <span className="truncate">{getCityName(item.location)}</span>
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">

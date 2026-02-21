@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { createProduct, updateProduct, filesToBase64 } from '@/lib/api/product';
+import { getCurrentUser } from '@/lib/api/auth';
 import {
   Select,
   SelectContent,
@@ -63,15 +66,6 @@ const nigerCities = [
   'Tillabéri', 'Diffa', 'Arlit', 'Birni N\'Konni', 'Gaya', 'Tessaoua'
 ];
 
-// Simuler un vendeur connecté
-const connectedSeller = {
-  name: 'Ali Tech Solutions',
-  phone: '+227 87727272',
-  whatsapp: '+227 87727272',
-  email: 'contact@alitech.ne',
-  location: 'Niamey, Niger'
-};
-
 // Liste générique simplifiée pour le secteur informel
 const genericProductTypes = [
   { id: 'electronique', label: 'Téléphones & Électronique', emoji: '📱', category: 'Électronique', subcategory: '' },
@@ -80,8 +74,8 @@ const genericProductTypes = [
   { id: 'mode', label: 'Vêtements & Mode', emoji: '👕', category: 'Mode & Beauté', subcategory: '' },
   { id: 'immobilier', label: 'Immobilier & Terrains', emoji: '🏢', category: 'Immobilier', subcategory: '' },
   { id: 'services', label: 'Services à domicile', emoji: '🔨', category: 'Services à domicile', subcategory: '' },
-  { id: 'commerce', label: 'Commerce & Alimentation', emoji: '🛒', category: 'Alimentation', subcategory: '' },
-  { id: 'autre', label: 'Autre', emoji: '📦', category: 'autres', subcategory: '' },
+  { id: 'materiaux', label: 'Commerce & Alimentation', emoji: '🛒', category: 'Alimentation', subcategory: '' },
+  { id: 'autres', label: 'Autre', emoji: '📦', category: 'autres', subcategory: '' },
 ];
 
 interface PhoneNumber {
@@ -98,6 +92,7 @@ interface FormData {
   description: string;
   condition: 'new' | 'used' | '';
   images: File[];
+  location: string;
   delivery: boolean;
   deliveryCost: string;
   deliveryAreas: string[];
@@ -118,9 +113,19 @@ interface FormData {
 }
 
 export function PublishForm() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [editMode, setEditMode] = useState(false);
-  const [editItemId, setEditItemId] = useState<number | null>(null);
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  
+  // Récupérer l'utilisateur connecté
+  const currentUser = getCurrentUser();
+  
+  // Extraire le numéro de téléphone pour le formulaire
+  const parsePhone = (phone: string) => {
+    const match = phone?.match(/(\+\d+)\s*(.+)/);
+    return match ? { countryCode: match[1], number: match[2].replace(/\s/g, '') } : { countryCode: '+227', number: '' };
+  };
   
   const [formData, setFormData] = useState<FormData>({
     type: 'product',
@@ -131,6 +136,7 @@ export function PublishForm() {
     description: '',
     condition: '',
     images: [],
+    location: currentUser?.location || '',
     delivery: false,
     deliveryCost: '',
     deliveryAreas: [],
@@ -139,16 +145,10 @@ export function PublishForm() {
       openingTime: '',
       closingTime: '',
     },
-    sellerName: connectedSeller.name,
-    sellerPhone: {
-      countryCode: '+227',
-      number: '87727272'
-    },
-    sellerWhatsapp: {
-      countryCode: '+227',
-      number: '87727272'
-    },
-    sellerEmail: connectedSeller.email,
+    sellerName: currentUser?.name || '',
+    sellerPhone: parsePhone(currentUser?.phone || '+227'),
+    sellerWhatsapp: parsePhone(currentUser?.whatsapp || currentUser?.phone || '+227'),
+    sellerEmail: currentUser?.email || '',
     specifications: {},
     serviceArea: [],
     promoted: false,
@@ -156,6 +156,8 @@ export function PublishForm() {
   });
 
   const [imagesPreviews, setImagesPreviews] = useState<string[]>([]);
+  const [originalImages, setOriginalImages] = useState<string[]>([]); // URLs des images existantes (mode édition)
+  const [deletedImages, setDeletedImages] = useState<string[]>([]); // URLs des images supprimées
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -175,7 +177,7 @@ export function PublishForm() {
         try {
           const item = JSON.parse(editItemData);
           setEditMode(true);
-          setEditItemId(parseInt(editId));
+          setEditItemId(editId);
           
           // Extraire les numéros de téléphone
           const parsePhone = (phone: string) => {
@@ -192,6 +194,7 @@ export function PublishForm() {
             price: item.price.replace(/[^\d]/g, ''),
             description: item.description,
             condition: item.condition || '',
+            location: item.location || '',
             images: [],
             delivery: item.delivery?.available || false,
             deliveryCost: item.delivery?.cost || '',
@@ -211,6 +214,7 @@ export function PublishForm() {
           // Charger les images existantes
           if (item.images && item.images.length > 0) {
             setImagesPreviews(item.images);
+            setOriginalImages(item.images); // Sauvegarder les URLs originales
           }
         } catch (error) {
           console.error('Erreur lors du chargement des données d\'édition:', error);
@@ -330,6 +334,13 @@ export function PublishForm() {
   };
 
   const handleRemoveImage = (index: number) => {
+    const imageToRemove = imagesPreviews[index];
+    
+    // Si c'est une URL (image existante sur Cloudinary), l'ajouter aux images supprimées
+    if (typeof imageToRemove === 'string' && imageToRemove.startsWith('http')) {
+      setDeletedImages([...deletedImages, imageToRemove]);
+    }
+    
     setImagesPreviews(imagesPreviews.filter((_, i) => i !== index));
     setFormData({
       ...formData,
@@ -462,20 +473,106 @@ export function PublishForm() {
     setIsSubmitting(true);
     
     try {
-      // Simulation d'un appel API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log('Données du formulaire:', formData);
+      console.log('🚀 Début de la publication...');
+
+      // 📸 Préparer les images selon le mode
+      let productData: any;
       
       if (editMode && editItemId) {
-        alert('Annonce mise à jour avec succès! (Pour le moment, les données sont dans la console)');
-        // Nettoyer le localStorage
-        localStorage.removeItem('editItem');
-        // Rediriger vers mes annonces
-        window.location.href = '/mes-annonces';
+        // MODE ÉDITION
+        console.log('🔄 Mode édition - Traitement des images...');
+        
+        // Convertir uniquement les NOUVELLES images (Files) en base64
+        let newImagesBase64: string[] = [];
+        if (formData.images.length > 0) {
+          console.log('📤 Conversion de', formData.images.length, 'nouvelles images en base64...');
+          newImagesBase64 = await filesToBase64(formData.images);
+          console.log('✅ Nouvelles images converties');
+        }
+        
+        console.log('🗑️ Images à supprimer:', deletedImages.length);
+        
+        // Préparer les données pour l'API (mode édition)
+        productData = {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          subcategory: formData.subcategory || '',
+          type: formData.type,
+          price: formData.price,
+          location: formData.location || 'Non spécifié',
+          condition: formData.condition as 'new' | 'used' | 'refurbished' | undefined,
+          quantity: formData.quantity?.toString() || '1',
+          newImages: newImagesBase64, // Nouvelles images à ajouter
+          deleteImages: deletedImages, // Images à supprimer
+          delivery: formData.delivery ? {
+            available: formData.delivery,
+            cost: formData.deliveryCost || '',
+            areas: formData.deliveryAreas || [],
+            estimatedTime: ''
+          } : { available: false },
+          availability: formData.availability,
+          serviceArea: formData.serviceArea || [],
+          specifications: formData.specifications || {},
+        };
       } else {
-        alert('Annonce publiée avec succès! (Pour le moment, les données sont dans la console)');
-        // Réinitialiser le formulaire après soumission réussie
+        // MODE CRÉATION
+        console.log('➕ Mode création - Conversion de toutes les images...');
+        
+        // Convertir TOUTES les images en base64
+        let imagesBase64: string[] = [];
+        if (formData.images.length > 0) {
+          console.log('📤 Conversion de', formData.images.length, 'images en base64...');
+          imagesBase64 = await filesToBase64(formData.images);
+          console.log('✅ Images converties');
+        }
+
+        // Préparer les données pour l'API (mode création)
+        productData = {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          subcategory: formData.subcategory || '',
+          type: formData.type,
+          price: formData.price,
+          location: formData.location || 'Non spécifié',
+          condition: formData.condition as 'new' | 'used' | 'refurbished' | undefined,
+          quantity: formData.quantity?.toString() || '1',
+          images: imagesBase64, // Toutes les images
+          delivery: formData.delivery ? {
+            available: formData.delivery,
+            cost: formData.deliveryCost || '',
+            areas: formData.deliveryAreas || [],
+            estimatedTime: ''
+          } : { available: false },
+          availability: formData.availability,
+          serviceArea: formData.serviceArea || [],
+          specifications: formData.specifications || {},
+          promoted: formData.promoted || false,
+          featured: formData.featured || false
+        };
+      }
+      
+      console.log('📝 Données préparées:', productData);
+      
+      if (editMode && editItemId) {
+        console.log('🔄 Mise à jour de l\'annonce:', editItemId);
+        // Mode édition
+        const response = await updateProduct(editItemId, productData);
+        console.log('✅ Annonce mise à jour:', response.data);
+        
+        localStorage.removeItem('editItem');
+        alert('✅ Annonce mise à jour avec succès!');
+        router.push('/mes-annonces');
+      } else {
+        console.log('➕ Création d\'une nouvelle annonce...');
+        // Mode création
+        const response = await createProduct(productData);
+        console.log('✅ Annonce créée:', response.data);
+        
+        alert('✅ Annonce publiée avec succès!');
+        
+        // Réinitialiser le formulaire
         setFormData({
           type: 'product',
           title: '',
@@ -484,6 +581,7 @@ export function PublishForm() {
           price: '',
           description: '',
           condition: '',
+          location: '',
           images: [],
           delivery: false,
           deliveryCost: '',
@@ -493,16 +591,10 @@ export function PublishForm() {
             openingTime: '',
             closingTime: '',
           },
-          sellerName: connectedSeller.name,
-          sellerPhone: {
-            countryCode: '+227',
-            number: '87727272'
-          },
-          sellerWhatsapp: {
-            countryCode: '+227',
-            number: '87727272'
-          },
-          sellerEmail: connectedSeller.email,
+          sellerName: currentUser?.name || '',
+          sellerPhone: parsePhone(currentUser?.phone || '+227'),
+          sellerWhatsapp: parsePhone(currentUser?.whatsapp || currentUser?.phone || '+227'),
+          sellerEmail: currentUser?.email || '',
           specifications: {},
           serviceArea: [],
           promoted: false,
@@ -510,10 +602,15 @@ export function PublishForm() {
         });
         setImagesPreviews([]);
         setCurrentStep(1);
+        
+        // Rediriger vers mes annonces
+        router.push('/mes-annonces');
       }
-    } catch (error) {
-      console.error('Erreur lors de la publication:', error);
-      alert('Une erreur est survenue lors de la publication. Veuillez réessayer.');
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la publication:', error);
+      const errorMessage = error.response?.data?.message || 'Une erreur est survenue lors de la publication. Veuillez réessayer.';
+      alert('❌ ' + errorMessage);
+      setErrors({ submit: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -736,9 +833,9 @@ export function PublishForm() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setFormData({ ...formData, category: item.category, subcategory: item.subcategory || '' })}
+                    onClick={() => setFormData({ ...formData, category: item.id, subcategory: item.subcategory || '' })}
                     className={`p-3 md:p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-1.5 md:gap-2 hover:shadow-md ${
-                      formData.category === item.category && (item.subcategory ? formData.subcategory === item.subcategory : true)
+                      formData.category === item.id && (item.subcategory ? formData.subcategory === item.subcategory : true)
                         ? 'border-[#ec5a13] bg-[#ffe9de] shadow-md'
                         : 'border-gray-200 hover:border-[#ec5a13]'
                     }`}
@@ -1317,7 +1414,7 @@ export function PublishForm() {
                     <div className="w-5 flex-shrink-0 flex items-center justify-center">
                       <MapPin className="h-3.5 w-3.5 text-[#ec5a13]" />
                     </div>
-                    <span className="truncate">{connectedSeller.location}</span>
+                    <span className="truncate">{currentUser?.location || 'Niger'}</span>
                     <span className="text-gray-400">•</span>
                     <span className="whitespace-nowrap">0.5 km</span>
                   </div>
@@ -1537,12 +1634,12 @@ export function PublishForm() {
               {isSubmitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Publication en cours...
+                  {editItemId ? 'Mise à jour en cours...' : 'Publication en cours...'}
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="mr-2 h-5 w-5" />
-                  Publier l'annonce
+                  {editItemId ? 'Mettre à jour l\'annonce' : 'Publier l\'annonce'}
                 </>
               )}
             </Button>

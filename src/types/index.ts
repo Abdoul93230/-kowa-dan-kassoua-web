@@ -38,7 +38,7 @@ export interface Review {
 }
 
 export interface Item {
-  id: number;
+  id: number | string; // number pour mockData, string pour MongoDB ObjectId
   title: string;
   price: string;
   location: string;

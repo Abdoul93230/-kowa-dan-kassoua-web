@@ -3,22 +3,29 @@
 import { Star, MapPin, Clock, Navigation } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockItems } from '@/lib/mockData';
 import { Item } from '@/types';
+import { mockItems } from '@/lib/mockData';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-
-
-const allItems: Item[] = Object.values(mockItems).flat();
+import { getCityName } from '@/lib/utils';
 
 // Fonction pour calculer une distance aléatoire (à remplacer par vraie géolocalisation plus tard)
-const getDistance = (itemId: number) => {
+const getDistance = (itemId: number | string) => {
   const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
-  return distances[itemId % distances.length];
+  // Convertir l'ID en nombre si c'est une chaîne
+  let numId: number;
+  if (typeof itemId === 'string') {
+    // Utiliser un hash simple de la chaîne
+    numId = itemId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  } else {
+    numId = itemId;
+  }
+  return distances[numId % distances.length];
 };
 
 export function FeaturedSection() {
   const router = useRouter();
+  const allItems: Item[] = Object.values(mockItems).flat();
   
   return (
     <section className="py-16 bg-gray-50">
@@ -91,7 +98,7 @@ export function FeaturedSection() {
 
                 <div className="flex items-center gap-1 text-sm text-gray-600 mb-3">
                   <MapPin className="h-4 w-4 text-[#ec5a13]" />
-                  <span className="font-medium">{item.location}</span>
+                  <span className="font-medium">{getCityName(item.location)}</span>
                   <span className="text-xs text-gray-400 ml-1">• {distance} km</span>
                 </div>
 

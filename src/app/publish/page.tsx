@@ -2,14 +2,33 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useAuthGuard } from '@/hooks/useAuth';
 import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
 import { PublishForm } from '../../components/publish/PublishForm';
 
 function PublishContent() {
   const searchParams = useSearchParams();
+  const { user, loading } = useAuthGuard(); // Protection de la route
   const editId = searchParams?.get('edit') || null;
   const isEditMode = !!editId;
+
+  // Afficher un spinner pendant la vérification d'authentification
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-6 md:py-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Vérification de votre session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si pas de loading et pas de user, useAuthGuard redirige automatiquement
+  if (!user) {
+    return null;
+  }
 
   return (
     <>

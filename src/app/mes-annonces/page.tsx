@@ -2,10 +2,10 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthGuard } from '@/hooks/useAuth';
+import { getMyProducts, getMyStats, deleteProduct, toggleProductStatus, type Product } from '@/lib/api/product';
 import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
-import { mockItems } from '@/lib/mockData';
-import { Item } from '@/types/index';
 import {
   Package,
   Briefcase,
@@ -22,8 +22,8 @@ import {
   MoreVertical,
   CheckCircle2,
   XCircle,
-  Pause,
-  Play,
+  Heart,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -53,94 +53,141 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
 
 export default function MyListingsPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuthGuard();
+  
+  const [myListings, setMyListings] = useState<Product[]>([]);
+  const [stats, setStats] = useState({
+    totalActive: 0,
+    totalSold: 0,
+    totalViews: 0,
+    totalFavorites: 0,
+  });
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const itemsPerPage = 20;
 
-  // Récupérer toutes les annonces de l'utilisateur connecté (simulé)
-  const allItems: Item[] = Object.values(mockItems).flat();
-  const myListings = allItems.filter(item => item.sellerId === 'seller_001'); // Simuler l'utilisateur connecté
+  // Charger les données
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Reset à la page 1 si le filtre change
+      setCurrentPage(1);
+      setMyListings([]);
+      loadData(1);
+    }
+  }, [authLoading, user, filterStatus]);
 
-  // Statistiques
-  const stats = {
-    total: myListings.length,
-    active: myListings.filter(item => item.status === 'active').length,
-    expired: myListings.filter(item => item.status === 'expired').length,
-    totalViews: myListings.reduce((sum, item) => sum + item.views, 0),
-    // totalFavorites: myListings.reduce((sum, item) => sum + item.favorites, 0),
+  const loadData = async (page: number = 1, append: boolean = false) => {
+    try {
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+      
+      // Charger les annonces et les stats en parallèle
+      const [productsResponse, statsResponse] = await Promise.all([
+        getMyProducts(filterStatus === 'all' ? undefined : filterStatus, page, itemsPerPage),
+        getMyStats()
+      ]);
+      
+      if (append) {
+        // Append à la liste existante
+        setMyListings(prev => [...prev, ...productsResponse.data]);
+      } else {
+        // Remplacer la liste
+        setMyListings(productsResponse.data);
+      }
+      
+      setTotalPages(productsResponse.pagination.pages);
+      setStats(statsResponse.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+    } finally {
+      setLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+  
+  const handleLoadMore = () => {
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    loadData(nextPage, true); // append = true
   };
 
-  // Filtrer les annonces
+  // Filtrer localement par recherche et type
   const filteredListings = myListings.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
     const matchesType = filterType === 'all' || item.type === filterType;
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesType;
   });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredListings.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedListings = filteredListings.slice(startIndex, endIndex);
-
-  // Réinitialiser la page actuelle quand les filtres changent
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, filterStatus, filterType]);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    // Scroll vers le haut de la liste
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleEdit = (item: Item) => {
+  const handleEdit = (item: Product) => {
     // Stocker les données dans localStorage pour pré-remplir le formulaire
     localStorage.setItem('editItem', JSON.stringify(item));
     router.push(`/publish?edit=${item.id}`);
   };
 
-  const handleDelete = (itemId: number) => {
+  const handleDelete = (itemId: string) => {
     setItemToDelete(itemId);
     setDeleteDialogOpen(true);
   };
-
-  const confirmDelete = () => {
-    if (itemToDelete) {
-      // Logique de suppression (à implémenter avec l'API backend)
-      console.log('Suppression de l\'annonce:', itemToDelete);
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
+  
+  const handleToggleStatus = async (itemId: string) => {
+    try {
+      setTogglingStatus(itemId);
+      await toggleProductStatus(itemId);
+      
+      // Recharger les données pour refléter le changement
+      setCurrentPage(1);
+      setMyListings([]);
+      await loadData(1);
+    } catch (error) {
+      console.error('Erreur lors du changement de statut:', error);
+      alert('Erreur lors du changement de statut de l\'annonce');
+    } finally {
+      setTogglingStatus(null);
     }
   };
 
-  const handleView = (itemId: number) => {
-    router.push(`/items/${itemId}`);
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      await deleteProduct(itemToDelete);
+      
+      // Recharger les données (reset à page 1)
+      setCurrentPage(1);
+      setMyListings([]);
+      await loadData(1);
+      
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression:', error);
+      alert('Erreur lors de la suppression: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
-  const handleToggleStatus = (itemId: number, currentStatus: string) => {
-    // Logique pour activer/désactiver une annonce
-    console.log('Toggle status pour:', itemId, currentStatus);
+  const handleView = (itemId: string) => {
+    router.push(`/items/${itemId}`);
   };
 
   const getStatusBadge = (status: string) => {
@@ -152,6 +199,13 @@ export default function MyListingsPage() {
             Active
           </Badge>
         );
+      case 'sold':
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-300">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Vendu
+          </Badge>
+        );
       case 'expired':
         return (
           <Badge className="bg-gray-100 text-gray-800 border-gray-300">
@@ -159,10 +213,34 @@ export default function MyListingsPage() {
             Expiré
           </Badge>
         );
+      case 'pending':
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
+            <Clock className="h-3 w-3 mr-1" />
+            En attente
+          </Badge>
+        );
       default:
         return null;
     }
   };
+
+  // Loading state
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+          <Header />
+        </Suspense>
+        <div className="container mx-auto px-4 py-12 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-[#ec5a13] mx-auto mb-4" />
+            <p className="text-gray-600">Chargement de vos annonces...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -192,38 +270,31 @@ export default function MyListingsPage() {
             <Card className="p-3 sm:p-4 bg-white border-2 border-[#ec5a13]/20 hover:border-[#ec5a13] transition-colors shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <Package className="h-4 w-4 sm:h-5 sm:w-5 text-[#ec5a13]" />
-                <p className="text-xs sm:text-sm text-gray-600">Total</p>
-              </div>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.total}</p>
-            </Card>
-            <Card className="p-3 sm:p-4 bg-white border-2 border-green-200 hover:border-green-400 transition-colors shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                 <p className="text-xs sm:text-sm text-gray-600">Actives</p>
               </div>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.active}</p>
-            </Card>
-            <Card className="p-3 sm:p-4 bg-white border-2 border-gray-200 hover:border-gray-400 transition-colors shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
-                <p className="text-xs sm:text-sm text-gray-600">Expirées</p>
-              </div>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.expired}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.totalActive}</p>
             </Card>
             <Card className="p-3 sm:p-4 bg-white border-2 border-blue-200 hover:border-blue-400 transition-colors shadow-sm">
               <div className="flex items-center gap-2 mb-1">
-                <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                <p className="text-xs sm:text-sm text-gray-600">Vendues</p>
+              </div>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.totalSold}</p>
+            </Card>
+            <Card className="p-3 sm:p-4 bg-white border-2 border-purple-200 hover:border-purple-400 transition-colors shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                 <p className="text-xs sm:text-sm text-gray-600">Vues</p>
               </div>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.totalViews}</p>
             </Card>
-            {/* <Card className="p-3 sm:p-4 bg-white border-2 border-amber-200 hover:border-amber-400 transition-colors shadow-sm">
+            <Card className="p-3 sm:p-4 bg-white border-2 border-pink-200 hover:border-pink-400 transition-colors shadow-sm">
               <div className="flex items-center gap-2 mb-1">
-                <Star className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+                <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-pink-600" />
                 <p className="text-xs sm:text-sm text-gray-600">Favoris</p>
               </div>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.totalFavorites}</p>
-            </Card> */}
+            </Card>
           </div>
         </div>
       </div>
@@ -263,16 +334,6 @@ export default function MyListingsPage() {
                   <SelectItem value="service">Services</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
-                <SelectTrigger className="w-full sm:w-[140px] h-12">
-                  <SelectValue placeholder="Par page" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 par page</SelectItem>
-                  <SelectItem value="10">10 par page</SelectItem>
-                  <SelectItem value="20">20 par page</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </Card>
@@ -310,14 +371,14 @@ export default function MyListingsPage() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600">
                 <span className="font-semibold text-gray-900">{filteredListings.length}</span> annonce{filteredListings.length > 1 ? 's' : ''} trouvée{filteredListings.length > 1 ? 's' : ''}
-                {filteredListings.length > itemsPerPage && (
-                  <span className="ml-2">
+                {currentPage < totalPages && (
+                  <span className="ml-2 text-xs text-gray-500">
                     (page {currentPage} sur {totalPages})
                   </span>
                 )}
               </p>
             </div>
-            {paginatedListings.map((item) => (
+            {filteredListings.map((item) => (
               <Card
                 key={item.id}
                 className="overflow-hidden border-gray-200 hover:shadow-lg transition-all duration-300 hover:border-[#ec5a13]/30"
@@ -419,36 +480,46 @@ export default function MyListingsPage() {
                         <Edit2 className="h-4 w-4 mr-1" />
                         Modifier
                       </Button>
-                      <Button
-                        onClick={() => handleDelete(item.id)}
-                        variant="outline"
-                        size="sm"
-                        className="border-red-500 text-red-600 hover:bg-red-50 flex-1 sm:flex-none"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Supprimer
-                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 sm:flex-none"
+                            disabled={togglingStatus === item.id}
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => handleToggleStatus(item.id, item.status)}
+                            onClick={() => handleToggleStatus(item.id)}
+                            disabled={togglingStatus === item.id || item.status === 'sold'}
                           >
-                            {item.status === 'active' ? (
+                            {togglingStatus === item.id ? (
                               <>
-                                <Pause className="h-4 w-4 mr-2" />
-                                Désactiver
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Chargement...
+                              </>
+                            ) : item.status === 'active' ? (
+                              <>
+                                <XCircle className="h-4 w-4 mr-2 text-orange-500" />
+                                Désactiver l'annonce
                               </>
                             ) : (
                               <>
-                                <Play className="h-4 w-4 mr-2" />
-                                Activer
+                                <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                                Activer l'annonce
                               </>
                             )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(item.id)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Supprimer
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -458,57 +529,30 @@ export default function MyListingsPage() {
               </Card>
             ))}
             
-            {/* Pagination */}
-            {totalPages > 1 && (
+            {/* Bouton Charger plus */}
+            {currentPage < totalPages && (
               <div className="flex justify-center mt-8">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious 
-                        onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                      />
-                    </PaginationItem>
-                    
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                      // Afficher les pages intelligemment
-                      if (
-                        page === 1 || 
-                        page === totalPages || 
-                        (page >= currentPage - 1 && page <= currentPage + 1)
-                      ) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              onClick={() => handlePageChange(page)}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      } else if (
-                        page === currentPage - 2 || 
-                        page === currentPage + 2
-                      ) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        );
-                      }
-                      return null;
-                    })}
-                    
-                    <PaginationItem>
-                      <PaginationNext 
-                        onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                <Button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  variant="outline"
+                  size="lg"
+                  className="min-w-[200px] border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de]"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Chargement...
+                    </>
+                  ) : (
+                    <>
+                      Charger plus
+                      <span className="ml-2 text-xs text-gray-500">
+                        ({currentPage}/{totalPages})
+                      </span>
+                    </>
+                  )}
+                </Button>
               </div>
             )}
           </div>
@@ -525,12 +569,20 @@ export default function MyListingsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
+              disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              Supprimer
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

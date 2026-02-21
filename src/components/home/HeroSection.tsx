@@ -2,16 +2,28 @@
 
 import { ArrowRight, TrendingUp, Users, Shield, Search, MapPin, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { HeroProductCarousel } from './HeroProductCarousel';
+import { getLocations } from '@/lib/api/products';
 
 export function HeroSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
+  const [locations, setLocations] = useState<string[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSearchFixed, setIsSearchFixed] = useState(false);
   const router = useRouter();
+
+  // Charger les localisations depuis l'API
+  useEffect(() => {
+    const loadLocations = async () => {
+      const locs = await getLocations();
+      setLocations(locs);
+    };
+    loadLocations();
+  }, []);
 
   // Messages pour le carousel - Plus d'impact et d'informations
   const carouselMessages = [
@@ -70,7 +82,8 @@ export function HeroSection() {
     // Construire l'URL de recherche
     const params = new URLSearchParams();
     if (searchQuery) params.append('q', searchQuery);
-    if (location) params.append('location', location);
+    // Ne pas ajouter la localisation si c'est "toutes"
+    if (location && location !== 'toutes') params.append('location', location);
     
     // Rediriger vers la page de catégories avec les filtres
     router.push(`/categories/tous?${params.toString()}`);
@@ -139,16 +152,30 @@ export function HeroSection() {
                     />
                   </div>
 
-                  {/* Champ de localisation */}
-                  <div className="sm:w-48 md:w-64 relative">
-                    <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Localisation"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl bg-gray-50 border-0 focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 placeholder:text-gray-500 text-sm sm:text-base"
-                    />
+                  {/* Champ de localisation - Design moderne */}
+                  <div className="sm:w-48 md:w-64 relative group">
+                    <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-[#ec5a13] z-10 pointer-events-none group-focus-within:scale-110 transition-transform" />
+                    <Select value={location} onValueChange={setLocation}>
+                      <SelectTrigger className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-orange-50/50 to-amber-50/30 border border-orange-100 hover:border-[#ec5a13] focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 text-sm sm:text-base h-auto font-medium shadow-sm hover:shadow-md">
+                        <SelectValue placeholder="📍 Localisation" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-orange-100 shadow-2xl">
+                        <SelectItem value="toutes" className="text-sm sm:text-base hover:bg-orange-50 focus:bg-orange-50 cursor-pointer rounded-lg">
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg">🌍</span>
+                            <span className="font-medium">Toutes les villes</span>
+                          </span>
+                        </SelectItem>
+                        {locations.map((loc: string) => (
+                          <SelectItem key={loc} value={loc} className="text-sm sm:text-base hover:bg-orange-50 focus:bg-orange-50 cursor-pointer rounded-lg">
+                            <span className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-[#ec5a13]" />
+                              <span>{loc}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Bouton de recherche */}

@@ -79,7 +79,7 @@ export function createConversation(
       seller: seller,
     },
     item: {
-      id: item.id,
+      id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
       title: item.title,
       price: item.price,
       image: item.images[0],

@@ -8,13 +8,15 @@ import { Footer } from '../../../components/home/Footer';
 import { Breadcrumb } from '../../../components/CategoryPage/Breadcrumb';
 import { FiltersSidebar } from '../../../components/CategoryPage/FiltersSidebar';
 import { ItemCard } from '../../../components/CategoryPage/ItemCard';
-import { mockItems, categories } from '@/lib/mockData';
+import { categories } from '@/lib/mockData';
 import { Item } from '@/types/index';
 import { 
   SlidersHorizontal, 
   Grid3x3,
   List,
   ArrowUpDown,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,9 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {filterItems,ITEMS_PER_PAGE,sortItems,getTotalPages} from '../../../lib/utilitis/filterUtils'
 import { Filters } from '@/types/index';
-
+import { getProducts } from '@/lib/api/products';
 
 
 
@@ -48,14 +49,25 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('recent');
   const [filters, setFilters] = useState<Filters>({
-    showProducts: true,
-    showServices: true,
+    showProducts: urlType === 'service' ? false : true,
+    showServices: urlType === 'product' ? false : true,
     priceMin: '',
     priceMax: '',
     location: locationParam,
     condition: 'all',
     minRating: 0,
     promotedOnly: false
+  });
+  
+  // États pour l'API
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 1
   });
   
   // Mettre à jour les filtres quand les paramètres changent
@@ -75,104 +87,95 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
     }));
   }, [searchParams]);
 
-  const itemsPerPage = ITEMS_PER_PAGE;
+  // Récupérer la sous-catégorie depuis l'URL
+  const subcategoryParam = searchParams?.get('subcategory');
 
-// Récupérer tous les items ou filtrer par catégorie
-const allItems: Item[] = slug === 'tous' 
-  ? Object.values(mockItems).flat() 
-  : (mockItems[slug] || Object.values(mockItems).flat());
+  // Charger les produits depuis l'API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Construire les filtres API
+        const apiFilters: any = {
+          page: currentPage,
+          limit: 20,
+          status: 'active'
+        };
 
-// Fonction pour normaliser les chaînes (enlever accents et mettre en minuscules)
-const normalizeString = (str: string): string => {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, ''); // Enlève les accents
-};
+        // Catégorie
+        if (slug !== 'tous') {
+          apiFilters.category = slug;
+        }
 
-// Filtrer par sous-catégorie si spécifié dans l'URL
-const subcategoryParam = searchParams?.get('subcategory');
-const subcategoryFilteredItems = subcategoryParam 
-  ? allItems.filter(item => 
-      item.subcategory && 
-      normalizeString(item.subcategory) === normalizeString(subcategoryParam)
-    )
-  : allItems;
+        // Sous-catégorie
+        if (subcategoryParam) {
+          apiFilters.subcategory = subcategoryParam;
+        }
 
-// Fonction de recherche complète dans tous les attributs
-const performSearch = (items: Item[], query: string): Item[] => {
-  if (query.trim() === '') return items;
-  
-  const searchTerm = query.toLowerCase();
-  
-  return items.filter(item => {
-    // Recherche dans les champs textuels principaux
-    const titleMatch = item.title.toLowerCase().includes(searchTerm);
-    const descriptionMatch = item.description.toLowerCase().includes(searchTerm);
-    const locationMatch = item.location.toLowerCase().includes(searchTerm);
-    const categoryMatch = item.category.toLowerCase().includes(searchTerm);
-    const subcategoryMatch = item.subcategory?.toLowerCase().includes(searchTerm);
-    
-    // Recherche dans le prix (ex: "1000", "1000 fcfa")
-    const priceMatch = item.price.toLowerCase().includes(searchTerm);
-    
-    // Recherche dans la condition
-    const conditionMatch = item.condition?.toLowerCase().includes(searchTerm);
-    
-    // Recherche dans les spécifications (ex: "128GB", "4K", etc.)
-    const specsMatch = item.specifications ? 
-      Object.entries(item.specifications).some(([key, value]) => 
-        key.toLowerCase().includes(searchTerm) || 
-        value.toLowerCase().includes(searchTerm)
-      ) : false;
-    
-    // Recherche dans le nom du vendeur
-    const sellerMatch = item.seller.name.toLowerCase().includes(searchTerm);
-    
-    // Recherche dans les zones de livraison (pour produits)
-    const deliveryMatch = item.delivery?.areas.some(area => 
-      area.toLowerCase().includes(searchTerm)
-    ) || false;
-    
-    // Recherche dans les zones de service (pour services)
-    const serviceAreaMatch = item.serviceArea?.some(area => 
-      area.toLowerCase().includes(searchTerm)
-    ) || false;
-    
-    // Recherche dans le type (produit/service)
-    const typeMatch = item.type.toLowerCase().includes(searchTerm);
-    
-    // Retourner true si au moins un champ correspond
-    return titleMatch || descriptionMatch || locationMatch || categoryMatch || 
-           subcategoryMatch || priceMatch || 
-           conditionMatch || specsMatch || sellerMatch || deliveryMatch || 
-           serviceAreaMatch || typeMatch;
-  });
-};
+        // Type (produit/service)
+        if (filters.showProducts && !filters.showServices) {
+          apiFilters.type = 'product';
+        } else if (filters.showServices && !filters.showProducts) {
+          apiFilters.type = 'service';
+        }
 
-// Filtrer par recherche textuelle d'abord
-const searchFilteredItems = performSearch(subcategoryFilteredItems, searchQuery);
+        // Location
+        if (filters.location && filters.location !== 'all') {
+          apiFilters.location = filters.location;
+        }
 
-// Appliquer les filtres supplémentaires
-let filteredItems = filterItems(searchFilteredItems, filters);
+        // Condition
+        if (filters.condition && filters.condition !== 'all') {
+          apiFilters.condition = filters.condition;
+        }
 
-// Si aucun résultat avec le filtre de localisation ET qu'il y a une recherche active,
-// réessayer sans le filtre de localisation
-if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location !== 'all') {
-  const filtersWithoutLocation = { ...filters, location: 'all' };
-  filteredItems = filterItems(searchFilteredItems, filtersWithoutLocation);
-}
+        // Prix
+        if (filters.priceMin) {
+          apiFilters.minPrice = parseFloat(filters.priceMin);
+        }
+        if (filters.priceMax) {
+          apiFilters.maxPrice = parseFloat(filters.priceMax);
+        }
 
+        // Recherche
+        if (searchQuery.trim()) {
+          apiFilters.search = searchQuery.trim();
+        }
 
-  const sortedItems = sortItems(filteredItems,sortBy);
+        // Tri
+        const sortMap: Record<string, string> = {
+          'recent': '-createdAt',
+          'price-asc': 'price',
+          'price-desc': '-price',
+          'rating': '-seller.rating'
+        };
+        apiFilters.sort = sortMap[sortBy] || '-createdAt';
 
-  const totalPages = getTotalPages(sortedItems.length);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentItems = sortedItems.slice(startIndex, startIndex + itemsPerPage);
+        console.log('🔍 Filtres API:', apiFilters);
+
+        // Appeler l'API
+        const response = await getProducts(apiFilters);
+        
+        setItems(response.data);
+        setPagination(response.pagination);
+        
+      } catch (err: any) {
+        console.error('❌ Erreur chargement produits:', err);
+        setError(err.message || 'Erreur lors du chargement des produits');
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [slug, subcategoryParam, currentPage, sortBy, filters, searchQuery]);
 
   // Compter produits et services
-  const productsCount = filteredItems.filter(i => i.type === 'product').length;
-  const servicesCount = filteredItems.filter(i => i.type === 'service').length;
+  const productsCount = items.filter(i => i.type === 'product').length;
+  const servicesCount = items.filter(i => i.type === 'service').length;
   
   // Trouver le nom de la catégorie et sous-catégorie
   const currentCategory = categories.find(cat => cat.slug === slug);
@@ -202,7 +205,7 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
           </h1>
           <div className="flex items-center gap-4 text-gray-600">
             <p className="text-lg">
-              <span className="font-semibold text-[#ec5a13]">{filteredItems.length}</span> résultats
+              <span className="font-semibold text-[#ec5a13]">{pagination.total}</span> résultats
             </p>
             <span className="text-gray-400">•</span>
             <p className="text-sm">
@@ -298,7 +301,38 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
 
           {/* Grille de produits/services */}
           <main className="flex-1">
-            {currentItems.length === 0 ? (
+            {/* Loading */}
+            {loading && (
+              <Card className="p-12 text-center shadow-sm">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-12 w-12 text-[#ec5a13] animate-spin" />
+                  <h3 className="text-xl font-semibold text-gray-900">Chargement...</h3>
+                  <p className="text-gray-600">Récupération des produits et services</p>
+                </div>
+              </Card>
+            )}
+
+            {/* Error */}
+            {error && !loading && (
+              <Card className="p-12 text-center shadow-sm border-red-200">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center">
+                    <AlertCircle className="h-10 w-10 text-red-500" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900">Erreur de chargement</h3>
+                  <p className="text-gray-600 max-w-md">{error}</p>
+                  <Button 
+                    onClick={() => window.location.reload()}
+                    className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white"
+                  >
+                    Réessayer
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* No results */}
+            {!loading && !error && items.length === 0 && (
               <Card className="p-12 text-center shadow-sm">
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-20 h-20 bg-[#ffe9de] rounded-full flex items-center justify-center">
@@ -309,38 +343,45 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
                     Essayez de modifier vos filtres ou critères de recherche pour voir plus de résultats.
                   </p>
                   <Button 
-                    onClick={() => setFilters({
-                      showProducts: true,
-                      showServices: true,
-                      priceMin: '',
-                      priceMax: '',
-                      location: 'all',
-                      condition: 'all',
-                      minRating: 0,
-                      promotedOnly: false
-                    })}
+                    onClick={() => {
+                      setFilters({
+                        showProducts: true,
+                        showServices: true,
+                        priceMin: '',
+                        priceMax: '',
+                        location: 'all',
+                        condition: 'all',
+                        minRating: 0,
+                        promotedOnly: false
+                      });
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
                     className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white"
                   >
                     Réinitialiser les filtres
                   </Button>
                 </div>
               </Card>
-            ) : (
+            )}
+
+            {/* Products Grid */}
+            {!loading && !error && items.length > 0 && (
               <>
                 <div className={viewMode === 'grid' 
                   ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' 
                   : 'flex flex-col gap-4'
                 }>
-                  {currentItems.map((item) => (
+                  {items.map((item) => (
                     <ItemCard key={item.id} item={item} viewMode={viewMode} />
                   ))}
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {pagination.pages > 1 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-10 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                     <p className="text-sm text-gray-600">
-                      Page {currentPage} sur {totalPages} - Affichage de {startIndex + 1} à {Math.min(startIndex + itemsPerPage, sortedItems.length)} sur {sortedItems.length} résultats
+                      Page {pagination.page} sur {pagination.pages} - {pagination.total} résultats
                     </p>
                     
                     <div className="flex items-center gap-2">
@@ -356,12 +397,12 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
                       </Button>
                       
                       <div className="flex items-center gap-1">
-                        {[...Array(totalPages)].map((_, i) => {
+                        {[...Array(pagination.pages)].map((_, i) => {
                           const pageNum = i + 1;
                           // Afficher seulement certaines pages pour éviter trop de boutons
                           if (
                             pageNum === 1 ||
-                            pageNum === totalPages ||
+                            pageNum === pagination.pages ||
                             (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
                           ) {
                             return (
@@ -390,7 +431,7 @@ if (filteredItems.length === 0 && searchQuery.trim() !== '' && filters.location 
 
                       <Button
                         variant="outline"
-                        disabled={currentPage === totalPages}
+                        disabled={currentPage === pagination.pages}
                         onClick={() => {
                           setCurrentPage(currentPage + 1);
                           window.scrollTo({ top: 0, behavior: 'smooth' });

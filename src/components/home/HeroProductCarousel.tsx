@@ -1,23 +1,51 @@
 'use client';
 
-import { Star, Clock, Navigation, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Star, Clock, Navigation, ChevronLeft, ChevronRight, MapPin, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockItems } from '@/lib/mockData';
+import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { Item } from '@/types';
+import { getProducts } from '@/lib/api/products';
 import Link from 'next/link';
-
-const allItems: Item[] = Object.values(mockItems).flat();
+import { getCityName } from '@/lib/utils';
 
 export function HeroProductCarousel() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les produits depuis l'API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await getProducts({
+          status: 'active',
+          sort: '-createdAt',
+          limit: 8
+        });
+        setItems(response.data);
+      } catch (error) {
+        console.error('❌ Erreur chargement HeroProductCarousel:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // Fonction pour calculer la distance
-  const getDistance = (itemId: number) => {
+  const getDistance = (itemId: number | string) => {
     const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
+    
+    if (typeof itemId === 'string') {
+      const hash = itemId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return distances[hash % distances.length];
+    }
+    
     return distances[itemId % distances.length];
   };
 
@@ -48,6 +76,28 @@ export function HeroProductCarousel() {
       return () => container.removeEventListener('scroll', updateScrollButtons);
     }
   }, []);
+
+  // État de chargement
+  if (loading) {
+    return (
+      <div className="mt-6 sm:mt-8 w-full">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 text-[#ec5a13] animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // Aucun produit
+  if (items.length === 0) {
+    return (
+      <div className="mt-6 sm:mt-8 w-full">
+        <div className="text-center py-12 text-gray-500">
+          <p>Aucun produit disponible pour le moment</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6 sm:mt-8 relative w-full">
@@ -82,7 +132,7 @@ export function HeroProductCarousel() {
         className="flex gap-3 sm:gap-4 md:gap-5 lg:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-8 sm:px-10 md:px-12 lg:px-16"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {allItems.slice(0, 8).map((item) => {
+        {items.map((item) => {
           const distance = getDistance(item.id);
           return (
             <Link href={`/items/${item.id}`} key={item.id} className="flex-shrink-0 w-[calc(100vw-80px)] sm:w-[calc(50vw-60px)] md:w-[calc(33.333vw-50px)] lg:w-[calc(25vw-60px)] xl:w-[calc(25vw-60px)] max-w-[340px]">
@@ -98,6 +148,13 @@ export function HeroProductCarousel() {
                     <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     <span className="font-medium">Il y a {item.postedTime}</span>
                   </Badge>
+                  {/* Bouton favoris en haut à droite */}
+                  <div 
+                    className="absolute top-2 sm:top-3 right-2 sm:right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <FavoriteButton productId={String(item.id)} size="sm" />
+                  </div>
                 </div>
 
                 <div className="p-3 flex flex-col gap-2">
@@ -116,7 +173,7 @@ export function HeroProductCarousel() {
                     <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
                       <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
                     </div>
-                    <span className="truncate">{item.location}</span>
+                    <span className="truncate">{getCityName(item.location)}</span>
                     <span className="text-gray-400">•</span>
                     <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
                   </div>

@@ -6,9 +6,10 @@ import Link from 'next/link';
 import { Header } from '../../../components/home/Header';
 import { Footer } from '../../../components/home/Footer';
 import { SimilarItemsCarousel } from '../../../components/home/SimilarItemsCarousel';
-import { mockItems, itemReviews, mockConversations } from '@/lib/mockData';
+import { itemReviews } from '@/lib/mockData';
 import { Item } from '@/types/index';
 import { getOrCreateConversation } from '@/lib/utilitis/conversationUtils';
+import { getProductById, getProducts } from '@/lib/api/products';
 import {
   Star,
   MapPin,
@@ -38,57 +39,131 @@ import {
   CalendarDays,
   MapPinned,
   Store,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import ReviewForm from '@/components/ReviewForm';
 
 export default function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
-  const itemId = parseInt(id);
 
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [allReviews, setAllReviews] = useState<any[]>([]);
+  const [item, setItem] = useState<Item | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [relatedItems, setRelatedItems] = useState<Item[]>([]);
 
-  const allItems: Item[] = Object.values(mockItems).flat();
-  const item = allItems.find(i => i.id === itemId);
+  // Charger le produit depuis l'API
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await getProductById(id);
+        setItem(response.data);
+      } catch (err: any) {
+        console.error('❌ Erreur chargement produit:', err);
+        setError(err.message || 'Erreur lors du chargement du produit');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
 
   // Charger les avis (mockData + localStorage)
   useEffect(() => {
-    const mockReviews = itemReviews[itemId] || [];
+    if (!item) return;
+
+    const itemId = item.id;
+    const mockReviews = (itemReviews as any)[itemId] || [];
     const localStorageKey = `reviews_${itemId}`;
     const storedReviews = localStorage.getItem(localStorageKey);
     const localReviews = storedReviews ? JSON.parse(storedReviews) : [];
     
     // Combiner les avis : localStorage en premier (plus récents)
     setAllReviews([...localReviews, ...mockReviews]);
-  }, [itemId]);
+  }, [item]);
+
+  // Charger les produits similaires depuis l'API
+  useEffect(() => {
+    const fetchRelatedProducts = async () => {
+      if (!item) return;
+
+      try {
+        const response = await getProducts({
+          category: item.category,
+          limit: 5, // Récupérer 5 pour exclure le produit actuel
+          status: 'active',
+        });
+        
+        // Filtrer pour exclure le produit actuel et garder 4 items
+        const filtered = response.data.filter(p => p.id !== item.id).slice(0, 4);
+        setRelatedItems(filtered);
+      } catch (err) {
+        console.error('❌ Erreur chargement produits similaires:', err);
+        setRelatedItems([]);
+      }
+    };
+
+    fetchRelatedProducts();
+  }, [item]);
 
   // Recharger les avis après soumission
   const handleReviewSubmitted = () => {
-    const mockReviews = itemReviews[itemId] || [];
+    if (!item) return;
+
+    const itemId = item.id;
+    const mockReviews = (itemReviews as any)[itemId] || [];
     const localStorageKey = `reviews_${itemId}`;
     const storedReviews = localStorage.getItem(localStorageKey);
     const localReviews = storedReviews ? JSON.parse(storedReviews) : [];
     setAllReviews([...localReviews, ...mockReviews]);
   };
 
-  if (!item) {
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+          <Header />
+        </Suspense>
+        <div className="container mx-auto px-4 py-16">
+          <Card className="p-12 text-center">
+            <Loader2 className="h-12 w-12 text-[#ec5a13] animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Chargement des détails...</p>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error ou produit non trouvé
+  if (error || !item) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
           <Header />
         </Suspense>
         <div className="container mx-auto px-4 py-16 text-center">
-          <div className="bg-white p-12 rounded-lg shadow-sm max-w-md mx-auto">
-            <AlertCircle className="h-16 w-16 text-[#ec5a13] mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Article non trouvé</h1>
-            <p className="text-gray-600 mb-6">Cet article n'existe pas ou a été supprimé.</p>
+          <div className="bg-white p-12 rounded-lg shadow-sm max-w-md mx-auto border-red-200">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              {error ? 'Erreur de chargement' : 'Article non trouvé'}
+            </h1>
+            <p className="text-gray-600 mb-6">
+              {error || "Cet article n'existe pas ou a été supprimé."}
+            </p>
             <Button 
               onClick={() => router.back()}
               className="bg-[#ec5a13] hover:bg-[#d94f0f]"
@@ -105,10 +180,6 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const isService = item.type === 'service';
   const reviews = allReviews;
   const seller = item.seller;
-
-  const relatedItems = allItems
-    .filter(i => i.category === item.category && i.id !== item.id)
-    .slice(0, 4);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -145,6 +216,27 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       </div>
+
+      {/* Bandeau d'alerte si produit désactivé */}
+      {item.status !== 'active' && (
+        <div className="bg-amber-50 border-b-2 border-amber-400">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-6 w-6 text-amber-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-900">
+                  {item.status === 'sold' && 'Cette annonce a été marquée comme vendue'}
+                  {item.status === 'expired' && 'Cette annonce n\'est plus disponible'}
+                  {item.status === 'pending' && 'Cette annonce est en attente de validation'}
+                </p>
+                <p className="text-sm text-amber-700">
+                  Vous pouvez encore consulter les détails, mais vous ne pourrez pas la contacter.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 py-6">
         {/* Breadcrumb */}
@@ -198,14 +290,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 )}
                 
                 <div className="absolute top-4 right-4 flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className={`rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white ${isFavorite ? 'text-red-500' : ''}`}
-                    onClick={() => setIsFavorite(!isFavorite)}
-                  >
-                    <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
-                  </Button>
+                  <FavoriteButton productId={String(item.id)} size="md" />
                   <Button
                     size="icon"
                     variant="secondary"
@@ -294,8 +379,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               {/* Actions rapides */}
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <Button 
-                  className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg"
+                  className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => window.open(`tel:${seller.contactInfo.phone}`)}
+                  disabled={item.status !== 'active'}
                 >
                   <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Appeler</span>
@@ -303,12 +389,13 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg"
+                  className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => {
                     // Obtenir ou créer une conversation pour ce vendeur et ce produit
-                    const conversation = getOrCreateConversation(seller.id, item.id);
+                    const conversation = getOrCreateConversation(seller.id, Number(item.id));
                     router.push(`/messages/${conversation.id}`);
                   }}
+                  disabled={item.status !== 'active'}
                 >
                   <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                   <span>Message</span>
@@ -490,7 +577,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                       </div>
                     </div>
                   )}
-                  <ReviewForm itemId={itemId} onReviewSubmitted={handleReviewSubmitted} />
+                  <ReviewForm itemId={typeof item.id === 'string' ? parseInt(item.id) : item.id} onReviewSubmitted={handleReviewSubmitted} />
                 </div>
               </div>
                 
@@ -586,7 +673,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               {reviews.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-gray-500 mb-4">Aucun avis pour le moment</p>
-                  <ReviewForm itemId={itemId} onReviewSubmitted={handleReviewSubmitted} />
+                  <ReviewForm itemId={typeof item.id === 'string' ? parseInt(item.id) : item.id} onReviewSubmitted={handleReviewSubmitted} />
                 </div>
               )}
             </Card>
@@ -654,22 +741,46 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     <Store className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                     Voir toutes les annonces ({seller.totalListings})
                   </Button>
-                  <Button className={`w-full ${isService ? 'bg-blue-100 hover:bg-blue-200 text-blue-900 border-2 border-blue-600' : 'bg-[#ffe9de] hover:bg-orange-100 text-[#ec5a13] border-2 border-[#ec5a13]'}`}>
+                  <Button 
+                    className={`w-full ${isService ? 'bg-blue-100 hover:bg-blue-200 text-blue-900 border-2 border-blue-600' : 'bg-[#ffe9de] hover:bg-orange-100 text-[#ec5a13] border-2 border-[#ec5a13]'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    disabled={item.status !== 'active'}
+                    onClick={() => item.status === 'active' && window.open(`tel:${seller.contactInfo.phone}`)}
+                  >
                     <Phone className="h-4 w-4 mr-2" />
                     {seller.contactInfo.phone}
                   </Button>
-                  <Button variant="outline" className="w-full border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de]">
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={item.status !== 'active'}
+                    onClick={() => {
+                      if (item.status === 'active') {
+                        const conversation = getOrCreateConversation(seller.id, Number(item.id));
+                        router.push(`/messages/${conversation.id}`);
+                      }
+                    }}
+                  >
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Envoyer un message
                   </Button>
                   {seller.contactInfo.whatsapp && (
-                    <Button variant="outline" className="w-full border-green-500 text-green-700 hover:bg-green-50">
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={item.status !== 'active'}
+                      onClick={() => item.status === 'active' && window.open(`https://wa.me/${seller.contactInfo.whatsapp}`)}
+                    >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       WhatsApp
                     </Button>
                   )}
                   {seller.contactInfo.email && (
-                    <Button variant="outline" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={item.status !== 'active'}
+                      onClick={() => item.status === 'active' && window.open(`mailto:${seller.contactInfo.email}`)}
+                    >
                       <Mail className="h-4 w-4 mr-2" />
                       Email
                     </Button>

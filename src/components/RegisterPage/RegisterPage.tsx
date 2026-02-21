@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { register, formatPhoneForAPI, sendOTP, verifyOTP, isAuthenticated } from '@/lib/api/auth';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,9 +91,15 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
+  const [devOTPCode, setDevOTPCode] = useState(''); // Code OTP en mode dev
   const [isVerifying, setIsVerifying] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
+  
+  // 🔒 Rate limiting pour OTP
+  const [otpAttemptsRemaining, setOtpAttemptsRemaining] = useState(3);
+  const [otpCooldown, setOtpCooldown] = useState(0); // Secondes restantes avant prochain envoi
+  const [canResendOTP, setCanResendOTP] = useState(true);
   
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -116,6 +123,25 @@ export default function RegisterPage() {
 
   const [avatarPreview, setAvatarPreview] = useState('');
 
+  // Rediriger si déjà connecté
+  useEffect(() => {
+    if (isAuthenticated()) {
+      router.push('/');
+    }
+  }, [router]);
+
+  // ⏱️ Timer pour le cooldown OTP
+  useEffect(() => {
+    if (otpCooldown > 0) {
+      const timer = setTimeout(() => {
+        setOtpCooldown(otpCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setCanResendOTP(otpAttemptsRemaining > 0);
+    }
+  }, [otpCooldown, otpAttemptsRemaining]);
+
   // Validation par étape
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -138,10 +164,10 @@ export default function RegisterPage() {
         newErrors.email = 'Email invalide';
       }
     } else if (step === 2) {
-      if (!formData.businessName.trim()) newErrors.businessName = 'Le nom est requis';
-      
-      // La description n'est requise que pour les professionnels
+      // Le nom de l'activité est requis uniquement pour les professionnels
       if (formData.businessType === 'professional') {
+        if (!formData.businessName.trim()) newErrors.businessName = 'Le nom de votre activité est requis pour un compte professionnel';
+        
         if (!formData.description.trim()) newErrors.description = 'La description est requise';
         if (formData.description.length < 20) newErrors.description = 'Décrivez votre activité en au moins 20 caractères';
       }
@@ -153,15 +179,57 @@ export default function RegisterPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (validateStep(currentStep)) {
       if (currentStep === 1) {
-        // Simuler l'envoi du code de vérification
+        // 📱 Envoyer le code OTP au numéro de téléphone
         setIsVerifying(true);
-        setTimeout(() => {
+        setErrors({});
+        
+        try {
+          const phoneNumber = formatPhoneForAPI(
+            formData.phone.countryCode, 
+            formData.phone.number
+          );
+          
+          const response = await sendOTP(phoneNumber);
+          
+          // Mettre à jour le nombre de tentatives restantes
+          if (response.data?.attemptsRemaining !== undefined) {
+            setOtpAttemptsRemaining(response.data.attemptsRemaining);
+          }
+          
+          // Démarrer le cooldown
+          if (response.data?.cooldownSeconds) {
+            setOtpCooldown(response.data.cooldownSeconds);
+            setCanResendOTP(false);
+          }
+          
+          // En mode développement, le backend renvoie le code OTP
+          if (response.devOTP) {
+            setDevOTPCode(response.devOTP);
+            console.log('🔑 Code OTP (dev):', response.devOTP);
+          }
+          
+          setSuccessMessage('Code envoyé avec succès !');
+          setTimeout(() => setSuccessMessage(''), 3000);
+          setCurrentStep(2.5);
+          
+        } catch (error: any) {
+          // Gérer les erreurs de rate limiting (429)
+          if (error.message.includes('Trop de tentatives') || error.message.includes('attendre')) {
+            setErrors({ 
+              general: error.message
+            });
+            setCanResendOTP(false);
+          } else {
+            setErrors({ 
+              general: error.message || "Erreur lors de l'envoi du code"
+            });
+          }
+        } finally {
           setIsVerifying(false);
-          setCurrentStep(2.5); // Étape de vérification
-        }, 1500);
+        }
       } else {
         setCurrentStep(currentStep + 1);
       }
@@ -176,13 +244,88 @@ export default function RegisterPage() {
     }
   };
 
-  const handleVerifyCode = () => {
-    if (verificationCode === '123456') { // Code de test
+  const handleVerifyCode = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setErrors({ verification: 'Veuillez entrer un code à 6 chiffres' });
+      return;
+    }
+
+    setIsVerifying(true);
+    setErrors({});
+
+    try {
+      const phoneNumber = formatPhoneForAPI(
+        formData.phone.countryCode, 
+        formData.phone.number
+      );
+      
+      await verifyOTP(phoneNumber, verificationCode);
+      
       setCurrentStep(2);
-      setSuccessMessage('Numéro vérifié avec succès !');
+      setSuccessMessage('Numéro vérifié avec succès ! ✅');
       setTimeout(() => setSuccessMessage(''), 3000);
-    } else {
-      setErrors({ verification: 'Code incorrect. Essayez 123456 pour le test.' });
+      
+    } catch (error: any) {
+      setErrors({ 
+        verification: error.message || 'Code incorrect ou expiré'
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (!canResendOTP || otpCooldown > 0) {
+      return; // Bloqué par le cooldown ou les tentatives max
+    }
+    
+    setIsVerifying(true);
+    setErrors({});
+    setVerificationCode(''); // Réinitialiser le code entré
+    
+    try {
+      const phoneNumber = formatPhoneForAPI(
+        formData.phone.countryCode, 
+        formData.phone.number
+      );
+      
+      const response = await sendOTP(phoneNumber);
+      
+      // Mettre à jour le nombre de tentatives restantes
+      if (response.data?.attemptsRemaining !== undefined) {
+        setOtpAttemptsRemaining(response.data.attemptsRemaining);
+      }
+      
+      // Démarrer le cooldown
+      if (response.data?.cooldownSeconds) {
+        setOtpCooldown(response.data.cooldownSeconds);
+        setCanResendOTP(false);
+      }
+      
+      // En mode développement, le backend renvoie le code OTP
+      if (response.devOTP) {
+        setDevOTPCode(response.devOTP);
+        console.log('🔑 Nouveau code OTP (dev):', response.devOTP);
+      }
+      
+      setSuccessMessage('Nouveau code envoyé avec succès !');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+    } catch (error: any) {
+      // Gérer les erreurs de rate limiting (429)
+      if (error.message.includes('Trop de tentatives') || error.message.includes('attendre')) {
+        setErrors({ 
+          general: error.message
+        });
+        setCanResendOTP(false);
+        setOtpAttemptsRemaining(0);
+      } else {
+        setErrors({ 
+          general: error.message || "Erreur lors de l'envoi du code"
+        });
+      }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -204,18 +347,43 @@ export default function RegisterPage() {
     if (!validateStep(2)) return;
     
     setIsLoading(true);
+    setErrors({});
     
     try {
-      // Simuler l'inscription
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 🔥 APPEL API RÉEL
+      const response = await register({
+        // Étape 1
+        name: formData.name,
+        phone: formatPhoneForAPI(formData.phone.countryCode, formData.phone.number),
+        whatsapp: formatPhoneForAPI(formData.whatsapp.countryCode, formData.whatsapp.number),
+        email: formData.email || undefined,
+        password: formData.password,
+        // Étape 2
+        businessType: formData.businessType,
+        businessName: formData.businessName,
+        description: formData.description || undefined,
+        location: formData.location,
+        avatar: formData.avatar || null
+      });
       
-      console.log('Données d\'inscription:', formData);
+      console.log('✅ Inscription réussie:', response);
       
-      // Rediriger vers la page de connexion
-      router.push('/login?registered=true');
-    } catch (error) {
-      console.error('Erreur d\'inscription:', error);
-      setErrors({ submit: 'Une erreur est survenue. Veuillez réessayer.' });
+      // Afficher message de succès
+      setSuccessMessage('Compte créé avec succès ! Bienvenue sur MarketHub 🎉');
+      
+      // Déclencher l'événement de mise à jour pour le Header
+      window.dispatchEvent(new Event('storage'));
+      
+      // Rediriger vers le dashboard après 2 secondes
+      setTimeout(() => {
+        router.push('/');  // Ou '/dashboard' si vous avez une page dashboard
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('❌ Erreur d\'inscription:', error);
+      setErrors({ 
+        submit: error.message || 'Une erreur est survenue. Veuillez réessayer.' 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -521,6 +689,21 @@ export default function RegisterPage() {
               <p className="text-gray-600">
                 Nous avons envoyé un code de vérification à {formatPhoneNumber(formData.phone)}
               </p>
+              
+              {/* Mode développement - Afficher le code OTP */}
+              {devOTPCode && (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-xs text-amber-800 font-medium mb-1">
+                    🔧 Mode Développement
+                  </p>
+                  <p className="text-sm text-amber-900">
+                    Code OTP: <span className="font-bold text-lg">{devOTPCode}</span>
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    (En production, ce code sera envoyé par SMS)
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-6">
@@ -539,13 +722,35 @@ export default function RegisterPage() {
                 {errors.verification && <p className="text-red-500 text-xs mt-1">{errors.verification}</p>}
               </div>
 
-              <div className="text-center">
+              {/* Message d'erreur global (rate limiting, etc.) */}
+              {errors.general && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    {errors.general}
+                  </p>
+                </div>
+              )}
+
+              <div className="text-center space-y-2">
                 <button
                   type="button"
-                  className="text-sm text-[#ec5a13] hover:text-[#d94f0f]"
+                  onClick={handleResendOTP}
+                  disabled={isVerifying || !canResendOTP || otpCooldown > 0}
+                  className="text-sm text-[#ec5a13] hover:text-[#d94f0f] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Renvoyer le code
+                  {isVerifying ? 'Envoi en cours...' : 
+                   otpCooldown > 0 ? `Attendre ${otpCooldown}s` :
+                   !canResendOTP ? 'Limite atteinte' :
+                   'Renvoyer le code'}
                 </button>
+                
+                {otpAttemptsRemaining < 3 && (
+                  <p className="text-xs text-gray-500">
+                    {otpAttemptsRemaining > 0 
+                      ? `${otpAttemptsRemaining} tentative(s) restante(s)` 
+                      : 'Aucune tentative restante. Réessayez dans 15 minutes.'}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -553,16 +758,27 @@ export default function RegisterPage() {
               <Button
                 variant="outline"
                 onClick={handlePrevStep}
+                disabled={isVerifying}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Retour
               </Button>
               <Button
                 onClick={handleVerifyCode}
+                disabled={isVerifying}
                 className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
               >
-                Vérifier
-                <CheckCircle2 className="ml-2 h-4 w-4" />
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Vérification...
+                  </>
+                ) : (
+                  <>
+                    Vérifier
+                    <CheckCircle2 className="ml-2 h-4 w-4" />
+                  </>
+                )}
               </Button>
             </div>
           </Card>
@@ -643,13 +859,13 @@ export default function RegisterPage() {
 
               <div>
                 <Label htmlFor="businessName" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Nom de votre activité *
+                  Nom de votre activité {formData.businessType === 'professional' && '*'}
                 </Label>
                 <div className="relative">
                   <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     id="businessName"
-                    placeholder="Ex: Ali Tech Solutions"
+                    placeholder={formData.businessType === 'professional' ? "Ex: Ali Tech Solutions" : "Ex: Vendeur de téléphones (optionnel)"}
                     value={formData.businessName}
                     onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
                     className="pl-10 text-base"

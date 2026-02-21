@@ -16,17 +16,27 @@ import {
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { Item } from '@/types/index';
 import { useRouter } from 'next/navigation';
+import { getCityName } from '@/lib/utils';
 
 export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'list' }) {
   const router = useRouter();
   const isService = item.type === 'service';
   
-  // Fonction pour calculer la distance
-  const getDistance = (itemId: number) => {
+  // Fonction pour calculer la distance (utilise un hash simple de l'ID)
+  const getDistance = (itemId: number | string) => {
     const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
-    return distances[itemId % distances.length];
+    // Convertir l'ID en nombre si c'est une chaîne
+    let numId: number;
+    if (typeof itemId === 'string') {
+      // Utiliser un hash simple de la chaîne
+      numId = itemId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    } else {
+      numId = itemId;
+    }
+    return distances[numId % distances.length];
   };
   
   const distance = getDistance(item.id);
@@ -62,10 +72,11 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
             </Badge>
             
             {/* Quick actions */}
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm shadow-md hover:bg-white">
-                <Heart className="h-4 w-4" />
-              </Button>
+            <div 
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <FavoriteButton productId={String(item.id)} size="sm" />
             </div>
           </div>
 
@@ -86,7 +97,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
               <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
                 <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
               </div>
-              <span className="truncate">{item.location}</span>
+              <span className="truncate">{getCityName(item.location)}</span>
               <span className="text-gray-400">•</span>
               <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
             </div>
@@ -121,10 +132,11 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
             
             {/* Quick actions */}
-            <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm shadow-md hover:bg-white">
-                <Heart className="h-4 w-4" />
-              </Button>
+            <div 
+              className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <FavoriteButton productId={String(item.id)} size="sm" />
             </div>
           </div>
 
@@ -145,7 +157,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
               <div className="w-6 flex-shrink-0 flex items-center justify-center">
                 <MapPin className="h-4 w-4 text-[#ec5a13]" />
               </div>
-              <span className="truncate">{item.location}</span>
+              <span className="truncate">{getCityName(item.location)}</span>
               <span className="text-gray-400">•</span>
               <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
             </div>
@@ -202,10 +214,11 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
         </Badge>
         
         {/* Quick actions - visible on hover */}
-        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm shadow-md hover:bg-white">
-            <Heart className="h-4 w-4" />
-          </Button>
+        <div 
+          className="absolute top-2 sm:top-3 right-2 sm:right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FavoriteButton productId={String(item.id)} size="sm" />
         </div>
       </div>
 
@@ -226,7 +239,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
           <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
             <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
           </div>
-          <span className="truncate">{item.location}</span>
+          <span className="truncate">{getCityName(item.location)}</span>
           <span className="text-gray-400">•</span>
           <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
         </div>

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,8 +31,10 @@ import {
   Send,
   Key,
   Smartphone,
-  Timer
+  Timer,
+  ShoppingBag
 } from 'lucide-react';
+import { forgotPassword, verifyResetCode, resetPassword } from '@/lib/api/auth';
 
 // Liste des pays avec leurs indicatifs
 const countries = [
@@ -66,6 +69,7 @@ interface PasswordResetProps {
 }
 
 export default function PasswordReset({ onCancel, onSuccess, showHeader = true }: PasswordResetProps) {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState<'identify' | 'verify' | 'reset' | 'success'>('identify');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -154,35 +158,38 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
     setIsLoading(true);
     
     try {
-      // Simuler l'envoi du code
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 📧 Envoyer la demande de réinitialisation au backend
+      const identifier = resetData.resetType === 'email' 
+        ? resetData.email 
+        : `${resetData.phone.countryCode} ${resetData.phone.number}`;
       
-      // Simulation de vérification (remplacer par votre API)
-      const isValidUser = resetData.resetType === 'email' 
-        ? resetData.email === 'test@example.com' 
-        : resetData.phone.number === '87727272';
+      console.log('📤 Envoi demande de réinitialisation:', identifier);
+      const response = await forgotPassword(identifier);
       
-      if (!isValidUser) {
-        setAttempts(attempts + 1);
-        if (attempts + 1 >= 3) {
-          setIsBlocked(true);
-          setBlockTimeLeft(300); // 5 minutes de blocage
-          setErrors({ blocked: 'Trop de tentatives. Compte bloqué pour 5 minutes.' });
-        } else {
-          setErrors({ 
-            notFound: resetData.resetType === 'email' 
-              ? 'Email non trouvé. Essayez test@example.com pour le test.' 
-              : 'Numéro non trouvé. Essayez 87727272 pour le test.' 
-          });
-        }
-      } else {
-        setCurrentStep('verify');
-        setResendTimer(60); // 60 secondes avant de pouvoir renvoyer
-        setSuccessMessage(`Code envoyé à ${resetData.resetType === 'email' ? resetData.email : `${resetData.phone.countryCode} ${resetData.phone.number}`}`);
-        setTimeout(() => setSuccessMessage(''), 5000);
+      // ✅ Succès - Passer à l'étape de vérification
+      setCurrentStep('verify');
+      setResendTimer(60); // 60 secondes avant de pouvoir renvoyer
+      setSuccessMessage(response.message || `Code envoyé à ${resetData.resetType === 'email' ? resetData.email : `${resetData.phone.countryCode} ${resetData.phone.number}`}`);
+      
+      // Afficher le code en mode dev (pour les tests)
+      if (response.devCode) {
+        console.log('🔑 Code de test:', response.devCode);
+        alert(`Code de test (dev only): ${response.devCode}`);
       }
-    } catch (error) {
-      setErrors({ submit: 'Une erreur est survenue. Veuillez réessayer.' });
+      
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } catch (error: any) {
+      console.error('❌ Erreur:', error.message);
+      
+      // ❌ Afficher l'erreur du backend
+      setAttempts(attempts + 1);
+      if (attempts + 1 >= 3) {
+        setIsBlocked(true);
+        setBlockTimeLeft(300); // 5 minutes de blocage
+        setErrors({ blocked: 'Trop de tentatives. Compte bloqué pour 5 minutes.' });
+      } else {
+        setErrors({ notFound: error.message });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -194,26 +201,34 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
       return;
     }
     
-    if (resetData.verificationCode !== '123456') {
-      setAttempts(attempts + 1);
-      if (attempts + 1 >= 3) {
-        setIsBlocked(true);
-        setBlockTimeLeft(300);
-        setErrors({ blocked: 'Trop de tentatives. Compte bloqué pour 5 minutes.' });
-      } else {
-        setErrors({ code: 'Code incorrect. Essayez 123456 pour le test.' });
-      }
+    // Validation basique du format (6 chiffres)
+    if (!/^\d{6}$/.test(resetData.verificationCode)) {
+      setErrors({ code: 'Le code doit contenir 6 chiffres' });
       return;
     }
     
     setIsLoading(true);
+    setErrors({});
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 🔐 Vérifier le code OTP avec le backend
+      const identifier = resetData.resetType === 'email' 
+        ? resetData.email 
+        : `${resetData.phone.countryCode} ${resetData.phone.number}`;
+      
+      console.log('🔍 Vérification du code pour:', identifier);
+      await verifyResetCode(identifier, resetData.verificationCode);
+      
+      // ✅ Code valide - passer à l'étape suivante
+      console.log('✅ Code vérifié avec succès');
       setCurrentStep('reset');
       setAttempts(0);
-    } catch (error) {
-      setErrors({ submit: 'Une erreur est survenue. Veuillez réessayer.' });
+      setSuccessMessage('Code vérifié avec succès !');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error: any) {
+      console.error('❌ Erreur vérification:', error.message);
+      setErrors({ code: error.message || 'Code invalide. Veuillez réessayer.' });
+      setAttempts(prev => prev + 1);
     } finally {
       setIsLoading(false);
     }
@@ -225,12 +240,26 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
     setIsLoading(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 🔄 Renvoyer le code via l'API
+      const identifier = resetData.resetType === 'email' 
+        ? resetData.email 
+        : `${resetData.phone.countryCode} ${resetData.phone.number}`;
+      
+      const response = await forgotPassword(identifier);
+      
       setResendTimer(60);
       setSuccessMessage('Code renvoyé avec succès !');
+      
+      // Afficher le code en mode dev
+      if (response.devCode) {
+        console.log('🔑 Nouveau code:', response.devCode);
+        alert(`Nouveau code de test (dev only): ${response.devCode}`);
+      }
+      
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      setErrors({ resend: 'Erreur lors du renvoi du code.' });
+    } catch (error: any) {
+      console.error('❌ Erreur renvoi:', error.message);
+      setErrors({ resend: error.message || 'Erreur lors du renvoi du code.' });
     } finally {
       setIsLoading(false);
     }
@@ -253,14 +282,23 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
     setIsLoading(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 🔐 Réinitialiser le mot de passe avec le backend
+      const identifier = resetData.resetType === 'email' 
+        ? resetData.email 
+        : `${resetData.phone.countryCode} ${resetData.phone.number}`;
+      
+      console.log('🔄 Réinitialisation du mot de passe pour:', identifier);
+      await resetPassword(identifier, resetData.verificationCode, resetData.newPassword);
+      
+      // ✅ Succès
       setCurrentStep('success');
       setSuccessMessage('Mot de passe réinitialisé avec succès !');
       setTimeout(() => {
         onSuccess?.();
       }, 3000);
-    } catch (error) {
-      setErrors({ submit: 'Une erreur est survenue. Veuillez réessayer.' });
+    } catch (error: any) {
+      console.error('❌ Erreur réinitialisation:', error.message);
+      setErrors({ submit: error.message || 'Une erreur est survenue. Veuillez réessayer.' });
     } finally {
       setIsLoading(false);
     }
@@ -286,60 +324,112 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
 
   if (currentStep === 'success') {
     return (
-      <Card className="p-8 shadow-xl border-0 max-w-md mx-auto">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="h-10 w-10 text-green-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">
-            Mot de passe réinitialisé !
-          </h2>
-          <p className="text-slate-600 mb-6">
-            Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
-          </p>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <Shield className="h-5 w-5 text-green-600" />
-              <div className="text-left">
-                <p className="text-sm font-medium text-green-900">Conseils de sécurité</p>
-                <ul className="text-xs text-green-700 mt-1 space-y-1">
-                  <li>• Utilisez un mot de passe unique</li>
-                  <li>• Ne le partagez avec personne</li>
-                  <li>• Changez-le régulièrement</li>
-                </ul>
+      <div className="min-h-screen bg-gradient-to-br from-[#ffe9de]/30 via-white to-orange-50/30 flex items-center justify-center p-4">
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
+                <ShoppingBag className="h-8 w-8 text-[#ec5a13]" />
+                <span className="text-2xl font-bold text-gray-900">MarketHub</span>
               </div>
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/login')}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Retour
+              </Button>
             </div>
           </div>
-          <Button
-            onClick={onSuccess}
-            className="w-full bg-emerald-600 hover:bg-emerald-700"
-          >
-            Se connecter maintenant
-          </Button>
         </div>
-      </Card>
+
+        <div className="w-full max-w-md mt-20">
+          <Card className="p-8 shadow-xl border-0">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                Mot de passe réinitialisé !
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <Shield className="h-5 w-5 text-green-600" />
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-green-900">Conseils de sécurité</p>
+                    <ul className="text-xs text-green-700 mt-1 space-y-1">
+                      <li>• Utilisez un mot de passe unique</li>
+                      <li>• Ne le partagez avec personne</li>
+                      <li>• Changez-le régulièrement</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={() => router.push('/login')}
+                className="w-full bg-[#ec5a13] hover:bg-[#d94f0f]"
+              >
+                Se connecter maintenant
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="p-8 shadow-xl border-0 max-w-md mx-auto">
-      {showHeader && (
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Key className="h-8 w-8 text-blue-600" />
+    <div className="min-h-screen bg-gradient-to-br from-[#ffe9de]/30 via-white to-orange-50/30 flex items-center justify-center p-4">
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
+              <ShoppingBag className="h-8 w-8 text-[#ec5a13]" />
+              <span className="text-2xl font-bold text-gray-900">MarketHub</span>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => router.push('/login')}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la connexion
+            </Button>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">
-            {currentStep === 'identify' && 'Réinitialiser le mot de passe'}
-            {currentStep === 'verify' && 'Vérification'}
-            {currentStep === 'reset' && 'Nouveau mot de passe'}
-          </h2>
-          <p className="text-slate-600">
-            {currentStep === 'identify' && 'Choisissez comment recevoir votre code de réinitialisation'}
+        </div>
+      </div>
+
+      <div className="w-full max-w-md mt-20">
+        {/* Message de succès */}
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+            {successMessage}
+          </div>
+        )}
+
+        <Card className="p-8 shadow-xl border-0">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
+          <Key className="h-8 w-8 text-[#ec5a13]" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {currentStep === 'identify' && 'Réinitialiser le mot de passe'}
+          {currentStep === 'verify' && 'Vérification'}
+          {currentStep === 'reset' && 'Nouveau mot de passe'}
+        </h2>
+        <p className="text-gray-600">
+          {currentStep === 'identify' && 'Choisissez comment recevoir votre code de réinitialisation'}
             {currentStep === 'verify' && 'Entrez le code que nous vous avons envoyé'}
             {currentStep === 'reset' && 'Choisissez votre nouveau mot de passe sécurisé'}
           </p>
         </div>
-      )}
 
       {/* Progress indicator */}
       <div className="flex items-center justify-center mb-8">
@@ -350,7 +440,7 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
                 (currentStep === step) || 
                 (currentStep === 'verify' && step === 'identify') ||
                 (currentStep === 'reset' && step !== 'identify')
-                  ? 'bg-emerald-600 text-white'
+                  ? 'bg-[#ec5a13] text-white'
                   : 'bg-slate-200 text-slate-600'
               }`}
             >
@@ -363,7 +453,7 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
                 className={`w-12 h-1 mx-2 ${
                   (currentStep === 'verify' && index === 0) ||
                   (currentStep === 'reset' && index < 2)
-                    ? 'bg-emerald-600'
+                    ? 'bg-[#ec5a13]'
                     : 'bg-slate-200'
                 }`}
               />
@@ -400,18 +490,18 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
                 onClick={() => setResetData({ ...resetData, resetType: 'email' })}
                 className={`p-4 rounded-lg border-2 transition-all ${
                   resetData.resetType === 'email'
-                    ? 'border-emerald-600 bg-emerald-50'
+                    ? 'border-[#ec5a13] bg-[#ffe9de]'
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
                 <Mail
                   className={`h-6 w-6 mx-auto mb-2 ${
-                    resetData.resetType === 'email' ? 'text-emerald-600' : 'text-slate-400'
+                    resetData.resetType === 'email' ? 'text-[#ec5a13]' : 'text-slate-400'
                   }`}
                 />
                 <p
                   className={`text-sm font-medium ${
-                    resetData.resetType === 'email' ? 'text-emerald-700' : 'text-slate-700'
+                    resetData.resetType === 'email' ? 'text-[#d94f0f]' : 'text-slate-700'
                   }`}
                 >
                   Email
@@ -422,18 +512,18 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
                 onClick={() => setResetData({ ...resetData, resetType: 'phone' })}
                 className={`p-4 rounded-lg border-2 transition-all ${
                   resetData.resetType === 'phone'
-                    ? 'border-emerald-600 bg-emerald-50'
+                    ? 'border-[#ec5a13] bg-[#ffe9de]'
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
                 <Phone
                   className={`h-6 w-6 mx-auto mb-2 ${
-                    resetData.resetType === 'phone' ? 'text-emerald-600' : 'text-slate-400'
+                    resetData.resetType === 'phone' ? 'text-[#ec5a13]' : 'text-slate-400'
                   }`}
                 />
                 <p
                   className={`text-sm font-medium ${
-                    resetData.resetType === 'phone' ? 'text-emerald-700' : 'text-slate-700'
+                    resetData.resetType === 'phone' ? 'text-[#d94f0f]' : 'text-slate-700'
                   }`}
                 >
                   SMS
@@ -503,14 +593,14 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
             </div>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-[#ffe9de] border border-orange-200 rounded-lg p-4">
             <div className="flex gap-3">
-              <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <Shield className="h-5 w-5 text-[#ec5a13] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-900 mb-1">
+                <p className="text-sm font-medium text-gray-900 mb-1">
                   Sécurité garantie
                 </p>
-                <p className="text-xs text-blue-700">
+                <p className="text-xs text-gray-700">
                   Le code expirera après 10 minutes pour votre sécurité.
                 </p>
               </div>
@@ -531,7 +621,7 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
             <Button
               onClick={handleSendCode}
               disabled={isLoading || isBlocked}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 bg-[#ec5a13] hover:bg-[#d94f0f]"
             >
               {isLoading ? (
                 <>
@@ -572,7 +662,7 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
               type="button"
               onClick={handleResendCode}
               disabled={resendTimer > 0 || isLoading}
-              className="text-sm text-emerald-600 hover:text-emerald-700 disabled:text-slate-400 disabled:cursor-not-allowed"
+              className="text-sm text-[#ec5a13] hover:text-[#d94f0f] disabled:text-slate-400 disabled:cursor-not-allowed"
             >
               {resendTimer > 0 ? (
                 <span className="flex items-center gap-2">
@@ -597,7 +687,7 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
             <Button
               onClick={handleVerifyCode}
               disabled={isLoading}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 bg-[#ec5a13] hover:bg-[#d94f0f]"
             >
               {isLoading ? (
                 <>
@@ -758,7 +848,7 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
             <Button
               onClick={handleResetPassword}
               disabled={isLoading}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 bg-[#ec5a13] hover:bg-[#d94f0f]"
             >
               {isLoading ? (
                 <>
@@ -775,6 +865,8 @@ export default function PasswordReset({ onCancel, onSuccess, showHeader = true }
           </div>
         </div>
       )}
-    </Card>
+      </Card>
+      </div>
+    </div>
   );
 }

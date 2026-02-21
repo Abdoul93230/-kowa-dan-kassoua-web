@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useEffect, useState } from 'react';
+import { getLocations } from '@/lib/api/products';
 
 export function FiltersSidebar({ 
   onClose, 
@@ -37,6 +39,17 @@ export function FiltersSidebar({
   setFilters: (filters: any) => void;
   urlType?: string | null;
 }) {
+  const [locations, setLocations] = useState<string[]>([]);
+
+  // 📍 Charger les localisations depuis l'API
+  useEffect(() => {
+    const loadLocations = async () => {
+      const locs = await getLocations();
+      setLocations(locs);
+    };
+    loadLocations();
+  }, []);
+
   return (
     <div className={`bg-white ${isMobile ? 'p-4' : 'rounded-lg border border-gray-200 p-6 shadow-sm'}`}>
       {isMobile && (
@@ -99,24 +112,41 @@ export function FiltersSidebar({
 
       {/* Localisation */}
       <div className="mb-6">
-        <Label className="text-sm font-semibold text-gray-900 mb-3 block">Localisation</Label>
+        <Label className="text-sm font-semibold text-gray-900 mb-3 block flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
+            <MapPin className="h-4 w-4 text-[#ec5a13]" />
+          </div>
+          <span>Localisation</span>
+        </Label>
         <Select 
           value={filters.location} 
           onValueChange={(value) => setFilters({...filters, location: value})}
         >
-          <SelectTrigger>
+          <SelectTrigger className="focus:border-[#ec5a13] focus:ring-[#ec5a13] hover:border-[#ec5a13] transition-all bg-gradient-to-br from-orange-50/30 to-transparent border-orange-100 rounded-lg shadow-sm hover:shadow-md">
             <SelectValue placeholder="Toutes les villes" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les villes</SelectItem>
-            <SelectItem value="dakar">Dakar, Sénégal</SelectItem>
-            <SelectItem value="abidjan">Abidjan, Côte d'Ivoire</SelectItem>
-            <SelectItem value="lome">Lomé, Togo</SelectItem>
-            <SelectItem value="cotonou">Cotonou, Bénin</SelectItem>
-            <SelectItem value="ouagadougou">Ouagadougou, Burkina Faso</SelectItem>
-            <SelectItem value="niamey">Niamey, Niger</SelectItem>
+          <SelectContent className="rounded-xl border-orange-100 shadow-2xl max-h-[300px]">
+            <SelectItem value="all" className="hover:bg-orange-50 focus:bg-orange-50 cursor-pointer rounded-lg mb-1">
+              <span className="flex items-center gap-2 font-medium">
+                <span className="text-lg">🌍</span>
+                <span>Toutes les villes</span>
+              </span>
+            </SelectItem>
+            <div className="border-t border-orange-100 my-1"></div>
+            {locations.map((loc) => (
+              <SelectItem key={loc} value={loc} className="hover:bg-orange-50 focus:bg-orange-50 cursor-pointer rounded-lg">
+                <span className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-[#ec5a13]" />
+                  <span>{loc}</span>
+                </span>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1.5">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#ec5a13] animate-pulse"></span>
+          <span>Affiche les produits et vendeurs de cette région</span>
+        </p>
       </div>
 
       {/* État (seulement pour les produits) */}
