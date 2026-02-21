@@ -133,11 +133,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
           <Header />
         </Suspense>
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-16 flex-1 flex items-center justify-center">
           <Card className="p-12 text-center">
             <Loader2 className="h-12 w-12 text-[#ec5a13] animate-spin mx-auto mb-4" />
             <p className="text-gray-600">Chargement des détails...</p>
@@ -151,11 +151,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   // Error ou produit non trouvé
   if (error || !item) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
           <Header />
         </Suspense>
-        <div className="container mx-auto px-4 py-16 text-center">
+        <div className="container mx-auto px-4 py-16 flex-1 flex items-center justify-center">
           <div className="bg-white p-12 rounded-lg shadow-sm max-w-md mx-auto border-red-200">
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
