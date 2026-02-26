@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,19 +16,79 @@ import {
   Clock,
   MoreVertical,
   Archive,
-  Trash2
+  Trash2,
+  Loader2,
+  WifiOff
 } from 'lucide-react';
-import { mockConversations } from '@/lib/mockData';
 import { Conversation } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getTotalUnreadCount } from '@/lib/utilitis/conversationUtils';
+import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
+import { getConversations } from '@/lib/api/messaging';
 
 export default function MessagesPage() {
   const router = useRouter();
+  const { user, token, loading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
-  const [selectedConv, setSelectedConv] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Socket.IO pour les mises à jour en temps réel
+  const { isConnected, on, off } = useSocket({
+    enabled: !!token,
+    token: token || undefined
+  });
+
+  // Charger les conversations initiales
+  useEffect(() => {
+    // Attendre que l'authentification soit vérifiée
+    if (authLoading) return;
+    
+    if (!user || !token) {
+      router.push('/login');
+      return;
+    }
+
+    const loadConversations = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getConversations();
+        setConversations(response.data);
+      } catch (err: any) {
+        console.error('❌ Erreur chargement conversations:', err);
+        setError(err.response?.data?.message || 'Erreur de chargement');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadConversations();
+  }, [user, token, router, authLoading]);
+
+  // Écouter les mises à jour en temps réel
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const handleConversationUpdate = (data: any) => {
+      console.log('📬 Conversation mise à jour:', data);
+      setConversations(prev =>
+        prev.map(conv =>
+          conv.id === data.conversationId
+            ? { ...conv, lastMessage: data.lastMessage, unreadCount: data.unreadCount }
+            : conv
+        )
+      );
+    };
+
+    on('conversation:updated', handleConversationUpdate);
+
+    return () => {
+      off('conversation:updated', handleConversationUpdate);
+    };
+  }, [isConnected, on, off]);
 
   // Filtrer les conversations par recherche
   const filteredConversations = conversations.filter((conv) => {
@@ -57,6 +117,37 @@ export default function MessagesPage() {
     return conversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
   };
 
+  // État de chargement
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="p-12 text-center">
+          <Loader2 className="h-12 w-12 text-[#ec5a13] animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Chargement des conversations...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  // État d'erreur
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="p-12 text-center max-w-md">
+          <WifiOff className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="bg-[#ec5a13] hover:bg-[#d94f0f]"
+          >
+            Réessayer
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -78,6 +169,13 @@ export default function MessagesPage() {
                 <span className="text-xl font-bold text-gray-900">MarketHub</span>
               </div>
             </div>
+            {/* Indicateur de connexion Socket */}
+            {isConnected && (
+              <Badge variant="outline" className="border-green-500 text-green-700">
+                <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                En ligne
+              </Badge>
+            )}
           </div>
         </div>
       </div>
@@ -206,13 +304,13 @@ export default function MessagesPage() {
                             : 'text-gray-600'
                         }`}
                       >
-                        {conversation.lastMessage.senderId === 'user_current' && (
+                        {conversation.lastMessage.senderId === user?.id && (
                           <span className="text-gray-400 mr-1">Vous:</span>
                         )}
                         {conversation.lastMessage.content}
                       </p>
                       {conversation.lastMessage.read &&
-                        conversation.lastMessage.senderId === 'user_current' && (
+                        conversation.lastMessage.senderId === user?.id && (
                           <CheckCheck className="h-4 w-4 text-[#ec5a13] flex-shrink-0" />
                         )}
                     </div>

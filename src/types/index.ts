@@ -125,7 +125,7 @@ export interface Message {
   content: string;
   timestamp: string;
   read: boolean;
-  type: 'text' | 'image' | 'offer';
+  type: 'text' | 'image' | 'audio' | 'offer';
   attachments?: string[];
   offerDetails?: {
     itemId: number;

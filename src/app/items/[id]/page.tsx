@@ -8,8 +8,9 @@ import { Footer } from '../../../components/home/Footer';
 import { SimilarItemsCarousel } from '../../../components/home/SimilarItemsCarousel';
 import { itemReviews } from '@/lib/mockData';
 import { Item } from '@/types/index';
-import { getOrCreateConversation } from '@/lib/utilitis/conversationUtils';
 import { getProductById, getProducts } from '@/lib/api/products';
+import { createOrGetConversation } from '@/lib/api/messaging';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Star,
   MapPin,
@@ -52,6 +53,7 @@ import ReviewForm from '@/components/ReviewForm';
 export default function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
+  const { user, token } = useAuth();
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [allReviews, setAllReviews] = useState<any[]>([]);
@@ -59,6 +61,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [relatedItems, setRelatedItems] = useState<Item[]>([]);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   // Charger le produit depuis l'API
   useEffect(() => {
@@ -180,6 +183,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const isService = item.type === 'service';
   const reviews = allReviews;
   const seller = item.seller;
+  const isOwnProduct = user?.id === seller.id;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -231,6 +235,25 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 </p>
                 <p className="text-sm text-amber-700">
                   Vous pouvez encore consulter les détails, mais vous ne pourrez pas la contacter.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bandeau d'alerte si c'est votre propre produit */}
+      {isOwnProduct && (
+        <div className="bg-blue-50 border-b-2 border-blue-400">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Info className="h-6 w-6 text-blue-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-blue-900">
+                  Ceci est votre propre annonce
+                </p>
+                <p className="text-sm text-blue-700">
+                  Vous ne pouvez pas vous envoyer de message à vous-même. Pour gérer cette annonce, allez dans "Mes annonces".
                 </p>
               </div>
             </div>
@@ -381,7 +404,8 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 <Button 
                   className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => window.open(`tel:${seller.contactInfo.phone}`)}
-                  disabled={item.status !== 'active'}
+                  disabled={item.status !== 'active' || isOwnProduct}
+                  title={isOwnProduct ? "Vous ne pouvez pas appeler votre propre annonce" : ""}
                 >
                   <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Appeler</span>
@@ -390,14 +414,41 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 <Button 
                   variant="outline" 
                   className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => {
-                    // Obtenir ou créer une conversation pour ce vendeur et ce produit
-                    const conversation = getOrCreateConversation(seller.id, Number(item.id));
-                    router.push(`/messages/${conversation.id}`);
+                  onClick={async () => {
+                    if (isOwnProduct) {
+                      alert('Vous ne pouvez pas vous envoyer de message à vous-même.');
+                      return;
+                    }
+                    
+                    if (!user || !token) {
+                      router.push('/login');
+                      return;
+                    }
+                    
+                    try {
+                      setCreatingConversation(true);
+                      // Créer ou récupérer la conversation via l'API
+                      const response = await createOrGetConversation({
+                        sellerId: seller.id,
+                        productId: String(item.id)
+                      });
+                      router.push(`/messages/${response.data.id}`);
+                    } catch (err: any) {
+                      console.error('❌ Erreur création conversation:', err);
+                      const errorMessage = err.response?.data?.message || 'Impossible de créer la conversation. Veuillez réessayer.';
+                      alert(errorMessage);
+                    } finally {
+                      setCreatingConversation(false);
+                    }
                   }}
-                  disabled={item.status !== 'active'}
+                  disabled={item.status !== 'active' || creatingConversation || isOwnProduct}
+                  title={isOwnProduct ? "Vous ne pouvez pas contacter votre propre annonce" : ""}
                 >
-                  <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                  {creatingConversation ? (
+                    <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 animate-spin" />
+                  ) : (
+                    <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                  )}
                   <span>Message</span>
                 </Button>
               </div>
@@ -743,8 +794,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   </Button>
                   <Button 
                     className={`w-full ${isService ? 'bg-blue-100 hover:bg-blue-200 text-blue-900 border-2 border-blue-600' : 'bg-[#ffe9de] hover:bg-orange-100 text-[#ec5a13] border-2 border-[#ec5a13]'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                    disabled={item.status !== 'active'}
-                    onClick={() => item.status === 'active' && window.open(`tel:${seller.contactInfo.phone}`)}
+                    disabled={item.status !== 'active' || isOwnProduct}
+                    onClick={() => item.status === 'active' && !isOwnProduct && window.open(`tel:${seller.contactInfo.phone}`)}
+                    title={isOwnProduct ? "Vous ne pouvez pas appeler votre propre annonce" : ""}
                   >
                     <Phone className="h-4 w-4 mr-2" />
                     {seller.contactInfo.phone}
@@ -752,23 +804,51 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   <Button 
                     variant="outline" 
                     className="w-full border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={item.status !== 'active'}
-                    onClick={() => {
+                    disabled={item.status !== 'active' || creatingConversation || isOwnProduct}
+                    onClick={async () => {
+                      if (isOwnProduct) {
+                        alert('Vous ne pouvez pas vous envoyer de message à vous-même.');
+                        return;
+                      }
+                      
+                      if (!user || !token) {
+                        router.push('/login');
+                        return;
+                      }
+                      
                       if (item.status === 'active') {
-                        const conversation = getOrCreateConversation(seller.id, Number(item.id));
-                        router.push(`/messages/${conversation.id}`);
+                        try {
+                          setCreatingConversation(true);
+                          const response = await createOrGetConversation({
+                            sellerId: seller.id,
+                            productId: String(item.id)
+                          });
+                          router.push(`/messages/${response.data.id}`);
+                        } catch (err: any) {
+                          console.error('❌ Erreur création conversation:', err);
+                          const errorMessage = err.response?.data?.message || 'Impossible de créer la conversation. Veuillez réessayer.';
+                          alert(errorMessage);
+                        } finally {
+                          setCreatingConversation(false);
+                        }
                       }
                     }}
+                    title={isOwnProduct ? "Vous ne pouvez pas contacter votre propre annonce" : ""}
                   >
-                    <MessageCircle className="h-4 w-4 mr-2" />
+                    {creatingConversation ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                    )}
                     Envoyer un message
                   </Button>
                   {seller.contactInfo.whatsapp && (
                     <Button 
                       variant="outline" 
                       className="w-full border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={item.status !== 'active'}
-                      onClick={() => item.status === 'active' && window.open(`https://wa.me/${seller.contactInfo.whatsapp}`)}
+                      disabled={item.status !== 'active' || isOwnProduct}
+                      onClick={() => item.status === 'active' && !isOwnProduct && window.open(`https://wa.me/${seller.contactInfo.whatsapp}`)}
+                      title={isOwnProduct ? "Vous ne pouvez pas contacter votre propre annonce" : ""}
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       WhatsApp
@@ -778,8 +858,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     <Button 
                       variant="outline" 
                       className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={item.status !== 'active'}
-                      onClick={() => item.status === 'active' && window.open(`mailto:${seller.contactInfo.email}`)}
+                      disabled={item.status !== 'active' || isOwnProduct}
+                      onClick={() => item.status === 'active' && !isOwnProduct && window.open(`mailto:${seller.contactInfo.email}`)}
+                      title={isOwnProduct ? "Vous ne pouvez pas contacter votre propre annonce" : ""}
                     >
                       <Mail className="h-4 w-4 mr-2" />
                       Email

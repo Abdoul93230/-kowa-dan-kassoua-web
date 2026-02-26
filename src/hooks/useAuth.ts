@@ -43,6 +43,7 @@ export interface User {
  */
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -54,13 +55,17 @@ export function useAuth() {
       const isAuth = authApi.isAuthenticated();
       if (isAuth) {
         const currentUser = authApi.getCurrentUser();
+        const accessToken = localStorage.getItem('accessToken');
         setUser(currentUser);
+        setToken(accessToken);
       } else {
         setUser(null);
+        setToken(null);
       }
     } catch (error) {
       console.error('Erreur lors du chargement de l\'utilisateur:', error);
       setUser(null);
+      setToken(null);
     } finally {
       setLoading(false);
     }
@@ -112,6 +117,7 @@ export function useAuth() {
       console.error('Erreur lors de la déconnexion:', error);
     } finally {
       setUser(null);
+      setToken(null);
     }
   };
 
@@ -152,6 +158,7 @@ export function useAuth() {
   return {
     // État
     user,
+    token,
     isAuthenticated: !!user,
     loading,
     

@@ -12,43 +12,120 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { mockConversations } from '@/lib/mockData';
-import { isAuthenticated, getCurrentUser, logout } from '@/lib/api/auth';
 import { useFavorites } from '@/contexts/FavoritesContext';
+import { getUnreadCount } from '@/lib/api/messaging';
+import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { favorites } = useFavorites();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { user, token, isAuthenticated: isLoggedIn, logout } = useAuth();
+  const { isConnected, on, off } = useSocket({
+    enabled: !!token,
+    token: token || undefined
+  });
   
   const urlType = searchParams?.get('type');
   
-  // Vérifier l'état de connexion au chargement
+  // Log de debug pour vérifier l'état d'authentification
   useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = isAuthenticated();
-      setIsLoggedIn(authenticated);
-      if (authenticated) {
-        const currentUser = getCurrentUser();
-        setUser(currentUser);
+    console.log('🔍 Header: État auth:', {
+      hasUser: !!user,
+      userId: user?.id,
+      hasToken: !!token,
+      isLoggedIn,
+      unreadCount
+    });
+  }, [user, token, isLoggedIn, unreadCount]);
+  
+  // Charger le nombre de messages non lus depuis l'API
+  const loadUnreadCount = useCallback(async () => {
+    if (!isLoggedIn) {
+      console.log('📊 Header: Non connecté, compteur = 0');
+      setUnreadCount(0);
+      return;
+    }
+    
+    try {
+      console.log('📊 Header: Chargement compteur messages...');
+      const response = await getUnreadCount();
+      console.log('📊 Header: Réponse API:', response);
+      const count = response.data?.unreadCount || 0;
+      console.log('📊 Header: Compteur chargé:', count);
+      setUnreadCount(count);
+    } catch (err) {
+      console.error('❌ Erreur chargement compteur messages:', err);
+      setUnreadCount(0);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    loadUnreadCount();
+    
+    // Rafraîchir toutes les 30 secondes
+    const interval = setInterval(loadUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [loadUnreadCount]);
+
+  // Écouter les événements Socket.IO pour mettre à jour le compteur en temps réel
+  useEffect(() => {
+    if (!isConnected || !isLoggedIn) return;
+
+    console.log('📡 Header: Écoute des événements Socket.IO pour compteur messages');
+
+    // Nouveau message reçu → recharger le compteur
+    const handleNewMessage = (message: any) => {
+      console.log('📨 Header: Nouveau message reçu', message);
+      // Ne compter que si le message n'est pas envoyé par l'utilisateur actuel
+      const currentUserId = String(user?.id || '').trim();
+      const messageSenderId = String(message.senderId || '').trim();
+      console.log('📨 Header: Comparaison IDs:', { currentUserId, messageSenderId, isFromOther: messageSenderId !== currentUserId });
+      
+      if (messageSenderId !== currentUserId) {
+        console.log('📨 Header: Message d\'un autre utilisateur, rechargement du compteur');
+        loadUnreadCount();
+      } else {
+        console.log('📨 Header: Message envoyé par moi, pas de rechargement');
       }
     };
-    
-    checkAuth();
-    
-    // Écouter les changements de storage (connexion/déconnexion dans un autre onglet)
-    window.addEventListener('storage', checkAuth);
-    return () => window.removeEventListener('storage', checkAuth);
-  }, []);
-  
-  // Calculer le nombre de messages non lus
-  const unreadCount = mockConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
+
+    // Conversation mise à jour → recharger le compteur
+    const handleConversationUpdated = (data: any) => {
+      console.log('🔄 Header: Conversation mise à jour', data);
+      loadUnreadCount();
+    };
+
+    // Message marqué comme lu → recharger le compteur
+    const handleMessageRead = () => {
+      console.log('👁️ Header: Message marqué comme lu');
+      loadUnreadCount();
+    };
+
+    // Compteur de non-lus a changé → recharger
+    const handleUnreadCountChanged = () => {
+      console.log('🔔 Header: Compteur de non-lus a changé');
+      loadUnreadCount();
+    };
+
+    on('message:new', handleNewMessage);
+    on('conversation:updated', handleConversationUpdated);
+    on('message:read', handleMessageRead);
+    on('unreadCount:changed', handleUnreadCountChanged);
+
+    return () => {
+      off('message:new', handleNewMessage);
+      off('conversation:updated', handleConversationUpdated);
+      off('message:read', handleMessageRead);
+      off('unreadCount:changed', handleUnreadCountChanged);
+    };
+  }, [isConnected, isLoggedIn, user, loadUnreadCount, on, off]);
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -57,8 +134,6 @@ export function Header() {
 
   const handleLogout = async () => {
     await logout();
-    setIsLoggedIn(false);
-    setUser(null);
     router.push('/');
     setMobileMenuOpen(false);
   };
@@ -158,7 +233,7 @@ export function Header() {
               className="relative hidden md:inline-flex hover:bg-[#ffe9de] hover:text-[#ec5a13]"
             >
               <MessageSquare className="h-5 w-5" />
-              {unreadCount > 0 && (
+              {isLoggedIn && (
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-[#ec5a13] text-white text-xs">
                   {unreadCount}
                 </Badge>
@@ -320,7 +395,7 @@ export function Header() {
                   <MessageSquare className="h-4 w-4" />
                   Messages
                 </span>
-                {unreadCount > 0 && (
+                {isLoggedIn && (
                   <Badge className="bg-[#ec5a13] text-white">
                     {unreadCount}
                   </Badge>
