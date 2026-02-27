@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft,
   Send,
-  Phone,
   Info,
   Image as ImageIcon,
   Smile,
@@ -414,14 +413,6 @@ export default function ChatPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => window.open(`tel:${seller.contactInfo.phone}`)}
-                className="hover:bg-gray-100"
-              >
-                <Phone className="h-5 w-5 text-gray-700" />
-              </Button>
               <Button
                 variant="ghost"
                 size="sm"

@@ -368,6 +368,8 @@ export const formatPhoneForAPI = (countryCode: string, number: string): string =
   // Nettoyer le numéro (enlever espaces et caractères non-numériques)
   const cleanNumber = number.replace(/\D/g, '');
   
+  console.log('📱 Formatage téléphone:', { countryCode, number, cleanNumber });
+  
   if (!cleanNumber) {
     throw new Error('Le numéro de téléphone est requis');
   }
@@ -376,7 +378,9 @@ export const formatPhoneForAPI = (countryCode: string, number: string): string =
     throw new Error('Le numéro de téléphone doit contenir au moins 6 chiffres');
   }
   
-  return `${countryCode} ${cleanNumber}`;
+  const formatted = `${countryCode} ${cleanNumber}`;
+  console.log('✅ Téléphone formaté:', formatted);
+  return formatted;
 };
 
 // ===============================================
@@ -389,9 +393,12 @@ export const formatPhoneForAPI = (countryCode: string, number: string): string =
  */
 export const sendOTP = async (phone: string) => {
   try {
+    console.log('📤 Envoi OTP avec téléphone:', phone);
     const response = await api.post('/auth/send-otp', { phone });
+    console.log('✅ Réponse OTP:', response.data);
     return response.data;
   } catch (error: any) {
+    console.error('❌ Erreur envoi OTP:', error.response?.data);
     throw new Error(
       error.response?.data?.message || 
       'Erreur lors de l\'envoi du code'

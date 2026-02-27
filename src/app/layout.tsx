@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
         <FavoritesProvider>
           {children}
           <ScrollToTop />
+          <Toaster position="top-right" richColors />
         </FavoritesProvider>
       </body>
     </html>

@@ -228,28 +228,31 @@ export default function MyListingsPage() {
   // Loading state
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
           <Header />
         </Suspense>
-        <div className="container mx-auto px-4 py-12 flex items-center justify-center">
+        <div className="flex-1 container mx-auto px-4 py-12 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-[#ec5a13] mx-auto mb-4" />
             <p className="text-gray-600">Chargement de vos annonces...</p>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
         <Header />
       </Suspense>
 
-      {/* Hero Section */}
-      <div className="bg-[#ffe9de] border-b-4 border-[#ec5a13]">
+      {/* Contenu principal */}
+      <main className="flex-1 flex flex-col">
+        {/* Hero Section */}
+        <div className="bg-[#ffe9de] border-b-4 border-[#ec5a13]">
         <div className="container mx-auto px-4 py-8 sm:py-12">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -587,6 +590,7 @@ export default function MyListingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </main>
 
       <Footer />
     </div>

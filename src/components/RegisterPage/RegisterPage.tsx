@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { register, formatPhoneForAPI, sendOTP, verifyOTP, isAuthenticated } from '@/lib/api/auth';
+import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -211,11 +212,15 @@ export default function RegisterPage() {
             console.log('🔑 Code OTP (dev):', response.devOTP);
           }
           
+          toast.success('Code envoyé avec succès !');
           setSuccessMessage('Code envoyé avec succès !');
           setTimeout(() => setSuccessMessage(''), 3000);
           setCurrentStep(2.5);
           
         } catch (error: any) {
+          // Afficher une alerte visuelle
+          toast.error(error.message || "Erreur lors de l'envoi du code");
+          
           // Gérer les erreurs de rate limiting (429)
           if (error.message.includes('Trop de tentatives') || error.message.includes('attendre')) {
             setErrors({ 
@@ -261,13 +266,16 @@ export default function RegisterPage() {
       
       await verifyOTP(phoneNumber, verificationCode);
       
+      toast.success('Numéro vérifié avec succès ! ✅');
       setCurrentStep(2);
       setSuccessMessage('Numéro vérifié avec succès ! ✅');
       setTimeout(() => setSuccessMessage(''), 3000);
       
     } catch (error: any) {
+      const errorMsg = error.message || 'Code incorrect ou expiré';
+      toast.error(errorMsg);
       setErrors({ 
-        verification: error.message || 'Code incorrect ou expiré'
+        verification: errorMsg
       });
     } finally {
       setIsVerifying(false);
@@ -308,10 +316,14 @@ export default function RegisterPage() {
         console.log('🔑 Nouveau code OTP (dev):', response.devOTP);
       }
       
+      toast.success('Nouveau code envoyé avec succès !');
       setSuccessMessage('Nouveau code envoyé avec succès !');
       setTimeout(() => setSuccessMessage(''), 3000);
       
     } catch (error: any) {
+      // Afficher une alerte visuelle
+      toast.error(error.message || "Erreur lors de l'envoi du code");
+      
       // Gérer les erreurs de rate limiting (429)
       if (error.message.includes('Trop de tentatives') || error.message.includes('attendre')) {
         setErrors({ 
@@ -369,6 +381,7 @@ export default function RegisterPage() {
       console.log('✅ Inscription réussie:', response);
       
       // Afficher message de succès
+      toast.success('Compte créé avec succès ! Bienvenue sur MarketHub 🎉');
       setSuccessMessage('Compte créé avec succès ! Bienvenue sur MarketHub 🎉');
       
       // Déclencher l'événement de mise à jour pour le Header
@@ -381,8 +394,10 @@ export default function RegisterPage() {
       
     } catch (error: any) {
       console.error('❌ Erreur d\'inscription:', error);
+      const errorMsg = error.message || 'Une erreur est survenue. Veuillez réessayer.';
+      toast.error(errorMsg);
       setErrors({ 
-        submit: error.message || 'Une erreur est survenue. Veuillez réessayer.' 
+        submit: errorMsg
       });
     } finally {
       setIsLoading(false);

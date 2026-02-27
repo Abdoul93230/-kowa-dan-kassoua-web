@@ -32,6 +32,8 @@ interface UseSocketReturn {
   markMessageAsRead: (messageId: string, conversationId: string) => void;
   startTyping: (conversationId: string) => void;
   stopTyping: (conversationId: string) => void;
+  isUserOnline: (userId: string) => boolean;
+  onlineUsers: Set<string>;
 }
 
 /**
@@ -42,6 +44,7 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
   const { enabled = true, token, onConnect, onDisconnect, onError } = options;
   
   const [isConnected, setIsConnected] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const socketRef = useRef<Socket | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -96,6 +99,7 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
     socket.on('disconnect', (reason) => {
       console.log('❌ Socket.IO déconnecté:', reason);
       setIsConnected(false);
+      setOnlineUsers(new Set()); // Réinitialiser la liste des utilisateurs en ligne
       onDisconnectRef.current?.();
     });
 
@@ -108,6 +112,26 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
     socket.on('error', (error) => {
       console.error('❌ Erreur Socket.IO:', error);
       onErrorRef.current?.(error);
+    });
+
+    // Événements de présence en ligne
+    socket.on('users:online', (data: { userIds: string[] }) => {
+      console.log('📋 Liste utilisateurs en ligne reçue:', data.userIds.length, 'utilisateurs');
+      setOnlineUsers(new Set(data.userIds));
+    });
+
+    socket.on('user:online', (data: { userId: string }) => {
+      console.log('🟢 Utilisateur en ligne:', data.userId);
+      setOnlineUsers(prev => new Set(prev).add(data.userId));
+    });
+
+    socket.on('user:offline', (data: { userId: string }) => {
+      console.log('⚪ Utilisateur hors ligne:', data.userId);
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(data.userId);
+        return newSet;
+      });
     });
 
     // Heartbeat pour maintenir la connexion
@@ -127,6 +151,7 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
       socket.disconnect();
       socketRef.current = null;
       setIsConnected(false);
+      setOnlineUsers(new Set()); // Réinitialiser la liste des utilisateurs en ligne
     };
   }, [enabled, token]); // Seulement enabled et token comme dépendances
 
@@ -193,6 +218,11 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
     emit('typing:stop', { conversationId });
   }, [emit]);
 
+  // Vérifier si un utilisateur est en ligne
+  const isUserOnline = useCallback((userId: string) => {
+    return onlineUsers.has(userId);
+  }, [onlineUsers]);
+
   return {
     socket: socketRef.current,
     isConnected,
@@ -204,6 +234,8 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
     sendMessage,
     markMessageAsRead,
     startTyping,
-    stopTyping
+    stopTyping,
+    isUserOnline,
+    onlineUsers
   };
 }

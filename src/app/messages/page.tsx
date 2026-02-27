@@ -36,7 +36,7 @@ export default function MessagesPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Socket.IO pour les mises à jour en temps réel
-  const { isConnected, on, off } = useSocket({
+  const { isConnected, on, off, isUserOnline } = useSocket({
     enabled: !!token,
     token: token || undefined
   });
@@ -90,12 +90,25 @@ export default function MessagesPage() {
     };
   }, [isConnected, on, off]);
 
+  // Obtenir l'autre participant dans une conversation
+  const getOtherParticipant = (conversation: Conversation) => {
+    if (!user) return conversation.participants.seller;
+    
+    // Si l'utilisateur actuel est le buyer, retourner le seller
+    if (conversation.participants.buyer.id === user.id) {
+      return conversation.participants.seller;
+    }
+    // Sinon, retourner le buyer
+    return conversation.participants.buyer;
+  };
+
   // Filtrer les conversations par recherche
   const filteredConversations = conversations.filter((conv) => {
-    const sellerName = conv.participants.seller.name.toLowerCase();
+    const otherParticipant = getOtherParticipant(conv);
+    const participantName = otherParticipant.name.toLowerCase();
     const itemTitle = conv.item?.title.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
-    return sellerName.includes(query) || itemTitle.includes(query);
+    return participantName.includes(query) || itemTitle.includes(query);
   });
 
   const formatTime = (timestamp: string) => {
@@ -235,7 +248,11 @@ export default function MessagesPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filteredConversations.map((conversation) => (
+            {filteredConversations.map((conversation) => {
+              const otherParticipant = getOtherParticipant(conversation);
+              const isVerified = 'verified' in otherParticipant && (otherParticipant as any).verified;
+              
+              return (
               <Card
                 key={conversation.id}
                 className={`p-4 hover:shadow-md transition-all cursor-pointer border-2 ${
@@ -246,35 +263,46 @@ export default function MessagesPage() {
                 onClick={() => handleOpenConversation(conversation.id)}
               >
                 <div className="flex items-start gap-4">
-                  {/* Avatar du vendeur */}
+                  {/* Avatar de l'interlocuteur */}
                   <div className="relative flex-shrink-0">
                     <Avatar className="h-14 w-14">
-                      {conversation.participants.seller.avatar ? (
+                      {otherParticipant.avatar ? (
                         <img
-                          src={conversation.participants.seller.avatar}
-                          alt={conversation.participants.seller.name}
+                          src={otherParticipant.avatar}
+                          alt={otherParticipant.name}
                           className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-[#ec5a13] to-orange-600 flex items-center justify-center text-white font-bold text-lg">
-                          {conversation.participants.seller.name.charAt(0)}
+                          {otherParticipant.name.charAt(0)}
                         </div>
                       )}
                     </Avatar>
-                    {conversation.participants.seller.verified && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <CheckCheck className="h-3 w-3 text-white" />
-                      </div>
-                    )}
+                    {/* Indicateur de présence en ligne */}
+                    <div 
+                      className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white ${
+                        isUserOnline(otherParticipant.id)
+                          ? 'bg-green-500'
+                          : 'bg-gray-400'
+                      }`}
+                      title={isUserOnline(otherParticipant.id) ? 'En ligne' : 'Hors ligne'}
+                    />
                   </div>
 
                   {/* Contenu de la conversation */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-1">
                       <div className="flex-1 min-w-0 pr-2">
-                        <h3 className="font-semibold text-gray-900 truncate">
-                          {conversation.participants.seller.name}
-                        </h3>
+                        <div className="flex items-center gap-1">
+                          <h3 className="font-semibold text-gray-900 truncate">
+                            {otherParticipant.name}
+                          </h3>
+                          {isVerified && (
+                            <span title="Vendeur vérifié">
+                              <CheckCheck className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                            </span>
+                          )}
+                        </div>
                         {conversation.item && (
                           <p className="text-xs text-gray-500 truncate flex items-center gap-1">
                             <ShoppingBag className="h-3 w-3" />
@@ -336,7 +364,8 @@ export default function MessagesPage() {
                   </div>
                 </div>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
 
