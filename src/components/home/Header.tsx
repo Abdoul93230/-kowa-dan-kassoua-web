@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { getUnreadCount } from '@/lib/api/messaging';
@@ -34,6 +34,10 @@ export function Header() {
   
   const urlType = searchParams?.get('type');
   
+  // Ref pour éviter les appels multiples simultanés (debounce)
+  const loadingRef = useRef(false);
+  const lastLoadRef = useRef(0);
+  
   // Log de debug pour vérifier l'état d'authentification
   useEffect(() => {
     console.log('🔍 Header: État auth:', {
@@ -41,38 +45,76 @@ export function Header() {
       userId: user?.id,
       hasToken: !!token,
       isLoggedIn,
-      unreadCount
+      unreadCount,
+      isSocketConnected: isConnected
     });
-  }, [user, token, isLoggedIn, unreadCount]);
+  }, [user, token, isLoggedIn, unreadCount, isConnected]);
   
-  // Charger le nombre de messages non lus depuis l'API
+  // Charger le nombre de messages non lus depuis l'API (avec debounce)
   const loadUnreadCount = useCallback(async () => {
     if (!isLoggedIn) {
-      console.log('📊 Header: Non connecté, compteur = 0');
       setUnreadCount(0);
       return;
     }
     
+    // Debounce: éviter les appels trop rapprochés (< 500ms pour permettre mises à jour rapides)
+    const now = Date.now();
+    if (now - lastLoadRef.current < 500) {
+      console.log('⏭️ Header: Appel ignoré (debounce 500ms)');
+      return;
+    }
+    
+    // Éviter les appels simultanés
+    if (loadingRef.current) {
+      console.log('⏭️ Header: Appel ignoré (déjà en cours)');
+      return;
+    }
+    
+    loadingRef.current = true;
+    lastLoadRef.current = now;
+    
     try {
       console.log('📊 Header: Chargement compteur messages...');
       const response = await getUnreadCount();
-      console.log('📊 Header: Réponse API:', response);
       const count = response.data?.unreadCount || 0;
-      console.log('📊 Header: Compteur chargé:', count);
+      console.log('✅ Header: Compteur chargé:', count);
       setUnreadCount(count);
     } catch (err) {
       console.error('❌ Erreur chargement compteur messages:', err);
       setUnreadCount(0);
+    } finally {
+      loadingRef.current = false;
     }
   }, [isLoggedIn]);
 
+  // Polling de secours (uniquement si WebSocket déconnecté)
   useEffect(() => {
+    if (!isLoggedIn) {
+      setUnreadCount(0);
+      return;
+    }
+
+    // Charger immédiatement
     loadUnreadCount();
     
-    // Rafraîchir toutes les 30 secondes
-    const interval = setInterval(loadUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [loadUnreadCount]);
+    // Si WebSocket connecté, pas besoin de polling (temps réel via Socket.IO)
+    if (isConnected) {
+      console.log('🔌 Header: WebSocket connecté, polling désactivé');
+      return;
+    }
+    
+    // WebSocket déconnecté → activer le polling de secours (toutes les 60 secondes)
+    console.log('🔄 Header: WebSocket déconnecté, activation du polling (60s)');
+    const interval = setInterval(() => {
+      console.log('⏰ Header: Polling de secours...');
+      loadUnreadCount();
+    }, 60000);
+    
+    return () => {
+      console.log('🛑 Header: Nettoyage du polling');
+      clearInterval(interval);
+    };
+  }, [isLoggedIn, isConnected, loadUnreadCount]);
 
   // Écouter les événements Socket.IO pour mettre à jour le compteur en temps réel
   useEffect(() => {
@@ -80,50 +122,41 @@ export function Header() {
 
     console.log('📡 Header: Écoute des événements Socket.IO pour compteur messages');
 
-    // Nouveau message reçu → recharger le compteur
+    // Nouveau message reçu → incrémenter localement (optimiste) + recharger
     const handleNewMessage = (message: any) => {
-      console.log('📨 Header: Nouveau message reçu', message);
-      // Ne compter que si le message n'est pas envoyé par l'utilisateur actuel
       const currentUserId = String(user?.id || '').trim();
       const messageSenderId = String(message.senderId || '').trim();
-      console.log('📨 Header: Comparaison IDs:', { currentUserId, messageSenderId, isFromOther: messageSenderId !== currentUserId });
       
       if (messageSenderId !== currentUserId) {
-        console.log('📨 Header: Message d\'un autre utilisateur, rechargement du compteur');
-        loadUnreadCount();
-      } else {
-        console.log('📨 Header: Message envoyé par moi, pas de rechargement');
+        console.log('📨 Header: Nouveau message reçu, mise à jour du compteur');
+        // Mise à jour optimiste (instantanée)
+        setUnreadCount(prev => prev + 1);
+        // Puis synchroniser avec l'API (debounced)
+        setTimeout(() => loadUnreadCount(), 100);
       }
     };
 
-    // Conversation mise à jour → recharger le compteur
-    const handleConversationUpdated = (data: any) => {
-      console.log('🔄 Header: Conversation mise à jour', data);
-      loadUnreadCount();
-    };
-
-    // Message marqué comme lu → recharger le compteur
+    // Message marqué comme lu → recharger depuis l'API
     const handleMessageRead = () => {
-      console.log('👁️ Header: Message marqué comme lu');
-      loadUnreadCount();
+      console.log('👁️ Header: Message marqué comme lu, rechargement du compteur');
+      // Recharger depuis l'API pour avoir le vrai compte
+      setTimeout(() => loadUnreadCount(), 100);
     };
 
-    // Compteur de non-lus a changé → recharger
-    const handleUnreadCountChanged = () => {
-      console.log('🔔 Header: Compteur de non-lus a changé');
-      loadUnreadCount();
+    // Conversation mise à jour → recharger (utile quand on envoie un message dans une conversation)
+    const handleConversationUpdated = () => {
+      console.log('🔄 Header: Conversation mise à jour, rechargement du compteur');
+      setTimeout(() => loadUnreadCount(), 100);
     };
 
     on('message:new', handleNewMessage);
-    on('conversation:updated', handleConversationUpdated);
     on('message:read', handleMessageRead);
-    on('unreadCount:changed', handleUnreadCountChanged);
+    on('conversation:updated', handleConversationUpdated);
 
     return () => {
       off('message:new', handleNewMessage);
-      off('conversation:updated', handleConversationUpdated);
       off('message:read', handleMessageRead);
-      off('unreadCount:changed', handleUnreadCountChanged);
+      off('conversation:updated', handleConversationUpdated);
     };
   }, [isConnected, isLoggedIn, user, loadUnreadCount, on, off]);
 

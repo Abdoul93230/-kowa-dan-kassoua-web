@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
-import { categories } from '@/lib/mockData';
+import { getCategories, Category } from '@/lib/api/categories';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,30 +21,56 @@ import {
   ChevronRight,
   Grid3x3,
   Package,
-  Wrench
+  Wrench,
+  Laptop,
+  Gamepad2,
+  HardHat,
+  Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-// Map des icônes par slug de catégorie
+// Map des icônes par nom
 const iconMap: Record<string, any> = {
-  'electronique': Smartphone,
-  'alimentation': UtensilsCrossed,
-  'immobilier': Home,
-  'vehicules': Car,
-  'mode': Shirt,
-  'emploi': Briefcase,
-  'education': BookOpen,
-  'loisirs': Heart,
+  Smartphone,
+  UtensilsCrossed,
+  Home,
+  Car,
+  Shirt,
+  Briefcase,
+  BookOpen,
+  Heart,
+  Wrench,
+  Laptop,
+  Gamepad2,
+  HardHat,
+  Package
 };
 
 export default function CategoriesListPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await getCategories();
+        setCategories(response.data);
+      } catch (error) {
+        console.error('Erreur lors du chargement des catégories:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Filtrer les catégories selon la recherche
   const filteredCategories = categories.filter(cat => 
     cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cat.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     cat.subcategories?.some(sub => sub.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
@@ -103,14 +129,19 @@ export default function CategoriesListPage() {
           </Card>
           <Card className="p-6 text-center bg-white shadow-sm border-gray-200">
             <div className="text-3xl font-bold text-[#ec5a13] mb-2">
-              {categories.reduce((acc, cat) => acc + cat.count, 0).toLocaleString()}
+              {categories.reduce((acc, cat) => acc + cat.totalCount, 0).toLocaleString()}
             </div>
             <div className="text-gray-600">Annonces au total</div>
           </Card>
         </div>
 
-        {/* Liste des catégories */}
-        {filteredCategories.length === 0 ? (
+        {/* État de chargement */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="h-12 w-12 animate-spin text-[#ec5a13] mb-4" />
+            <p className="text-gray-600">Chargement des catégories...</p>
+          </div>
+        ) : filteredCategories.length === 0 ? (
           <Card className="p-12 text-center">
             <div className="flex flex-col items-center gap-4">
               <div className="w-20 h-20 bg-[#ffe9de] rounded-full flex items-center justify-center">
@@ -131,11 +162,11 @@ export default function CategoriesListPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {filteredCategories.map((category) => {
-              const IconComponent = iconMap[category.slug] || Package;
+              const IconComponent = iconMap[category.icon || 'Package'] || Package;
               
               return (
                 <Card 
-                  key={category.id} 
+                  key={category._id} 
                   className="group hover:shadow-xl transition-all duration-300 border-gray-200 bg-white overflow-hidden py-0 gap-0"
                 >
                   {/* En-tête de la catégorie */}
@@ -156,7 +187,7 @@ export default function CategoriesListPage() {
                             {category.description}
                           </p>
                           <Badge className="bg-[#ec5a13] text-white">
-                            {category.count.toLocaleString()} annonces
+                            {category.totalCount.toLocaleString()} annonces
                           </Badge>
                         </div>
                       </div>
@@ -174,7 +205,7 @@ export default function CategoriesListPage() {
                       <div className="grid grid-cols-2 gap-3">
                         {category.subcategories.map((sub) => (
                           <button
-                            key={sub.id}
+                            key={sub._id}
                             onClick={() => handleSubcategoryClick(category.slug, sub.slug)}
                             className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-[#ec5a13] hover:bg-[#ffe9de] transition-all duration-200 text-left group/sub"
                           >
@@ -183,7 +214,7 @@ export default function CategoriesListPage() {
                                 {sub.name}
                               </div>
                               <div className="text-xs text-gray-500 mt-1">
-                                {sub.count} annonces
+                                Sous-catégorie
                               </div>
                             </div>
                             <ChevronRight className="h-4 w-4 text-gray-400 group-hover/sub:text-[#ec5a13] flex-shrink-0 ml-2" />

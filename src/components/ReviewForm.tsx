@@ -1,79 +1,96 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { createReview } from '@/lib/api/reviews';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Star, MessageSquarePlus } from 'lucide-react';
+import { Star, MessageSquarePlus, AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface ReviewFormProps {
-  itemId: number;
+  itemId: string;  // Changé de number à string (pour MongoDB ObjectId)
   onReviewSubmitted?: () => void;
 }
 
 export default function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProps) {
+  const { user, token } = useAuth();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
-  const [userName, setUserName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (rating === 0 || !comment.trim() || !userName.trim()) {
-      alert('Veuillez remplir tous les champs et donner une note');
+    if (!user || !token) {
+      alert('Vous devez être connecté pour laisser un avis');
+      router.push('/login');
+      return;
+    }
+    
+    if (rating === 0 || !comment.trim()) {
+      alert('Veuillez donner une note et écrire un commentaire');
+      return;
+    }
+
+    if (comment.length > 1000) {
+      alert('Le commentaire ne peut pas dépasser 1000 caractères');
       return;
     }
 
     setIsSubmitting(true);
+    setError(null);
 
-    // Créer le nouvel avis
-    const newReview = {
-      id: `rev_${Date.now()}`,
-      userId: `user_${Date.now()}`,
-      userName: userName.trim(),
-      userAvatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`,
-      rating,
-      comment: comment.trim(),
-      date: new Date().toISOString().split('T')[0],
-      helpful: 0
-    };
+    try {
+      // Appeler l'API pour créer l'avis
+      await createReview({
+        productId: itemId,
+        rating,
+        comment: comment.trim()
+      });
 
-    // Récupérer les avis existants depuis localStorage
-    const existingReviews = localStorage.getItem(`reviews_${itemId}`);
-    const reviews = existingReviews ? JSON.parse(existingReviews) : [];
-    
-    // Ajouter le nouvel avis
-    reviews.unshift(newReview);
-    
-    // Sauvegarder dans localStorage
-    localStorage.setItem(`reviews_${itemId}`, JSON.stringify(reviews));
+      // Réinitialiser le formulaire
+      setRating(0);
+      setComment('');
+      setShowSuccess(true);
 
-    // Réinitialiser le formulaire
-    setRating(0);
-    setComment('');
-    setUserName('');
-    setIsSubmitting(false);
-    setShowSuccess(true);
+      // Masquer le message de succès et fermer le modal
+      setTimeout(() => {
+        setShowSuccess(false);
+        setOpen(false);
+      }, 2000);
 
-    // Masquer le message de succès après 3 secondes
-    setTimeout(() => {
-      setShowSuccess(false);
-      setOpen(false); // Fermer le modal
-    }, 2000);
+      // Notifier le parent pour recharger les avis
+      if (onReviewSubmitted) {
+        onReviewSubmitted();
+      }
 
-    // Notifier le parent
-    if (onReviewSubmitted) {
-      onReviewSubmitted();
+    } catch (err: any) {
+      console.error('Erreur création avis:', err);
+      setError(err.message || 'Erreur lors de la publication de l\'avis');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen && (!user || !token)) {
+      alert('Vous devez être connecté pour laisser un avis');
+      router.push('/login');
+      return;
+    }
+    setOpen(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button 
           className="bg-[#ec5a13] hover:bg-[#d64f11] text-white gap-2"
@@ -89,32 +106,26 @@ export default function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProp
         </DialogHeader>
       
       {showSuccess && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
-          ✓ Votre avis a été publié avec succès!
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 flex items-center gap-2">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          Votre avis a été publié avec succès!
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 flex items-center gap-2">
+          <AlertCircle className="w-5 h-5" />
+          {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Nom */}
-        <div>
-          <label htmlFor="userName" className="block text-sm font-medium mb-2">
-            Votre nom
-          </label>
-          <input
-            type="text"
-            id="userName"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="Entrez votre nom"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ec5a13] focus:border-transparent"
-            required
-          />
-        </div>
-
         {/* Note avec étoiles */}
         <div>
           <label className="block text-sm font-medium mb-2">
-            Votre note
+            Votre note *
           </label>
           <div className="flex gap-2">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -136,7 +147,7 @@ export default function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProp
               </button>
             ))}
             {rating > 0 && (
-              <span className="ml-2 text-gray-600 self-center">
+              <span className="ml-2 text-gray-600 self-center font-medium">
                 {rating} / 5
               </span>
             )}
@@ -146,7 +157,7 @@ export default function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProp
         {/* Commentaire */}
         <div>
           <label htmlFor="comment" className="block text-sm font-medium mb-2">
-            Votre commentaire
+            Votre commentaire *
           </label>
           <Textarea
             id="comment"
@@ -156,17 +167,18 @@ export default function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProp
             rows={4}
             className="w-full resize-none focus:ring-2 focus:ring-[#ec5a13]"
             required
+            maxLength={1000}
           />
           <p className="text-sm text-gray-500 mt-1">
-            {comment.length} / 500 caractères
+            {comment.length} / 1000 caractères
           </p>
         </div>
 
         {/* Bouton de soumission */}
         <Button
           type="submit"
-          disabled={isSubmitting || rating === 0}
-          className="w-full bg-[#ec5a13] hover:bg-[#d64f11] text-white"
+          disabled={isSubmitting || rating === 0 || !comment.trim()}
+          className="w-full bg-[#ec5a13] hover:bg-[#d64f11] text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Publication...' : 'Publier mon avis'}
         </Button>

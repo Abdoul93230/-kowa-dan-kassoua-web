@@ -6,10 +6,10 @@ import Link from 'next/link';
 import { Header } from '../../../components/home/Header';
 import { Footer } from '../../../components/home/Footer';
 import { SimilarItemsCarousel } from '../../../components/home/SimilarItemsCarousel';
-import { itemReviews } from '@/lib/mockData';
 import { Item } from '@/types/index';
 import { getProductById, getProducts } from '@/lib/api/products';
 import { createOrGetConversation } from '@/lib/api/messaging';
+import { getProductReviews, getReviewStats, markReviewHelpful, type Review, type ReviewStats } from '@/lib/api/reviews';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Star,
@@ -41,6 +41,7 @@ import {
   MapPinned,
   Store,
   Loader2,
+  ThumbsUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -49,6 +50,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import ReviewForm from '@/components/ReviewForm';
+import { formatRelativeDate } from '@/lib/utils';
 
 export default function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -56,7 +58,9 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const { user, token } = useAuth();
 
   const [selectedImage, setSelectedImage] = useState(0);
-  const [allReviews, setAllReviews] = useState<any[]>([]);
+  const [allReviews, setAllReviews] = useState<Review[]>([]);
+  const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
+  const [loadingReviews, setLoadingReviews] = useState(false);
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,18 +87,29 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     fetchProduct();
   }, [id]);
 
-  // Charger les avis (mockData + localStorage)
+  // Charger les avis depuis l'API
   useEffect(() => {
-    if (!item) return;
+    const fetchReviews = async () => {
+      if (!item) return;
 
-    const itemId = item.id;
-    const mockReviews = (itemReviews as any)[itemId] || [];
-    const localStorageKey = `reviews_${itemId}`;
-    const storedReviews = localStorage.getItem(localStorageKey);
-    const localReviews = storedReviews ? JSON.parse(storedReviews) : [];
-    
-    // Combiner les avis : localStorage en premier (plus récents)
-    setAllReviews([...localReviews, ...mockReviews]);
+      setLoadingReviews(true);
+      try {
+        const [reviewsResponse, statsResponse] = await Promise.all([
+          getProductReviews(String(item.id), 1, 10),
+          getReviewStats(String(item.id))
+        ]);
+        
+        setAllReviews(reviewsResponse.data);
+        setReviewStats(statsResponse.data);
+      } catch (err) {
+        console.error('❌ Erreur chargement avis:', err);
+        setAllReviews([]);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchReviews();
   }, [item]);
 
   // Charger les produits similaires depuis l'API
@@ -122,15 +137,36 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   }, [item]);
 
   // Recharger les avis après soumission
-  const handleReviewSubmitted = () => {
+  const handleReviewSubmitted = async () => {
     if (!item) return;
 
-    const itemId = item.id;
-    const mockReviews = (itemReviews as any)[itemId] || [];
-    const localStorageKey = `reviews_${itemId}`;
-    const storedReviews = localStorage.getItem(localStorageKey);
-    const localReviews = storedReviews ? JSON.parse(storedReviews) : [];
-    setAllReviews([...localReviews, ...mockReviews]);
+    try {
+      const [reviewsResponse, statsResponse] = await Promise.all([
+        getProductReviews(String(item.id), 1, 10),
+        getReviewStats(String(item.id))
+      ]);
+      
+      setAllReviews(reviewsResponse.data);
+      setReviewStats(statsResponse.data);
+      
+      // Recharger aussi le produit pour mettre à jour le rating
+      const productResponse = await getProductById(id);
+      setItem(productResponse.data);
+    } catch (err) {
+      console.error('❌ Erreur rechargement avis:', err);
+    }
+  };
+
+  // Marquer un avis comme utile
+  const handleMarkHelpful = async (reviewId: string) => {
+    try {
+      await markReviewHelpful(reviewId);
+      // Recharger les avis pour voir le compteur mis à jour
+      const reviewsResponse = await getProductReviews(String(item!.id), 1, 10);
+      setAllReviews(reviewsResponse.data);
+    } catch (err) {
+      console.error('❌ Erreur marquage avis utile:', err);
+    }
   };
 
   // Loading state
@@ -628,7 +664,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                       </div>
                     </div>
                   )}
-                  <ReviewForm itemId={typeof item.id === 'string' ? parseInt(item.id) : item.id} onReviewSubmitted={handleReviewSubmitted} />
+                  <ReviewForm itemId={String(item.id)} onReviewSubmitted={handleReviewSubmitted} />
                 </div>
               </div>
                 
@@ -657,7 +693,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                           <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <div className="flex items-start gap-3">
                               <Avatar className="flex-shrink-0">
-                                <AvatarImage src={review.userAvatar} />
+                                <AvatarImage src={review.userAvatar || undefined} />
                                 <AvatarFallback>{review.userName[0]}</AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
@@ -675,7 +711,16 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                                   </div>
                                 </div>
                                 <p className="text-sm text-gray-700 mb-2 line-clamp-3">{review.comment}</p>
-                                <p className="text-xs text-gray-500">{review.date}</p>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs text-gray-500">{formatRelativeDate(review.date)}</p>
+                                  <button
+                                    onClick={() => handleMarkHelpful(review.id)}
+                                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#ec5a13] transition-colors"
+                                  >
+                                    <ThumbsUp className="h-3 w-3" />
+                                    <span>{review.helpful > 0 ? review.helpful : ''}</span>
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -692,7 +737,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                       <div key={review.id} className="border-t border-gray-200 pt-4 first:border-t-0 first:pt-0">
                         <div className="flex items-start gap-3">
                           <Avatar>
-                            <AvatarImage src={review.userAvatar} />
+                            <AvatarImage src={review.userAvatar || undefined} />
                             <AvatarFallback>{review.userName[0]}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
@@ -710,7 +755,19 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                               </div>
                             </div>
                             <p className="text-gray-700 mb-2">{review.comment}</p>
-                            <p className="text-sm text-gray-500">{review.date}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm text-gray-500">{formatRelativeDate(review.date)}</p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleMarkHelpful(review.id)}
+                                className="flex items-center gap-2 text-gray-500 hover:text-[#ec5a13] h-8"
+                              >
+                                <ThumbsUp className="h-4 w-4" />
+                                {review.helpful > 0 && <span className="text-sm">{review.helpful}</span>}
+                                <span className="text-sm">Utile</span>
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -721,10 +778,18 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               )}
               
               {/* Message si aucun avis */}
-              {reviews.length === 0 && (
+              {!loadingReviews && reviews.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-gray-500 mb-4">Aucun avis pour le moment</p>
-                  <ReviewForm itemId={typeof item.id === 'string' ? parseInt(item.id) : item.id} onReviewSubmitted={handleReviewSubmitted} />
+                  <p className="text-sm text-gray-400 mb-4">Soyez le premier à laisser un avis!</p>
+                </div>
+              )}
+              
+              {/* Chargement des avis */}
+              {loadingReviews && (
+                <div className="text-center py-8">
+                  <Loader2 className="h-8 w-8 text-[#ec5a13] animate-spin mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">Chargement des avis...</p>
                 </div>
               )}
             </Card>

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { createProduct, updateProduct, filesToBase64 } from '@/lib/api/product';
 import { getCurrentUser } from '@/lib/api/auth';
+import { getCategories, Category as ApiCategory } from '@/lib/api/categories';
 import {
   Select,
   SelectContent,
@@ -17,7 +18,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { categories } from '@/lib/mockData';
 import {
   Package,
   Briefcase,
@@ -44,6 +44,7 @@ import {
   Save,
   Trash2,
   Eye,
+  Loader2,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
@@ -64,18 +65,6 @@ const countries = [
 const nigerCities = [
   'Niamey', 'Zinder', 'Maradi', 'Agadez', 'Tahoua', 'Dosso', 
   'Tillabéri', 'Diffa', 'Arlit', 'Birni N\'Konni', 'Gaya', 'Tessaoua'
-];
-
-// Liste générique simplifiée pour le secteur informel
-const genericProductTypes = [
-  { id: 'electronique', label: 'Téléphones & Électronique', emoji: '📱', category: 'Électronique', subcategory: '' },
-  { id: 'vehicules', label: 'Véhicules & Transport', emoji: '🚗', category: 'Automobile', subcategory: '' },
-  { id: 'maison', label: 'Maison & Mobilier', emoji: '🏠', category: 'maison', subcategory: '' },
-  { id: 'mode', label: 'Vêtements & Mode', emoji: '👕', category: 'Mode & Beauté', subcategory: '' },
-  { id: 'immobilier', label: 'Immobilier & Terrains', emoji: '🏢', category: 'Immobilier', subcategory: '' },
-  { id: 'services', label: 'Services à domicile', emoji: '🔨', category: 'Services à domicile', subcategory: '' },
-  { id: 'materiaux', label: 'Commerce & Alimentation', emoji: '🛒', category: 'Alimentation', subcategory: '' },
-  { id: 'autres', label: 'Autre', emoji: '📦', category: 'autres', subcategory: '' },
 ];
 
 interface PhoneNumber {
@@ -120,6 +109,11 @@ export function PublishForm() {
   
   // Récupérer l'utilisateur connecté
   const currentUser = getCurrentUser();
+  
+  // État pour les catégories dynamiques
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   
   // Extraire le numéro de téléphone pour le formulaire
   const parsePhone = (phone: string) => {
@@ -223,9 +217,29 @@ export function PublishForm() {
     }
   }, []);
 
-  const selectedProduct = genericProductTypes.find(
-    p => p.category === formData.category && (formData.subcategory ? p.subcategory === formData.subcategory : true)
-  );
+  // Charger les catégories depuis l'API
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        setCategoriesError(null);
+        const response = await getCategories();
+        setCategories(response.data);
+      } catch (error) {
+        console.error('Erreur lors du chargement des catégories:', error);
+        setCategoriesError('Impossible de charger les catégories');
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  // Trouver la catégorie et sous-catégorie sélectionnées
+  const selectedCategory = categories.find(cat => cat._id === formData.category);
+  const selectedSubcategory = selectedCategory?.subcategories.find(sub => sub.slug === formData.subcategory);
+  
   const daysOptions = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
   const formatPhoneNumber = (phone: PhoneNumber): string => {
@@ -822,37 +836,85 @@ export function PublishForm() {
               </div>
             )}
 
-            {/* Catégorie - Liste générique simplifiée */}
+            {/* Catégorie - Chargement dynamique depuis l'API */}
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">
                 Que voulez-vous publier ? *
               </Label>
               
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
-                {genericProductTypes.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, category: item.id, subcategory: item.subcategory || '' })}
-                    className={`p-3 md:p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-1.5 md:gap-2 hover:shadow-md ${
-                      formData.category === item.id && (item.subcategory ? formData.subcategory === item.subcategory : true)
-                        ? 'border-[#ec5a13] bg-[#ffe9de] shadow-md'
-                        : 'border-gray-200 hover:border-[#ec5a13]'
-                    }`}
-                  >
-                    <span className="text-2xl md:text-3xl">{item.emoji}</span>
-                    <span className={`text-xs md:text-sm font-medium text-center leading-tight ${
-                      formData.category === item.category && (item.subcategory ? formData.subcategory === item.subcategory : true)
-                        ? 'text-[#ec5a13]'
-                        : 'text-gray-700'
-                    }`}>
-                      {item.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {categoriesLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="p-3 md:p-4 rounded-lg border-2 border-gray-200 flex flex-col items-center gap-1.5 md:gap-2 animate-pulse">
+                      <div className="w-10 h-10 bg-gray-200 rounded"></div>
+                      <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : categoriesError ? (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  {categoriesError}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+                  {categories.map((category) => (
+                    <button
+                      key={category._id}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, category: category._id, subcategory: '' })}
+                      className={`p-3 md:p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-1.5 md:gap-2 hover:shadow-md ${
+                        formData.category === category._id
+                          ? 'border-[#ec5a13] bg-[#ffe9de] shadow-md'
+                          : 'border-gray-200 hover:border-[#ec5a13]'
+                      }`}
+                    >
+                      <span className="text-2xl md:text-3xl">{category.icon || '📦'}</span>
+                      <span className={`text-xs md:text-sm font-medium text-center leading-tight ${
+                        formData.category === category._id
+                          ? 'text-[#ec5a13]'
+                          : 'text-gray-700'
+                      }`}>
+                        {category.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
               {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
             </div>
+
+            {/* Sous-catégories - Affichage dynamique si une catégorie est sélectionnée */}
+            {selectedCategory && selectedCategory.subcategories.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                  Type de {selectedCategory.name.toLowerCase()}
+                </Label>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+                  {selectedCategory.subcategories.map((subcategory) => (
+                    <button
+                      key={subcategory._id}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, subcategory: subcategory.slug })}
+                      className={`p-3 md:p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-1.5 md:gap-2 hover:shadow-md ${
+                        formData.subcategory === subcategory.slug
+                          ? 'border-[#ec5a13] bg-[#ffe9de] shadow-md'
+                          : 'border-gray-200 hover:border-[#ec5a13]'
+                      }`}
+                    >
+                      <span className="text-xl md:text-2xl">{subcategory.icon || '📄'}</span>
+                      <span className={`text-xs md:text-sm font-medium text-center leading-tight ${
+                        formData.subcategory === subcategory.slug
+                          ? 'text-[#ec5a13]'
+                          : 'text-gray-700'
+                      }`}>
+                        {subcategory.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
           </div>
 
@@ -1448,7 +1510,14 @@ export function PublishForm() {
                 </div>
                 <div>
                   <span className="text-gray-600">Catégorie:</span>
-                  <span className="ml-2 font-medium">{selectedProduct?.label || 'Non spécifié'}</span>
+                  <span className="ml-2 font-medium">
+                    {selectedCategory ? (
+                      <>
+                        {selectedCategory.name}
+                        {selectedSubcategory && ` - ${selectedSubcategory.name}`}
+                      </>
+                    ) : 'Non spécifié'}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Prix:</span>
