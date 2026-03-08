@@ -17,7 +17,6 @@ import {
   Clock,
   Heart,
   Share2,
-  Phone,
   MessageCircle,
   Mail,
   Shield,
@@ -436,8 +435,8 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
               <Separator className="my-3 sm:my-4" />
 
               {/* Actions rapides */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <Button 
+              <div className="w-full">
+                {/* <Button 
                   className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => window.open(`tel:${seller.contactInfo.phone}`)}
                   disabled={item.status !== 'active' || isOwnProduct}
@@ -446,10 +445,10 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Appeler</span>
                   <span className="sm:hidden">Appel</span>
-                </Button>
+                </Button> */}
                 <Button 
                   variant="outline" 
-                  className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] py-4 sm:py-5 md:py-6 text-sm sm:text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={async () => {
                     if (isOwnProduct) {
                       alert('Vous ne pouvez pas vous envoyer de message à vous-même.');
@@ -604,7 +603,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                               {item.delivery.available && (
                                 <>
                                   <p className="text-xs text-gray-600 mt-1">Zones: {item.delivery.areas.join(', ')}</p>
-                                  <p className="text-xs text-gray-600">Délai: {item.delivery.estimatedTime}</p>
+                                  {/* <p className="text-xs text-gray-600">Délai: {item.delivery.estimatedTime}</p> */}
                                 </>
                               )}
                             </div>
@@ -857,7 +856,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     <Store className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                     Voir toutes les annonces ({seller.totalListings})
                   </Button>
-                  <Button 
+                  {/* <Button 
                     className={`w-full ${isService ? 'bg-blue-100 hover:bg-blue-200 text-blue-900 border-2 border-blue-600' : 'bg-[#ffe9de] hover:bg-orange-100 text-[#ec5a13] border-2 border-[#ec5a13]'} disabled:opacity-50 disabled:cursor-not-allowed`}
                     disabled={item.status !== 'active' || isOwnProduct}
                     onClick={() => item.status === 'active' && !isOwnProduct && window.open(`tel:${seller.contactInfo.phone}`)}
@@ -865,7 +864,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   >
                     <Phone className="h-4 w-4 mr-2" />
                     {seller.contactInfo.phone}
-                  </Button>
+                  </Button> */}
                   <Button 
                     variant="outline" 
                     className="w-full border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -907,7 +906,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     )}
                     Envoyer un message
                   </Button>
-                  {seller.contactInfo.whatsapp && (
+                  {/* {seller.contactInfo.whatsapp && (
                     <Button 
                       variant="outline" 
                       className="w-full border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -918,8 +917,8 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                       <MessageCircle className="h-4 w-4 mr-2" />
                       WhatsApp
                     </Button>
-                  )}
-                  {seller.contactInfo.email && (
+                  )} */}
+                  {/* {seller.contactInfo.email && (
                     <Button 
                       variant="outline" 
                       className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
@@ -930,7 +929,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                       <Mail className="h-4 w-4 mr-2" />
                       Email
                     </Button>
-                  )}
+                  )} */}
                 </div>
 
                 {seller.bio && (

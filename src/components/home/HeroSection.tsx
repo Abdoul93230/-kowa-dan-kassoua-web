@@ -153,25 +153,19 @@ export function HeroSection() {
                   </div>
 
                   {/* Champ de localisation - Design moderne */}
-                  <div className="sm:w-48 md:w-64 relative group">
-                    <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-[#ec5a13] z-10 pointer-events-none group-focus-within:scale-110 transition-transform" />
+                  <div className="sm:w-48 md:w-56 relative group">
+                    <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-[#ec5a13] z-10 pointer-events-none" style={{ marginTop: '-4px' }} />
                     <Select value={location} onValueChange={setLocation}>
-                      <SelectTrigger className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-orange-50/50 to-amber-50/30 border border-orange-100 hover:border-[#ec5a13] focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 text-sm sm:text-base h-auto font-medium shadow-sm hover:shadow-md">
-                        <SelectValue placeholder="📍 Localisation" />
+                      <SelectTrigger className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-orange-50/50 to-amber-50/30 border border-orange-100 hover:border-[#ec5a13] focus:outline-none focus:ring-2 focus:ring-[#ec5a13] focus:bg-white transition-all text-gray-900 text-sm sm:text-base font-medium shadow-sm hover:shadow-md flex items-center">
+                        <SelectValue placeholder="Toutes les villes" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-orange-100 shadow-2xl">
                         <SelectItem value="toutes" className="text-sm sm:text-base hover:bg-orange-50 focus:bg-orange-50 cursor-pointer rounded-lg">
-                          <span className="flex items-center gap-2">
-                            <span className="text-lg">🌍</span>
-                            <span className="font-medium">Toutes les villes</span>
-                          </span>
+                          <span className="font-medium">Toutes les villes</span>
                         </SelectItem>
                         {locations.map((loc: string) => (
                           <SelectItem key={loc} value={loc} className="text-sm sm:text-base hover:bg-orange-50 focus:bg-orange-50 cursor-pointer rounded-lg">
-                            <span className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-[#ec5a13]" />
-                              <span>{loc}</span>
-                            </span>
+                            {loc}
                           </SelectItem>
                         ))}
                       </SelectContent>

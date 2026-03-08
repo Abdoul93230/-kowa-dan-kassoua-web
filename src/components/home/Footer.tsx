@@ -1,6 +1,7 @@
 'use client';
 
 import { ShoppingBag, Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import Link from 'next/link';
 
 export function Footer() {
   return (
@@ -31,10 +32,10 @@ export function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-3 text-sm">À propos</h3>
             <ul className="space-y-1.5 text-sm">
-              <li><a href="#" className="hover:text-[#ec5a13] transition-colors">Qui sommes-nous</a></li>
-              <li><a href="#" className="hover:text-[#ec5a13] transition-colors">Comment ça marche</a></li>
-              <li><a href="#" className="hover:text-[#ec5a13] transition-colors">Conditions d'utilisation</a></li>
-              <li><a href="#" className="hover:text-[#ec5a13] transition-colors">Centre d'aide</a></li>
+              <li><Link href="/qui-sommes-nous" className="hover:text-[#ec5a13] transition-colors">Qui sommes-nous</Link></li>
+              <li><Link href="/comment-ca-marche" className="hover:text-[#ec5a13] transition-colors">Comment ça marche</Link></li>
+              <li><Link href="/conditions-utilisation" className="hover:text-[#ec5a13] transition-colors">Conditions d'utilisation</Link></li>
+              <li><Link href="/centre-aide" className="hover:text-[#ec5a13] transition-colors">Centre d'aide</Link></li>
             </ul>
           </div>
 
@@ -58,8 +59,8 @@ export function Footer() {
             © 2025 MarketHub. Tous droits réservés.
           </p>
           <div className="flex items-center gap-4 text-xs">
-            <a href="#" className="hover:text-[#ec5a13] transition-colors">Mentions légales</a>
-            <a href="#" className="hover:text-[#ec5a13] transition-colors">Confidentialité</a>
+            <Link href="/mentions-legales" className="hover:text-[#ec5a13] transition-colors">Mentions légales</Link>
+            <Link href="/confidentialite" className="hover:text-[#ec5a13] transition-colors">Confidentialité</Link>
           </div>
         </div>
       </div>
