@@ -259,7 +259,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
 
               {/* Boutons de contact */}
               <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
-                {seller.contactInfo.phone && (
+                {/* {seller.contactInfo.phone && (
                   <Button
                     variant="outline"
                     className="bg-white text-[#ec5a13] hover:bg-[#ec5a13] hover:text-white border-2 border-[#ec5a13]"
@@ -288,7 +288,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                     <Mail className="h-4 w-4 mr-2" />
                     Email
                   </Button>
-                )}
+                )} */}
 
                 {/* QR Code Button */}
                 <SellerQRCode sellerId={sellerId} sellerName={seller.name} />

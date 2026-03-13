@@ -383,17 +383,17 @@ export default function ChatPage() {
                       </div>
                     )}
                   </Avatar>
-                  {/* Badge vérifié seulement pour le seller */}
-                  {otherParticipant.id === seller.id && seller.verified && (
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                      <CheckCheck className="h-2.5 w-2.5 text-white" />
-                    </div>
-                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-gray-900 truncate">
-                    {otherParticipant.name}
-                  </h2>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h2 className="font-semibold text-gray-900 truncate">
+                      {otherParticipant.name}
+                    </h2>
+                    {/* Badge vérifié sur la même ligne que le nom du store */}
+                    {otherParticipant.id === seller.id && seller.verified && (
+                      <CheckCheck className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                    )}
+                  </div>
                   {/* Afficher rating et location seulement si c'est le seller */}
                   {otherParticipant.id === seller.id && (
                     <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -591,7 +591,7 @@ export default function ChatPage() {
                           {isCurrentUser && (
                             <>
                               {msg.read ? (
-                                <CheckCheck className="h-4 w-4 text-white" />
+                                <CheckCheck className="h-4 w-4 text-emerald-300" />
                               ) : (
                                 <Check className="h-4 w-4 text-white/70" />
                               )}
