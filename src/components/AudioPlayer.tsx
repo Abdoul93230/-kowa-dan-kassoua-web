@@ -177,7 +177,7 @@ export default function AudioPlayer({ audioUrl, isCurrentUser = false }: AudioPl
       </div>
 
       {/* Bouton téléchargement */}
-      <Button
+      {/* <Button
         onClick={handleDownload}
         variant="ghost"
         size="icon"
@@ -188,7 +188,7 @@ export default function AudioPlayer({ audioUrl, isCurrentUser = false }: AudioPl
         }`}
       >
         <Download className="h-4 w-4" />
-      </Button>
+      </Button> */}
     </div>
   );
 }
