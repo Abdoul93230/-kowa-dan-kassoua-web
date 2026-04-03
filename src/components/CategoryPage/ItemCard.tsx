@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { Item } from '@/types/index';
 import { useRouter } from 'next/navigation';
-import { getCityName } from '@/lib/utils';
+import { getCityName, formatPriceFCFA } from '@/lib/utils';
 
 export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'list' }) {
   const router = useRouter();
@@ -105,7 +105,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
             {/* Prix */}
             <div className="flex items-center gap-1.5">
               <div className="w-4 sm:w-5 flex-shrink-0"></div>
-              <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
+              <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
             </div>
           </div>
         </div>
@@ -165,7 +165,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
             {/* Prix */}
             <div className="flex items-center gap-2">
               <div className="w-6 flex-shrink-0"></div>
-              <p className="text-base sm:text-lg font-semibold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
+              <p className="text-base sm:text-lg font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
             </div>
 
             {/* Description (optionnelle) */}
@@ -247,7 +247,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
         {/* Prix */}
         <div className="flex items-center gap-1.5">
           <div className="w-4 sm:w-5 flex-shrink-0"></div>
-          <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
+          <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
         </div>
       </div>
     </Card>

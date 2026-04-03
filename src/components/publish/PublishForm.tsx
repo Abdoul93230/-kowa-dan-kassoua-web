@@ -46,6 +46,7 @@ import {
   Eye,
   Loader2,
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
 // Liste des pays avec leurs indicatifs
@@ -94,12 +95,60 @@ interface FormData {
   sellerPhone: PhoneNumber;
   sellerWhatsapp: PhoneNumber;
   sellerEmail: string;
-  quantity?: number;
   specifications: Record<string, string>;
   serviceArea: string[];
   promoted?: boolean;
   featured?: boolean;
 }
+
+const toPascalCase = (value: string) =>
+  value
+    .trim()
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('');
+
+const resolveLucideIcon = (iconName?: string, fallback = 'Package') => {
+  const fallbackIcon = (LucideIcons[fallback as keyof typeof LucideIcons] || LucideIcons.Package) as any;
+  if (!iconName || !iconName.trim()) return fallbackIcon;
+
+  const raw = iconName.trim();
+  const normalized = toPascalCase(raw);
+  const withoutIconSuffix = normalized.replace(/Icon$/i, '');
+
+  const candidates = [raw, normalized, withoutIconSuffix];
+  for (const name of candidates) {
+    const found = LucideIcons[name as keyof typeof LucideIcons] as any;
+    if (found) return found;
+  }
+
+  return fallbackIcon;
+};
+
+const normalizeCategoryValue = (value: unknown): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    const category = value as Record<string, unknown>;
+    return (
+      String(category._id || category.id || category.slug || category.name || '')
+    );
+  }
+  return '';
+};
+
+const normalizeSubcategoryValue = (value: unknown): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    const subcategory = value as Record<string, unknown>;
+    return (
+      String(subcategory.slug || subcategory._id || subcategory.id || subcategory.name || '')
+    );
+  }
+  return '';
+};
 
 export function PublishForm() {
   const router = useRouter();
@@ -183,8 +232,8 @@ export function PublishForm() {
           setFormData({
             type: item.type,
             title: item.title,
-            category: item.category,
-            subcategory: item.subcategory || '',
+            category: normalizeCategoryValue(item.category),
+            subcategory: normalizeSubcategoryValue(item.subcategory),
             price: item.price.replace(/[^\d]/g, ''),
             description: item.description,
             condition: item.condition || '',
@@ -198,7 +247,6 @@ export function PublishForm() {
             sellerPhone: parsePhone(item.seller.contactInfo.phone),
             sellerWhatsapp: item.seller.contactInfo.whatsapp ? parsePhone(item.seller.contactInfo.whatsapp) : parsePhone(item.seller.contactInfo.phone),
             sellerEmail: item.seller.contactInfo.email || '',
-            quantity: item.quantity ? parseInt(item.quantity) : undefined,
             specifications: item.specifications || {},
             serviceArea: item.serviceArea || [],
             promoted: item.promoted || false,
@@ -237,8 +285,48 @@ export function PublishForm() {
   }, []);
 
   // Trouver la catégorie et sous-catégorie sélectionnées
-  const selectedCategory = categories.find(cat => cat._id === formData.category);
-  const selectedSubcategory = selectedCategory?.subcategories.find(sub => sub.slug === formData.subcategory);
+  const selectedCategory = categories.find((cat) => {
+    const currentValue = formData.category.trim();
+    const currentLower = currentValue.toLowerCase();
+
+    return (
+      cat._id === currentValue ||
+      cat.slug === currentValue ||
+      cat.name.toLowerCase() === currentLower
+    );
+  });
+  const selectedSubcategory = selectedCategory?.subcategories.find((sub) => {
+    const currentValue = formData.subcategory.trim();
+    const currentLower = currentValue.toLowerCase();
+
+    return (
+      sub.slug === currentValue ||
+      sub._id === currentValue ||
+      sub.name.toLowerCase() === currentLower
+    );
+  });
+
+  const isCategorySelected = (category: ApiCategory) => {
+    const currentValue = formData.category.trim();
+    const currentLower = currentValue.toLowerCase();
+
+    return (
+      currentValue === category._id ||
+      currentValue === category.slug ||
+      currentLower === category.name.toLowerCase()
+    );
+  };
+
+  useEffect(() => {
+    if (!selectedCategory) return;
+
+    if (formData.category !== selectedCategory._id) {
+      setFormData((prev) => ({
+        ...prev,
+        category: selectedCategory._id,
+      }));
+    }
+  }, [selectedCategory, formData.category]);
   
   const daysOptions = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
@@ -258,6 +346,9 @@ export function PublishForm() {
       if (!formData.price.trim()) newErrors.price = 'Le prix est requis';
       if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
         newErrors.price = 'Veuillez entrer un prix valide';
+      }
+      if (imagesPreviews.length === 0) {
+        newErrors.images = 'Ajoutez au moins une image';
       }
       // Description optionnelle, mais limitée à 150 mots
       if (formData.description.trim()) {
@@ -516,7 +607,6 @@ export function PublishForm() {
           price: formData.price,
           location: formData.location || 'Non spécifié',
           condition: formData.condition as 'new' | 'used' | 'refurbished' | undefined,
-          quantity: formData.quantity?.toString() || '1',
           newImages: newImagesBase64, // Nouvelles images à ajouter
           deleteImages: deletedImages, // Images à supprimer
           delivery: formData.delivery ? {
@@ -551,7 +641,6 @@ export function PublishForm() {
           price: formData.price,
           location: formData.location || 'Non spécifié',
           condition: formData.condition as 'new' | 'used' | 'refurbished' | undefined,
-          quantity: formData.quantity?.toString() || '1',
           images: imagesBase64, // Toutes les images
           delivery: formData.delivery ? {
             available: formData.delivery,
@@ -626,12 +715,13 @@ export function PublishForm() {
       alert('❌ ' + errorMessage);
       setErrors({ submit: errorMessage });
     } finally {
+      
       setIsSubmitting(false);
     }
   };
 
   const isStep1Valid = formData.type && formData.title && formData.category;
-  const isStep2Valid = formData.price && formData.description;
+  const isStep2Valid = formData.price && imagesPreviews.length > 0;
   const isStep3Valid = formData.sellerName && formData.sellerPhone.number;
 
   return (
@@ -811,31 +901,6 @@ export function PublishForm() {
               </div>
             )}
 
-            {/* Quantité (pour produits seulement) */}
-            {formData.type === 'product' && (
-              <div>
-                <Label htmlFor="quantity" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Quantité disponible
-                </Label>
-                <Input
-                  id="quantity"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="Ex: 1, 5, 10..."
-                  value={formData.quantity || ''}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    setFormData({ ...formData, quantity: value ? parseInt(value) : undefined });
-                  }}
-                  className="text-base"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Indiquez combien d'unités sont disponibles
-                </p>
-              </div>
-            )}
-
             {/* Catégorie - Chargement dynamique depuis l'API */}
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">
@@ -843,11 +908,11 @@ export function PublishForm() {
               </Label>
               
               {categoriesLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+                <div className="flex gap-2 overflow-x-auto pb-1">
                   {[...Array(8)].map((_, i) => (
-                    <div key={i} className="p-3 md:p-4 rounded-lg border-2 border-gray-200 flex flex-col items-center gap-1.5 md:gap-2 animate-pulse">
-                      <div className="w-10 h-10 bg-gray-200 rounded"></div>
-                      <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                    <div key={i} className="w-[92px] min-h-[82px] rounded-xl border border-gray-200 bg-white p-2 flex-shrink-0 flex flex-col items-center justify-center gap-1.5 animate-pulse">
+                      <div className="w-[30px] h-[30px] rounded-full bg-gray-200"></div>
+                      <div className="w-16 h-3 bg-gray-200 rounded"></div>
                     </div>
                   ))}
                 </div>
@@ -856,28 +921,41 @@ export function PublishForm() {
                   {categoriesError}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+                <div className="overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  <div className="flex gap-2.5 pr-2 snap-x snap-mandatory">
                   {categories.map((category) => (
                     <button
                       key={category._id}
                       type="button"
                       onClick={() => setFormData({ ...formData, category: category._id, subcategory: '' })}
-                      className={`p-3 md:p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-1.5 md:gap-2 hover:shadow-md ${
-                        formData.category === category._id
+                      className={`w-[102px] min-h-[88px] rounded-2xl border-[1.5px] transition-all duration-200 snap-start flex-shrink-0 flex flex-col items-center justify-center px-2 py-2 gap-1.5 shadow-sm ${
+                          isCategorySelected(category)
                           ? 'border-[#ec5a13] bg-[#ffe9de] shadow-md'
-                          : 'border-gray-200 hover:border-[#ec5a13]'
+                          : 'border-gray-200 bg-white hover:border-[#ec5a13]/60 hover:shadow-md'
                       }`}
                     >
-                      <span className="text-2xl md:text-3xl">{category.icon || '📦'}</span>
+                      <span
+                        className={`w-[30px] h-[30px] rounded-full flex items-center justify-center ${
+                            isCategorySelected(category)
+                            ? 'bg-[#ffe9de] text-[#ec5a13]'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                      {(() => {
+                        const Icon = resolveLucideIcon(category.icon, 'Package');
+                        return <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />;
+                      })()}
+                      </span>
                       <span className={`text-xs md:text-sm font-medium text-center leading-tight ${
-                        formData.category === category._id
+                        isCategorySelected(category)
                           ? 'text-[#ec5a13]'
-                          : 'text-gray-700'
+                          : 'text-gray-800'
                       }`}>
                         {category.name}
                       </span>
                     </button>
                   ))}
+                  </div>
                 </div>
               )}
               {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
@@ -890,20 +968,23 @@ export function PublishForm() {
                   Type de {selectedCategory.name.toLowerCase()}
                 </Label>
                 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+                <div className="flex flex-wrap gap-2">
                   {selectedCategory.subcategories.map((subcategory) => (
                     <button
                       key={subcategory._id}
                       type="button"
                       onClick={() => setFormData({ ...formData, subcategory: subcategory.slug })}
-                      className={`p-3 md:p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-1.5 md:gap-2 hover:shadow-md ${
+                      className={`inline-flex items-center gap-2 rounded-full border-[1.5px] px-3.5 py-2 transition-all ${
                         formData.subcategory === subcategory.slug
-                          ? 'border-[#ec5a13] bg-[#ffe9de] shadow-md'
-                          : 'border-gray-200 hover:border-[#ec5a13]'
+                          ? 'border-[#ec5a13] bg-[#ffe9de]'
+                          : 'border-gray-200 bg-white hover:border-[#ec5a13]'
                       }`}
                     >
-                      <span className="text-xl md:text-2xl">{subcategory.icon || '📄'}</span>
-                      <span className={`text-xs md:text-sm font-medium text-center leading-tight ${
+                      {(() => {
+                        const Icon = resolveLucideIcon(subcategory.icon, 'FileText');
+                        return <Icon className="h-4 w-4" strokeWidth={2.2} />;
+                      })()}
+                      <span className={`text-xs md:text-sm font-semibold leading-tight ${
                         formData.subcategory === subcategory.slug
                           ? 'text-[#ec5a13]'
                           : 'text-gray-700'

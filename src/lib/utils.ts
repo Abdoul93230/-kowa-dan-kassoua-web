@@ -113,3 +113,37 @@ export function formatRelativeDate(isoDate: string): string {
 
   return `Le ${day} ${month} ${year}`;
 }
+
+/**
+ * Assure un affichage prix coherent avec FCFA dans l'interface web.
+ * - Conserve les labels non numeriques (ex: Gratuit, A discuter)
+ * - Evite de dupliquer FCFA si deja present
+ * - Formate les nombres en style fr-FR
+ */
+export function formatPriceFCFA(price: string | number | null | undefined): string {
+  if (price === null || price === undefined) return '';
+
+  const raw = String(price).trim();
+  if (!raw) return '';
+
+  if (/gratuit|a discuter|à discuter/i.test(raw)) return raw;
+
+  if (/fcfa/i.test(raw)) return raw;
+
+  const fromMatch = raw.match(/^À\s+partir\s+de\s+/i);
+  const fromPrefix = fromMatch ? fromMatch[0] : '';
+  const valuePart = fromPrefix ? raw.slice(fromPrefix.length).trim() : raw;
+
+  const numericOnly = valuePart.replace(/[^\d]/g, '');
+  if (!numericOnly) return raw;
+
+  const formattedNumber = Number.parseInt(numericOnly, 10).toLocaleString('fr-FR');
+  const slashIndex = valuePart.indexOf('/');
+
+  if (slashIndex > -1) {
+    const suffix = valuePart.slice(slashIndex).trim();
+    return `${fromPrefix}${formattedNumber} FCFA ${suffix}`.replace(/\s+/g, ' ').trim();
+  }
+
+  return `${fromPrefix}${formattedNumber} FCFA`.trim();
+}

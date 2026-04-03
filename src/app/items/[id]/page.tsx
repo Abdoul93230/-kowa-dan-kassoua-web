@@ -49,7 +49,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import ReviewForm from '@/components/ReviewForm';
-import { formatRelativeDate } from '@/lib/utils';
+import { formatRelativeDate, formatPriceFCFA } from '@/lib/utils';
 
 export default function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -278,7 +278,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
       )}
 
       {/* Bandeau d'alerte si c'est votre propre produit */}
-      {isOwnProduct && (
+      {/* {isOwnProduct && (
         <div className="bg-blue-50 border-b-2 border-blue-400">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center gap-3">
@@ -294,7 +294,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       <div className="container mx-auto px-4 py-6">
         {/* Breadcrumb */}
@@ -379,7 +379,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex-1">{item.title}</h1>
-                    <p className="text-lg sm:text-xl font-bold text-[#ec5a13] whitespace-nowrap flex-shrink-0">{item.price}</p>
+                    <p className="text-lg sm:text-xl font-bold text-[#ec5a13] whitespace-nowrap flex-shrink-0">{formatPriceFCFA(item.price)}</p>
                   </div>
                   {isService && <p className="text-xs text-gray-500 mb-3">Tarif indicatif</p>}
                   

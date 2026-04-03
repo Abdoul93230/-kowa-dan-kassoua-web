@@ -53,6 +53,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { formatPriceFCFA } from '@/lib/utils';
 
 export default function MyListingsPage() {
   const router = useRouter();
@@ -269,7 +270,7 @@ export default function MyListingsPage() {
           </div>
 
           {/* Statistiques */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 sm:mt-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 mt-6 sm:mt-8">
             <Card className="p-3 sm:p-4 bg-white border-2 border-[#ec5a13]/20 hover:border-[#ec5a13] transition-colors shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <Package className="h-4 w-4 sm:h-5 sm:w-5 text-[#ec5a13]" />
@@ -277,13 +278,13 @@ export default function MyListingsPage() {
               </div>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.totalActive}</p>
             </Card>
-            <Card className="p-3 sm:p-4 bg-white border-2 border-blue-200 hover:border-blue-400 transition-colors shadow-sm">
+            {/* <Card className="p-3 sm:p-4 bg-white border-2 border-blue-200 hover:border-blue-400 transition-colors shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 <p className="text-xs sm:text-sm text-gray-600">Vendues</p>
               </div>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{stats.totalSold}</p>
-            </Card>
+            </Card> */}
             <Card className="p-3 sm:p-4 bg-white border-2 border-purple-200 hover:border-purple-400 transition-colors shadow-sm">
               <div className="flex items-center gap-2 mb-1">
                 <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
@@ -422,7 +423,7 @@ export default function MyListingsPage() {
                           {item.title}
                         </h3>
                         <p className="text-lg sm:text-xl font-bold text-[#ec5a13] mb-2">
-                          {item.price}
+                          {formatPriceFCFA(item.price)}
                         </p>
                       </div>
                       <div className="flex-shrink-0">

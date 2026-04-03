@@ -26,6 +26,7 @@ import { fr } from 'date-fns/locale';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import { getConversations } from '@/lib/api/messaging';
+import { formatPriceFCFA } from '@/lib/utils';
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -356,7 +357,7 @@ export default function MessagesPage() {
                             {conversation.item.title}
                           </p>
                           <p className="text-xs font-semibold text-[#ec5a13]">
-                            {conversation.item.price}
+                            {formatPriceFCFA(conversation.item.price)}
                           </p>
                         </div>
                       </div>

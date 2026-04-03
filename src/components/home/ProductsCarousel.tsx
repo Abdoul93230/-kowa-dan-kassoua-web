@@ -1,7 +1,7 @@
 'use client';
 
 import { Star, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getCityName } from '@/lib/utils';
+import { getCityName, formatPriceFCFA } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Item } from '@/types';
@@ -123,7 +123,7 @@ export function ProductsCarousel() {
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <p className="text-lg sm:text-xl font-bold text-[#ec5a13] truncate">{item.price}</p>
+                    <p className="text-lg sm:text-xl font-bold text-[#ec5a13] truncate">{formatPriceFCFA(item.price)}</p>
                     <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                       <span className="text-xs sm:text-sm font-medium text-gray-700">{item.rating}</span>

@@ -8,7 +8,7 @@ import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { Item } from '@/types';
 import { getProducts } from '@/lib/api/products';
 import Link from 'next/link';
-import { getCityName } from '@/lib/utils';
+import { getCityName, formatPriceFCFA } from '@/lib/utils';
 
 export function HeroProductCarousel() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -181,7 +181,7 @@ export function HeroProductCarousel() {
                   {/* Prix */}
                   <div className="flex items-center gap-1.5">
                     <div className="w-4 sm:w-5 flex-shrink-0"></div>
-                    <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
+                    <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
                   </div>
                 </div>
               </Card>

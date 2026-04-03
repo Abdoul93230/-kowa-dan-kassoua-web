@@ -35,6 +35,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
+import { formatPriceFCFA } from '@/lib/utils';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -454,7 +455,7 @@ export default function ChatPage() {
                     {conversation.item.title}
                   </h3>
                   <p className="text-base font-bold text-[#ec5a13] mt-1">
-                    {conversation.item.price}
+                    {formatPriceFCFA(conversation.item.price)}
                   </p>
                 </div>
                 <Button

@@ -44,7 +44,9 @@ export interface Item {
   location: string;
   images: string[]; // multiple images
   mainImage: string;
-  category: string;
+  category: string; // Nom complet de la catégorie (ex: "Immobilier")
+  categorySlug?: string; // Slug pour les routes (ex: "immobilier")
+  categoryId?: string; // ObjectId MongoDB pour l'édition
   subcategory?: string;
   type: 'product' | 'service';
   rating: number;

@@ -48,6 +48,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { SellerQRCode } from '@/components/seller/SellerQRCode';
+import { formatPriceFCFA } from '@/lib/utils';
 
 interface Seller {
   id: string;
@@ -457,7 +458,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
 
                             <div className="flex items-center gap-1.5">
                               <div className="w-4 sm:w-5 flex-shrink-0"></div>
-                              <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
+                              <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
                             </div>
                           </div>
                         </div>
@@ -495,7 +496,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
 
                             <div className="flex items-center gap-2">
                               <div className="w-6 flex-shrink-0"></div>
-                              <p className="text-base sm:text-lg font-semibold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
+                              <p className="text-base sm:text-lg font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
                             </div>
 
                             {item.description && (
@@ -564,7 +565,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                         {/* Prix */}
                         <div className="flex items-center gap-1.5">
                           <div className="w-4 sm:w-5 flex-shrink-0"></div>
-                          <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{item.price.replace(/À partir de /gi, '')}</p>
+                          <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
                         </div>
                       </div>
                     </Card>

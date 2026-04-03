@@ -7,7 +7,7 @@ import { Item } from '@/types';
 import { mockItems } from '@/lib/mockData';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { getCityName } from '@/lib/utils';
+import { getCityName, formatPriceFCFA } from '@/lib/utils';
 
 // Fonction pour calculer une distance aléatoire (à remplacer par vraie géolocalisation plus tard)
 const getDistance = (itemId: number | string) => {
@@ -104,7 +104,7 @@ export function FeaturedSection() {
 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div>
-                    <p className="text-2xl font-bold text-[#ec5a13]">{item.price}</p>
+                    <p className="text-2xl font-bold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <Clock className="h-3 w-3" />
