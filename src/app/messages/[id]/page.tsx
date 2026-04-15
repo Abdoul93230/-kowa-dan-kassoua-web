@@ -374,16 +374,76 @@ export default function ChatPage() {
         ? 'Non conclue'
         : 'Aucune clôture';
 
+  const applyDealTransition = (currentDeal: Conversation['deal'] | undefined, action: 'request' | 'confirm' | 'reject' | 'reopen') => {
+    const now = new Date().toISOString();
+    const safeDeal = currentDeal || { status: 'open' as const };
+
+    if (action === 'request') {
+      return {
+        ...safeDeal,
+        status: 'pending_conclusion' as const,
+        requestedBy: currentUserId || safeDeal.requestedBy || null,
+        requestedAt: now,
+      };
+    }
+
+    if (action === 'confirm') {
+      return {
+        ...safeDeal,
+        status: 'concluded' as const,
+        resolvedBy: currentUserId || safeDeal.resolvedBy || null,
+        resolvedAt: now,
+      };
+    }
+
+    if (action === 'reject') {
+      return {
+        ...safeDeal,
+        status: 'not_concluded' as const,
+        resolvedBy: currentUserId || safeDeal.resolvedBy || null,
+        resolvedAt: now,
+      };
+    }
+
+    return {
+      status: 'open' as const,
+      requestedBy: null,
+      requestedAt: null,
+      resolvedBy: null,
+      resolvedAt: null,
+      note: '',
+    };
+  };
+
   const handleDealAction = async (action: 'request' | 'confirm' | 'reject' | 'reopen') => {
     if (!conversationId || dealActionLoading) return;
+
+    const previousConversation = conversation;
+
+    // Mise à jour optimiste pour un feedback instantané dans l'UI
+    setConversation((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        deal: applyDealTransition(prev.deal, action),
+      };
+    });
 
     try {
       setDealActionLoading(true);
       const response = await updateConversationDeal(conversationId, action);
-      if (response?.data) {
-        setConversation(response.data);
+      const updatedConversation = response?.data?.id ? response.data : response?.id ? response : null;
+
+      if (updatedConversation) {
+        setConversation(updatedConversation as Conversation);
+      } else {
+        const refreshed = await getConversationById(conversationId);
+        if (refreshed?.data) {
+          setConversation(refreshed.data);
+        }
       }
     } catch (err: any) {
+      setConversation(previousConversation);
       setError(err?.response?.data?.message || 'Impossible de mettre à jour le statut de l\'affaire');
     } finally {
       setDealActionLoading(false);
@@ -464,6 +524,46 @@ export default function ChatPage() {
               </Button>
             </div>
           </div>
+
+          <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Affaire</span>
+              <Badge variant="outline" className={dealStatus === 'concluded' ? 'border-emerald-500 text-emerald-700' : dealStatus === 'not_concluded' ? 'border-slate-400 text-slate-600' : 'border-orange-500 text-orange-700'}>
+                {dealLabel}
+              </Badge>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {dealStatus === 'open' ? (
+                <Button onClick={() => handleDealAction('request')} disabled={dealActionLoading} size="sm" className="h-8 bg-[#ec5a13] hover:bg-[#d94f0f] text-white text-xs">
+                  {dealActionLoading ? 'En cours...' : 'Marquer conclue'}
+                </Button>
+              ) : null}
+
+              {dealStatus === 'pending_conclusion' ? (
+                isDealRequester ? (
+                  <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" size="sm" className="h-8 text-xs">
+                    Annuler demande
+                  </Button>
+                ) : (
+                  <>
+                    <Button onClick={() => handleDealAction('confirm')} disabled={dealActionLoading} size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
+                      Confirmer
+                    </Button>
+                    <Button onClick={() => handleDealAction('reject')} disabled={dealActionLoading} variant="outline" size="sm" className="h-8 text-xs">
+                      Non conclue
+                    </Button>
+                  </>
+                )
+              ) : null}
+
+              {(dealStatus === 'concluded' || dealStatus === 'not_concluded') ? (
+                <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" size="sm" className="h-8 text-xs">
+                  Réouvrir
+                </Button>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -509,49 +609,6 @@ export default function ChatPage() {
               </div>
             </Card>
           )}
-
-          <Card className={`mb-4 p-4 border-0 shadow-md rounded-xl ${dealStatus === 'concluded' ? 'bg-emerald-50' : dealStatus === 'not_concluded' ? 'bg-slate-50' : 'bg-white'}`}>
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Statut de l'affaire</p>
-                <h3 className="font-semibold text-gray-900 text-sm">{dealLabel}</h3>
-              </div>
-              <Badge variant="outline" className={dealStatus === 'concluded' ? 'border-emerald-500 text-emerald-700' : dealStatus === 'not_concluded' ? 'border-slate-400 text-slate-600' : 'border-orange-500 text-orange-700'}>
-                {dealLabel}
-              </Badge>
-            </div>
-
-            {dealStatus === 'open' ? (
-              <Button onClick={() => handleDealAction('request')} disabled={dealActionLoading} className="w-full bg-[#ec5a13] hover:bg-[#d94f0f] text-white">
-                {dealActionLoading ? 'En cours...' : 'Marquer comme conclue'}
-              </Button>
-            ) : null}
-
-            {dealStatus === 'pending_conclusion' ? (
-              <div className="flex flex-col sm:flex-row gap-2">
-                {isDealRequester ? (
-                  <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" className="w-full">
-                    Annuler la demande
-                  </Button>
-                ) : (
-                  <>
-                    <Button onClick={() => handleDealAction('confirm')} disabled={dealActionLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                      Confirmer
-                    </Button>
-                    <Button onClick={() => handleDealAction('reject')} disabled={dealActionLoading} variant="outline" className="w-full">
-                      Non conclue
-                    </Button>
-                  </>
-                )}
-              </div>
-            ) : null}
-
-            {(dealStatus === 'concluded' || dealStatus === 'not_concluded') ? (
-              <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" className="w-full">
-                Réouvrir
-              </Button>
-            ) : null}
-          </Card>
 
           {/* Messages */}
           <div className="space-y-1">
