@@ -158,4 +158,12 @@ export interface Conversation {
   createdAt: string;
   updatedAt: string;
   status: 'active' | 'archived';
+  deal?: {
+    status: 'open' | 'pending_conclusion' | 'concluded' | 'not_concluded';
+    requestedBy?: string | null;
+    requestedAt?: string | null;
+    resolvedBy?: string | null;
+    resolvedAt?: string | null;
+    note?: string;
+  };
 }

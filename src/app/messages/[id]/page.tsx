@@ -30,7 +30,7 @@ import { Message, Conversation, Item } from '@/types';
 import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getProductById } from '@/lib/api/products';
-import { getMessages, getConversationById, markMessageAsRead as apiMarkMessageAsRead, markConversationAsRead, sendVoiceMessage } from '@/lib/api/messaging';
+import { getMessages, getConversationById, markMessageAsRead as apiMarkMessageAsRead, markConversationAsRead, sendVoiceMessage, updateConversationDeal } from '@/lib/api/messaging';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import VoiceRecorder from '@/components/VoiceRecorder';
@@ -56,6 +56,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [dealActionLoading, setDealActionLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -160,6 +161,17 @@ export default function ChatPage() {
       }
     };
 
+    const handleConversationUpdate = (data: any) => {
+      if (String(data?.conversationId || '') !== String(conversationId)) return;
+      setConversation((prev) => (prev ? {
+        ...prev,
+        lastMessage: data.lastMessage || prev.lastMessage,
+        unreadCount: typeof data.unreadCount === 'number' ? data.unreadCount : prev.unreadCount,
+        status: data.status || prev.status,
+        deal: data.deal || prev.deal,
+      } : prev));
+    };
+
     // Utilisateur en train d'écrire
     const handleTypingStart = ({ userId, userName }: { userId: string; userName: string; conversationId: string }) => {
       const currentUserId = String(user?.id || '').trim();
@@ -188,12 +200,14 @@ export default function ChatPage() {
     on('message:read', handleMessageRead);
     on('typing:start', handleTypingStart);
     on('typing:stop', handleTypingStop);
+    on('conversation:updated', handleConversationUpdate);
 
     return () => {
       off('message:new', handleNewMessage);
       off('message:read', handleMessageRead);
       off('typing:start', handleTypingStart);
       off('typing:stop', handleTypingStop);
+      off('conversation:updated', handleConversationUpdate);
     };
   }, [isConnected, conversationId, user, on, off, socketMarkAsRead]);
 
@@ -349,6 +363,32 @@ export default function ChatPage() {
   // Déterminer qui est l'autre participant (celui qui n'est pas l'utilisateur actuel)
   const currentUserId = String(user?.id || '').trim();
   const otherParticipant = currentUserId === seller.id ? buyer : seller;
+  const dealStatus = conversation.deal?.status || 'open';
+  const dealRequestedBy = conversation.deal?.requestedBy ? String(conversation.deal.requestedBy) : '';
+  const isDealRequester = Boolean(dealRequestedBy && dealRequestedBy === currentUserId);
+  const dealLabel = conversation.deal?.status === 'pending_conclusion'
+    ? 'En attente de confirmation'
+    : conversation.deal?.status === 'concluded'
+      ? 'Affaire conclue'
+      : conversation.deal?.status === 'not_concluded'
+        ? 'Non conclue'
+        : 'Aucune clôture';
+
+  const handleDealAction = async (action: 'request' | 'confirm' | 'reject' | 'reopen') => {
+    if (!conversationId || dealActionLoading) return;
+
+    try {
+      setDealActionLoading(true);
+      const response = await updateConversationDeal(conversationId, action);
+      if (response?.data) {
+        setConversation(response.data);
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Impossible de mettre à jour le statut de l\'affaire');
+    } finally {
+      setDealActionLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -469,6 +509,49 @@ export default function ChatPage() {
               </div>
             </Card>
           )}
+
+          <Card className={`mb-4 p-4 border-0 shadow-md rounded-xl ${dealStatus === 'concluded' ? 'bg-emerald-50' : dealStatus === 'not_concluded' ? 'bg-slate-50' : 'bg-white'}`}>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Statut de l'affaire</p>
+                <h3 className="font-semibold text-gray-900 text-sm">{dealLabel}</h3>
+              </div>
+              <Badge variant="outline" className={dealStatus === 'concluded' ? 'border-emerald-500 text-emerald-700' : dealStatus === 'not_concluded' ? 'border-slate-400 text-slate-600' : 'border-orange-500 text-orange-700'}>
+                {dealLabel}
+              </Badge>
+            </div>
+
+            {dealStatus === 'open' ? (
+              <Button onClick={() => handleDealAction('request')} disabled={dealActionLoading} className="w-full bg-[#ec5a13] hover:bg-[#d94f0f] text-white">
+                {dealActionLoading ? 'En cours...' : 'Marquer comme conclue'}
+              </Button>
+            ) : null}
+
+            {dealStatus === 'pending_conclusion' ? (
+              <div className="flex flex-col sm:flex-row gap-2">
+                {isDealRequester ? (
+                  <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" className="w-full">
+                    Annuler la demande
+                  </Button>
+                ) : (
+                  <>
+                    <Button onClick={() => handleDealAction('confirm')} disabled={dealActionLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                      Confirmer
+                    </Button>
+                    <Button onClick={() => handleDealAction('reject')} disabled={dealActionLoading} variant="outline" className="w-full">
+                      Non conclue
+                    </Button>
+                  </>
+                )}
+              </div>
+            ) : null}
+
+            {(dealStatus === 'concluded' || dealStatus === 'not_concluded') ? (
+              <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" className="w-full">
+                Réouvrir
+              </Button>
+            ) : null}
+          </Card>
 
           {/* Messages */}
           <div className="space-y-1">

@@ -78,7 +78,7 @@ export default function MessagesPage() {
       setConversations(prev =>
         prev.map(conv =>
           conv.id === data.conversationId
-            ? { ...conv, lastMessage: data.lastMessage, unreadCount: data.unreadCount }
+            ? { ...conv, lastMessage: data.lastMessage || conv.lastMessage, unreadCount: typeof data.unreadCount === 'number' ? data.unreadCount : conv.unreadCount, status: data.status || conv.status, deal: data.deal || conv.deal }
             : conv
         )
       );
@@ -252,6 +252,13 @@ export default function MessagesPage() {
             {filteredConversations.map((conversation) => {
               const otherParticipant = getOtherParticipant(conversation);
               const isVerified = 'verified' in otherParticipant && (otherParticipant as any).verified;
+              const dealStatus = conversation.deal?.status || 'open';
+              const dealLabel = {
+                open: null,
+                pending_conclusion: 'En attente de confirmation',
+                concluded: 'Affaire conclue',
+                not_concluded: 'Non conclue'
+              }[dealStatus] || null;
               
               return (
               <Card
@@ -309,6 +316,11 @@ export default function MessagesPage() {
                             <ShoppingBag className="h-3 w-3" />
                             {conversation.item.title}
                           </p>
+                        )}
+                        {dealLabel && (
+                          <Badge variant="outline" className={`mt-2 w-fit ${dealStatus === 'concluded' ? 'border-emerald-500 text-emerald-700' : dealStatus === 'not_concluded' ? 'border-slate-400 text-slate-600' : 'border-orange-500 text-orange-700'}`}>
+                            {dealLabel}
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">

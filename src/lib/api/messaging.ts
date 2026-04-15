@@ -35,6 +35,14 @@ export interface Conversation {
   };
   unreadCount: number;
   status: string;
+  deal?: {
+    status: 'open' | 'pending_conclusion' | 'concluded' | 'not_concluded';
+    requestedBy?: string | null;
+    requestedAt?: string | null;
+    resolvedBy?: string | null;
+    resolvedAt?: string | null;
+    note?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -95,6 +103,21 @@ export const createOrGetConversation = async (data: {
  */
 export const markConversationAsRead = async (conversationId: string) => {
   const response = await api.put(`/conversations/${conversationId}/read`);
+  return response.data;
+};
+
+/**
+ * Mettre à jour le statut de l'affaire
+ */
+export const updateConversationDeal = async (
+  conversationId: string,
+  action: 'request' | 'confirm' | 'reject' | 'reopen',
+  reason = ''
+) => {
+  const response = await api.put(`/conversations/${conversationId}/deal`, {
+    action,
+    reason,
+  });
   return response.data;
 };
 
