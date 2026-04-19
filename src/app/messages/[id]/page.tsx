@@ -156,7 +156,27 @@ export default function ChatPage() {
       if (readConvId === conversationId) {
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === messageId ? { ...msg, read: true } : msg
+            msg.id === messageId ? { ...msg, delivered: true, read: true } : msg
+          )
+        );
+      }
+    };
+
+    const handleMessageDelivered = ({
+      conversationId: deliveredConvId,
+      messageId,
+      deliveredAt,
+    }: {
+      conversationId: string;
+      messageId: string;
+      deliveredAt?: string;
+    }) => {
+      if (deliveredConvId === conversationId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId
+              ? { ...msg, delivered: true, deliveredAt: deliveredAt || msg.deliveredAt }
+              : msg
           )
         );
       }
@@ -198,6 +218,7 @@ export default function ChatPage() {
     };
 
     on('message:new', handleNewMessage);
+    on('message:delivered', handleMessageDelivered);
     on('message:read', handleMessageRead);
     on('typing:start', handleTypingStart);
     on('typing:stop', handleTypingStop);
@@ -205,6 +226,7 @@ export default function ChatPage() {
 
     return () => {
       off('message:new', handleNewMessage);
+      off('message:delivered', handleMessageDelivered);
       off('message:read', handleMessageRead);
       off('typing:start', handleTypingStart);
       off('typing:stop', handleTypingStop);
@@ -746,6 +768,8 @@ export default function ChatPage() {
                             <>
                               {msg.read ? (
                                 <CheckCheck className="h-4 w-4 text-emerald-300" />
+                              ) : msg.delivered ? (
+                                <CheckCheck className="h-4 w-4 text-white/70" />
                               ) : (
                                 <Check className="h-4 w-4 text-white/70" />
                               )}

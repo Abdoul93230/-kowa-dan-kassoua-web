@@ -126,7 +126,10 @@ export interface Message {
   senderAvatar?: string;
   content: string;
   timestamp: string;
+  delivered?: boolean;
+  deliveredAt?: string;
   read: boolean;
+  readAt?: string;
   type: 'text' | 'image' | 'audio' | 'offer';
   attachments?: string[];
   offerDetails?: {

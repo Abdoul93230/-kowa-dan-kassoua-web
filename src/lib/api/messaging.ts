@@ -26,11 +26,15 @@ export interface Conversation {
     price: string;
   };
   lastMessage: {
+    id?: string;
     content: string;
     senderId: string;
     senderName: string;
     timestamp: string;
+    delivered?: boolean;
+    deliveredAt?: string;
     read: boolean;
+    readAt?: string;
     type: string;
   };
   unreadCount: number;
@@ -55,9 +59,11 @@ export interface Message {
   senderAvatar?: string;
   content: string;
   timestamp: string;
+  delivered?: boolean;
+  deliveredAt?: string;
   read: boolean;
   readAt?: string;
-  type: 'text' | 'image' | 'offer' | 'deleted';
+  type: 'text' | 'image' | 'audio' | 'offer' | 'deleted';
   attachments?: string[];
   offerDetails?: {
     itemId: string;

@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ShoppingBag,
   CheckCheck,
+  Check,
   Clock,
   MoreVertical,
   Archive,
@@ -84,10 +85,63 @@ export default function MessagesPage() {
       );
     };
 
+    const handleMessageDelivered = (data: any) => {
+      const payloadConversationId = String(data?.conversationId || '');
+      const payloadMessageId = String(data?.messageId || '');
+      if (!payloadConversationId || !payloadMessageId) return;
+
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (String(conv.id) !== payloadConversationId) return conv;
+
+          const lastMessageId = String(conv?.lastMessage?.id || '');
+          if (!lastMessageId || lastMessageId !== payloadMessageId) return conv;
+
+          return {
+            ...conv,
+            lastMessage: {
+              ...conv.lastMessage,
+              delivered: true,
+              deliveredAt: data?.deliveredAt || conv?.lastMessage?.deliveredAt,
+            },
+          };
+        })
+      );
+    };
+
+    const handleMessageRead = (data: any) => {
+      const payloadConversationId = String(data?.conversationId || '');
+      const payloadMessageId = String(data?.messageId || '');
+      if (!payloadConversationId || !payloadMessageId) return;
+
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (String(conv.id) !== payloadConversationId) return conv;
+
+          const lastMessageId = String(conv?.lastMessage?.id || '');
+          if (!lastMessageId || lastMessageId !== payloadMessageId) return conv;
+
+          return {
+            ...conv,
+            lastMessage: {
+              ...conv.lastMessage,
+              delivered: true,
+              read: true,
+              readAt: data?.readAt || conv?.lastMessage?.readAt,
+            },
+          };
+        })
+      );
+    };
+
     on('conversation:updated', handleConversationUpdate);
+    on('message:delivered', handleMessageDelivered);
+    on('message:read', handleMessageRead);
 
     return () => {
       off('conversation:updated', handleConversationUpdate);
+      off('message:delivered', handleMessageDelivered);
+      off('message:read', handleMessageRead);
     };
   }, [isConnected, on, off]);
 
@@ -350,10 +404,15 @@ export default function MessagesPage() {
                         )}
                         {conversation.lastMessage.content}
                       </p>
-                      {conversation.lastMessage.read &&
-                        conversation.lastMessage.senderId === user?.id && (
+                      {conversation.lastMessage.senderId === user?.id && (
+                        conversation.lastMessage.read ? (
                           <CheckCheck className="h-4 w-4 text-[#ec5a13] flex-shrink-0" />
-                        )}
+                        ) : conversation.lastMessage.delivered ? (
+                          <CheckCheck className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        ) : (
+                          <Check className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        )
+                      )}
                     </div>
 
                     {/* Aperçu du produit */}
