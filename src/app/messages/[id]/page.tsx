@@ -57,6 +57,7 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [dealActionLoading, setDealActionLoading] = useState(false);
+  const [optimisticDealStatus, setOptimisticDealStatus] = useState<Conversation['deal'] extends { status: infer S } ? S | null : string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -216,6 +217,14 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    if (!optimisticDealStatus) return;
+    const serverStatus = conversation?.deal?.status || 'open';
+    if (serverStatus === optimisticDealStatus) {
+      setOptimisticDealStatus(null);
+    }
+  }, [conversation?.deal?.status, optimisticDealStatus]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -363,7 +372,8 @@ export default function ChatPage() {
   // Déterminer qui est l'autre participant (celui qui n'est pas l'utilisateur actuel)
   const currentUserId = String(user?.id || '').trim();
   const otherParticipant = currentUserId === seller.id ? buyer : seller;
-  const dealStatus = conversation.deal?.status || 'open';
+  const isConversationSeller = currentUserId === seller.id;
+  const dealStatus = optimisticDealStatus || conversation.deal?.status || 'open';
   const dealRequestedBy = conversation.deal?.requestedBy ? String(conversation.deal.requestedBy) : '';
   const isDealRequester = Boolean(dealRequestedBy && dealRequestedBy === currentUserId);
   const dealLabel = conversation.deal?.status === 'pending_conclusion'
@@ -419,8 +429,10 @@ export default function ChatPage() {
     if (!conversationId || dealActionLoading) return;
 
     const previousConversation = conversation;
+    const optimisticDeal = applyDealTransition(conversation?.deal, action);
 
     // Mise à jour optimiste pour un feedback instantané dans l'UI
+    setOptimisticDealStatus(optimisticDeal.status);
     setConversation((prev) => {
       if (!prev) return prev;
       return {
@@ -443,6 +455,7 @@ export default function ChatPage() {
         }
       }
     } catch (err: any) {
+      setOptimisticDealStatus(null);
       setConversation(previousConversation);
       setError(err?.response?.data?.message || 'Impossible de mettre à jour le statut de l\'affaire');
     } finally {
@@ -534,7 +547,7 @@ export default function ChatPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {dealStatus === 'open' ? (
+              {dealStatus === 'open' && isConversationSeller ? (
                 <Button onClick={() => handleDealAction('request')} disabled={dealActionLoading} size="sm" className="h-8 bg-[#ec5a13] hover:bg-[#d94f0f] text-white text-xs">
                   {dealActionLoading ? 'En cours...' : 'Marquer conclue'}
                 </Button>
@@ -545,7 +558,7 @@ export default function ChatPage() {
                   <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" size="sm" className="h-8 text-xs">
                     Annuler demande
                   </Button>
-                ) : (
+                ) : !isConversationSeller ? (
                   <>
                     <Button onClick={() => handleDealAction('confirm')} disabled={dealActionLoading} size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
                       Confirmer
@@ -554,10 +567,10 @@ export default function ChatPage() {
                       Non conclue
                     </Button>
                   </>
-                )
+                ) : null
               ) : null}
 
-              {(dealStatus === 'concluded' || dealStatus === 'not_concluded') ? (
+              {(dealStatus === 'concluded' || dealStatus === 'not_concluded') && isConversationSeller ? (
                 <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" size="sm" className="h-8 text-xs">
                   Réouvrir
                 </Button>

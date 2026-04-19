@@ -114,8 +114,9 @@ export const updateConversationDeal = async (
   action: 'request' | 'confirm' | 'reject' | 'reopen',
   reason = ''
 ) => {
+  const mappedAction = action === 'reject' ? 'decline' : action;
   const response = await api.put(`/conversations/${conversationId}/deal`, {
-    action,
+    action: mappedAction,
     reason,
   });
   return response.data;
