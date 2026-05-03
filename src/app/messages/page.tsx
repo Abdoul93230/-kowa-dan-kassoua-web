@@ -79,7 +79,7 @@ export default function MessagesPage() {
       setConversations(prev =>
         prev.map(conv =>
           conv.id === data.conversationId
-            ? { ...conv, lastMessage: data.lastMessage || conv.lastMessage, unreadCount: typeof data.unreadCount === 'number' ? data.unreadCount : conv.unreadCount, status: data.status || conv.status, deal: data.deal || conv.deal }
+            ? { ...conv, lastMessage: data.lastMessage || conv.lastMessage, unreadCount: typeof data.unreadCount === 'number' ? data.unreadCount : conv.unreadCount, status: data.status || conv.status, closedByOwner: typeof data.closedByOwner === 'boolean' ? data.closedByOwner : conv.closedByOwner, closedAt: data.closedAt || conv.closedAt || null, closedById: data.closedById || conv.closedById || null, deal: data.deal || conv.deal }
             : conv
         )
       );
@@ -307,6 +307,7 @@ export default function MessagesPage() {
               const otherParticipant = getOtherParticipant(conversation);
               const isVerified = 'verified' in otherParticipant && (otherParticipant as any).verified;
               const dealStatus = conversation.deal?.status || 'open';
+              const isClosedByOwner = Boolean(conversation.closedByOwner);
               const dealLabel = {
                 open: null,
                 pending_conclusion: 'En attente de confirmation',
@@ -374,6 +375,11 @@ export default function MessagesPage() {
                         {dealLabel && (
                           <Badge variant="outline" className={`mt-2 w-fit ${dealStatus === 'concluded' ? 'border-emerald-500 text-emerald-700' : dealStatus === 'not_concluded' ? 'border-slate-400 text-slate-600' : 'border-orange-500 text-orange-700'}`}>
                             {dealLabel}
+                          </Badge>
+                        )}
+                        {isClosedByOwner && (
+                          <Badge variant="outline" className="mt-2 w-fit border-slate-400 text-slate-600">
+                            Clôturée par le propriétaire
                           </Badge>
                         )}
                       </div>

@@ -30,7 +30,7 @@ import { Message, Conversation, Item } from '@/types';
 import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getProductById } from '@/lib/api/products';
-import { getMessages, getConversationById, markMessageAsRead as apiMarkMessageAsRead, markConversationAsRead, sendVoiceMessage, updateConversationDeal } from '@/lib/api/messaging';
+import { getMessages, getConversationById, markMessageAsRead as apiMarkMessageAsRead, markConversationAsRead, sendVoiceMessage, updateConversationDeal, closeConversationByOwner, reopenConversationByOwner } from '@/lib/api/messaging';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import VoiceRecorder from '@/components/VoiceRecorder';
@@ -57,6 +57,7 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [dealActionLoading, setDealActionLoading] = useState(false);
+  const [ownerClosureLoading, setOwnerClosureLoading] = useState(false);
   const [optimisticDealStatus, setOptimisticDealStatus] = useState<Conversation['deal'] extends { status: infer S } ? S | null : string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -270,7 +271,8 @@ export default function ChatPage() {
     socketSendMessage({
       conversationId: conversationId,
       content: message.trim(),
-      type: 'text'
+      type: 'text',
+      postClosure: Boolean(conversation.closedByOwner),
     });
     
     // Vider le champ de saisie
@@ -395,6 +397,7 @@ export default function ChatPage() {
   const currentUserId = String(user?.id || '').trim();
   const otherParticipant = currentUserId === seller.id ? buyer : seller;
   const isConversationSeller = currentUserId === seller.id;
+  const isOwnerClosureActive = Boolean(conversation.closedByOwner);
   const dealStatus = optimisticDealStatus || conversation.deal?.status || 'open';
   const dealRequestedBy = conversation.deal?.requestedBy ? String(conversation.deal.requestedBy) : '';
   const isDealRequester = Boolean(dealRequestedBy && dealRequestedBy === currentUserId);
@@ -485,6 +488,35 @@ export default function ChatPage() {
     }
   };
 
+  const handleOwnerClosureAction = async () => {
+    if (!conversationId || ownerClosureLoading || !isConversationSeller) return;
+
+    const previousConversation = conversation;
+
+    try {
+      setOwnerClosureLoading(true);
+      const response = isOwnerClosureActive
+        ? await reopenConversationByOwner(conversationId)
+        : await closeConversationByOwner(conversationId);
+
+      const updatedConversation = response?.data?.id ? response.data : response?.id ? response : null;
+
+      if (updatedConversation) {
+        setConversation(updatedConversation as Conversation);
+      } else {
+        const refreshed = await getConversationById(conversationId);
+        if (refreshed?.data) {
+          setConversation(refreshed.data);
+        }
+      }
+    } catch (err: any) {
+      setConversation(previousConversation);
+      setError(err?.response?.data?.message || 'Impossible de mettre à jour la clôture de la discussion');
+    } finally {
+      setOwnerClosureLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header de la conversation */}
@@ -566,9 +598,24 @@ export default function ChatPage() {
               <Badge variant="outline" className={dealStatus === 'concluded' ? 'border-emerald-500 text-emerald-700' : dealStatus === 'not_concluded' ? 'border-slate-400 text-slate-600' : 'border-orange-500 text-orange-700'}>
                 {dealLabel}
               </Badge>
+              {isOwnerClosureActive && (
+                <Badge variant="outline" className="border-slate-400 text-slate-600">
+                  Clôturée par le propriétaire
+                </Badge>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2">
+              {isConversationSeller ? (
+                <Button onClick={handleOwnerClosureAction} disabled={ownerClosureLoading} variant={isOwnerClosureActive ? 'outline' : 'default'} size="sm" className="h-8 text-xs">
+                  {ownerClosureLoading ? '...' : isOwnerClosureActive ? 'Réouvrir la discussion' : 'Clôturer la discussion'}
+                </Button>
+              ) : null}
+
+              {/*
+              Bloc conservé en commentaire: ancienne logique d'actions "affaire".
+              On garde uniquement le bouton de clôture propriétaire pour éviter la duplication.
+
               {dealStatus === 'open' && isConversationSeller ? (
                 <Button onClick={() => handleDealAction('request')} disabled={dealActionLoading} size="sm" className="h-8 bg-[#ec5a13] hover:bg-[#d94f0f] text-white text-xs">
                   {dealActionLoading ? 'En cours...' : 'Marquer conclue'}
@@ -597,6 +644,7 @@ export default function ChatPage() {
                   Réouvrir
                 </Button>
               ) : null}
+              */}
             </div>
           </div>
         </div>

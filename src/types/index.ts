@@ -132,6 +132,7 @@ export interface Message {
   readAt?: string;
   type: 'text' | 'image' | 'audio' | 'offer';
   attachments?: string[];
+  postClosure?: boolean;
   offerDetails?: {
     itemId: number;
     itemTitle: string;
@@ -161,6 +162,9 @@ export interface Conversation {
   createdAt: string;
   updatedAt: string;
   status: 'active' | 'archived';
+  closedByOwner?: boolean;
+  closedAt?: string | null;
+  closedById?: string | null;
   deal?: {
     status: 'open' | 'pending_conclusion' | 'concluded' | 'not_concluded';
     requestedBy?: string | null;

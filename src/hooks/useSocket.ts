@@ -28,6 +28,7 @@ interface UseSocketReturn {
     type?: string;
     attachments?: string[];
     offerDetails?: any;
+    postClosure?: boolean;
   }) => void;
   markMessageAsRead: (messageId: string, conversationId: string) => void;
   startTyping: (conversationId: string) => void;
@@ -199,6 +200,7 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
     type?: string;
     attachments?: string[];
     offerDetails?: any;
+    postClosure?: boolean;
   }) => {
     emit('message:send', data);
   }, [emit]);

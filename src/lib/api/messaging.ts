@@ -39,6 +39,9 @@ export interface Conversation {
   };
   unreadCount: number;
   status: string;
+  closedByOwner?: boolean;
+  closedAt?: string | null;
+  closedById?: string | null;
   deal?: {
     status: 'open' | 'pending_conclusion' | 'concluded' | 'not_concluded';
     requestedBy?: string | null;
@@ -65,6 +68,7 @@ export interface Message {
   readAt?: string;
   type: 'text' | 'image' | 'audio' | 'offer' | 'deleted';
   attachments?: string[];
+  postClosure?: boolean;
   offerDetails?: {
     itemId: string;
     itemTitle: string;
@@ -128,6 +132,16 @@ export const updateConversationDeal = async (
   return response.data;
 };
 
+export const closeConversationByOwner = async (conversationId: string) => {
+  const response = await api.put(`/conversations/${conversationId}/close-owner`);
+  return response.data;
+};
+
+export const reopenConversationByOwner = async (conversationId: string) => {
+  const response = await api.put(`/conversations/${conversationId}/reopen-owner`);
+  return response.data;
+};
+
 /**
  * Archiver une conversation
  */
@@ -171,6 +185,7 @@ export const sendMessage = async (data: {
   type?: string;
   attachments?: string[];
   offerDetails?: any;
+  postClosure?: boolean;
 }) => {
   const response = await api.post('/messages', data);
   return response.data;
