@@ -229,6 +229,9 @@ export default function ChatPage() {
         lastMessage: data.lastMessage || prev.lastMessage,
         unreadCount: typeof data.unreadCount === 'number' ? data.unreadCount : prev.unreadCount,
         status: data.status || prev.status,
+        closedByOwner: typeof data.closedByOwner === 'boolean' ? data.closedByOwner : prev.closedByOwner,
+        closedAt: data.closedAt !== undefined ? data.closedAt : prev.closedAt,
+        closedById: data.closedById !== undefined ? data.closedById : prev.closedById,
         deal: data.deal || prev.deal,
       } : prev));
     };
