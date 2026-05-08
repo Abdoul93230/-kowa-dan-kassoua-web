@@ -38,6 +38,43 @@ import VoiceRecorder from '@/components/VoiceRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
 import { formatPriceFCFA } from '@/lib/utils';
 
+const mergeClosureHistory = (messages: Message[], closureHistory: Conversation['closureHistory'] = []) => {
+  if (!Array.isArray(closureHistory) || closureHistory.length === 0) return messages;
+
+  const merged = [...messages];
+
+  closureHistory.forEach((entry) => {
+    const historyId = `closure-history-${entry.messageId}`;
+    const alreadyExists = merged.some((msg) => msg.id === entry.messageId || msg.id === historyId || msg.systemId === historyId);
+    if (alreadyExists) return;
+
+    const systemMessage: Message = {
+      id: historyId,
+      systemId: historyId,
+      conversationId: '',
+      senderId: entry.actorId,
+      senderName: entry.actorName,
+      senderAvatar: undefined,
+      content: entry.content,
+      timestamp: entry.timestamp,
+      read: true,
+      type: 'system',
+      postClosure: false,
+      attachments: [],
+    };
+
+    const insertedAt = new Date(entry.timestamp).getTime();
+    const index = merged.findIndex((msg) => new Date(msg.timestamp).getTime() > insertedAt);
+    if (index === -1) {
+      merged.push(systemMessage);
+    } else {
+      merged.splice(index, 0, systemMessage);
+    }
+  });
+
+  return merged;
+};
+
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
@@ -85,7 +122,7 @@ export default function ChatPage() {
 
         // Charger les messages
         const messagesResponse = await getMessages(conversationId);
-        setMessages(messagesResponse.data);
+        setMessages(mergeClosureHistory(messagesResponse.data, convResponse.data.closureHistory));
 
         // Scroll instantané vers le bas après chargement initial
         setTimeout(() => {

@@ -167,6 +167,14 @@ export interface Conversation {
   closedByOwner?: boolean;
   closedAt?: string | null;
   closedById?: string | null;
+  closureHistory?: Array<{
+    action: 'close' | 'reopen';
+    messageId: string;
+    content: string;
+    timestamp: string;
+    actorId: string;
+    actorName: string;
+  }>;
   deal?: {
     status: 'open' | 'pending_conclusion' | 'concluded' | 'not_concluded';
     requestedBy?: string | null;
