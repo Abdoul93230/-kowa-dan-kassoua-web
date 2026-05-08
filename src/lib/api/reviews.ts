@@ -49,6 +49,12 @@ export interface CreateReviewData {
   comment: string;
 }
 
+export interface ReviewEligibilityResponse {
+  success: boolean;
+  eligible: boolean;
+  reason?: string;
+}
+
 /**
  * Créer un nouvel avis pour un produit
  */
@@ -99,6 +105,22 @@ export const getReviewStats = async (productId: string): Promise<ReviewStatsResp
     throw new Error(
       error.response?.data?.message || 
       'Erreur lors de la récupération des statistiques'
+    );
+  }
+};
+
+/**
+ * Vérifier si l'utilisateur peut laisser un avis
+ */
+export const checkReviewEligibility = async (productId: string): Promise<ReviewEligibilityResponse> => {
+  try {
+    const response = await api.get<ReviewEligibilityResponse>(`/reviews/eligibility/${productId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Erreur vérification éligibilité avis:', error);
+    throw new Error(
+      error.response?.data?.message ||
+      'Erreur lors de la vérification de l\'éligibilité'
     );
   }
 };

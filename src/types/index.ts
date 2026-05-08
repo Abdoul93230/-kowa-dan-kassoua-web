@@ -130,9 +130,10 @@ export interface Message {
   deliveredAt?: string;
   read: boolean;
   readAt?: string;
-  type: 'text' | 'image' | 'audio' | 'offer';
+  type: 'text' | 'image' | 'audio' | 'offer' | 'system';
   attachments?: string[];
   postClosure?: boolean;
+  systemId?: string;
   offerDetails?: {
     itemId: number;
     itemTitle: string;
@@ -153,6 +154,7 @@ export interface Conversation {
   };
   item?: {
     id: number;
+    _id?: string;
     title: string;
     image: string;
     price: string;

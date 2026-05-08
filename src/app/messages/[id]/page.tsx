@@ -31,6 +31,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getProductById } from '@/lib/api/products';
 import { getMessages, getConversationById, markMessageAsRead as apiMarkMessageAsRead, markConversationAsRead, sendVoiceMessage, updateConversationDeal, closeConversationByOwner, reopenConversationByOwner } from '@/lib/api/messaging';
+import { checkReviewEligibility } from '@/lib/api/reviews';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import VoiceRecorder from '@/components/VoiceRecorder';
@@ -59,6 +60,7 @@ export default function ChatPage() {
   const [dealActionLoading, setDealActionLoading] = useState(false);
   const [ownerClosureLoading, setOwnerClosureLoading] = useState(false);
   const [optimisticDealStatus, setOptimisticDealStatus] = useState<Conversation['deal'] extends { status: infer S } ? S | null : string | null>(null);
+  const [reviewEligible, setReviewEligible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -247,6 +249,27 @@ export default function ChatPage() {
       setOptimisticDealStatus(null);
     }
   }, [conversation?.deal?.status, optimisticDealStatus]);
+
+  useEffect(() => {
+    const checkEligibility = async () => {
+      const productId = String(conversation?.item?._id || conversation?.item?.id || conversation?.item || '');
+
+      if (!conversation?.closedByOwner || !productId) {
+        setReviewEligible(false);
+        return;
+      }
+
+      try {
+        const response = await checkReviewEligibility(productId);
+        setReviewEligible(Boolean(response?.eligible));
+      } catch (error) {
+        console.error('❌ Erreur vérification éligibilité avis conversation:', error);
+        setReviewEligible(false);
+      }
+    };
+
+    checkEligibility();
+  }, [conversation?.closedByOwner, conversation?.item]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -517,6 +540,13 @@ export default function ChatPage() {
     }
   };
 
+  const handleOpenReview = () => {
+    const productId = String(conversation?.item?._id || conversation?.item?.id || conversation?.item || '');
+    if (!productId) return;
+
+    router.push(`/items/${productId}?scrollToReviewForm=1`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header de la conversation */}
@@ -653,6 +683,22 @@ export default function ChatPage() {
       {/* Zone des messages */}
       <div className="flex-1 overflow-y-auto bg-gray-50">
         <div className="container mx-auto px-4 py-6 max-w-4xl">
+          {reviewEligible && conversation.closedByOwner && (
+            <Card className="mb-4 p-4 border-emerald-200 bg-emerald-50 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-emerald-900">📝 Donnez votre avis</p>
+                  <p className="text-sm text-emerald-800">
+                    La discussion est clôturée. Vous pouvez maintenant laisser un avis sur cet article.
+                  </p>
+                </div>
+                <Button onClick={handleOpenReview} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Aller au formulaire
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Carte du produit concerné */}
           {conversation.item && (
             <Card className="mb-4 p-4 bg-white shadow-md border-0 rounded-xl">
@@ -696,6 +742,18 @@ export default function ChatPage() {
           {/* Messages */}
           <div className="space-y-1">
             {messages.map((msg, index) => {
+              if (msg.type === 'system' || msg.systemId) {
+                return (
+                  <div key={msg.id} className="w-full flex justify-center py-2">
+                    <div className="max-w-[85%] rounded-full border border-gray-200 bg-white px-4 py-2 shadow-sm">
+                      <p className="text-xs font-semibold text-gray-500 text-center">
+                        {msg.content}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
               // Comparaison stricte pour déterminer si c'est l'utilisateur actuel
               // On compare à la fois avec l'ID de l'utilisateur et avec le nom
               const userIdStr = String(user?.id || '').trim();

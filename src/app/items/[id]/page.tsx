@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use, useEffect, Suspense } from 'react';
+import { useState, use, useEffect, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '../../../components/home/Header';
@@ -9,7 +9,7 @@ import { SimilarItemsCarousel } from '../../../components/home/SimilarItemsCarou
 import { Item } from '@/types/index';
 import { getProductById, getProducts } from '@/lib/api/products';
 import { createOrGetConversation } from '@/lib/api/messaging';
-import { getProductReviews, getReviewStats, markReviewHelpful, type Review, type ReviewStats } from '@/lib/api/reviews';
+import { getProductReviews, getReviewStats, markReviewHelpful, checkReviewEligibility, type Review, type ReviewStats } from '@/lib/api/reviews';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Star,
@@ -55,6 +55,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   const { id } = use(params);
   const { user, token } = useAuth();
+  const reviewFormRef = useRef<HTMLDivElement>(null);
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [allReviews, setAllReviews] = useState<Review[]>([]);
@@ -65,6 +66,8 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [error, setError] = useState<string | null>(null);
   const [relatedItems, setRelatedItems] = useState<Item[]>([]);
   const [creatingConversation, setCreatingConversation] = useState(false);
+  const [reviewEligible, setReviewEligible] = useState(false);
+  const [checkingReviewEligibility, setCheckingReviewEligibility] = useState(false);
 
   // Charger le produit depuis l'API
   useEffect(() => {
@@ -85,6 +88,42 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
     fetchProduct();
   }, [id]);
+
+  // Vérifier l'éligibilité à laisser un avis
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (!item?.id) {
+        setReviewEligible(false);
+        return;
+      }
+
+      try {
+        setCheckingReviewEligibility(true);
+        const response = await checkReviewEligibility(String(item.id));
+        setReviewEligible(response?.eligible || false);
+      } catch (error) {
+        console.error('❌ Erreur vérification éligibilité:', error);
+        setReviewEligible(false);
+      } finally {
+        setCheckingReviewEligibility(false);
+      }
+    };
+
+    checkEligibility();
+  }, [item?.id]);
+
+  useEffect(() => {
+    if (!reviewEligible) return;
+
+    const shouldScroll = new URLSearchParams(window.location.search).get('scrollToReviewForm');
+    if (!shouldScroll) return;
+
+    const timer = window.setTimeout(() => {
+      reviewFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+
+    return () => window.clearTimeout(timer);
+  }, [reviewEligible]);
 
   // Charger les avis depuis l'API
   useEffect(() => {
@@ -663,7 +702,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                       </div>
                     </div>
                   )}
-                  <ReviewForm itemId={String(item.id)} onReviewSubmitted={handleReviewSubmitted} />
+                  <div ref={reviewFormRef}>
+                    {reviewEligible ? (
+                      <ReviewForm itemId={String(item.id)} onReviewSubmitted={handleReviewSubmitted} />
+                    ) : null}
+                  </div>
                 </div>
               </div>
                 
