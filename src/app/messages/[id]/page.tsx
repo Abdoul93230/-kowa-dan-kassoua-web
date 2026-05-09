@@ -262,7 +262,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     const checkEligibility = async () => {
-      const productId = String(conversation?.item?._id || conversation?.item?.id || conversation?.item || '');
+      const productId = conversation?.item?.id ? String(conversation.item.id) : '';
 
       if (!conversation?.closedByOwner || !productId) {
         setReviewEligible(false);
@@ -590,9 +590,8 @@ export default function ChatPage() {
   };
 
   const handleOpenReview = () => {
-    const productId = String(conversation?.item?._id || conversation?.item?.id || conversation?.item || '');
+    const productId = conversation?.item?.id ? String(conversation.item.id) : '';
     if (!productId) return;
-
     router.push(`/items/${productId}?scrollToReviewForm=1`);
   };
 
@@ -662,60 +661,40 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Affaire</span>
-              <Badge variant="outline" className={dealStatus === 'concluded' ? 'border-emerald-500 text-emerald-700' : dealStatus === 'not_concluded' ? 'border-slate-400 text-slate-600' : 'border-orange-500 text-orange-700'}>
-                {dealLabel}
+          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+            {/* Badge unique — état le plus pertinent */}
+            {isOwnerClosureActive ? (
+              <Badge variant="outline" className="border-slate-400 text-slate-600 text-xs">
+                🔒 Discussion clôturée
               </Badge>
-              {isOwnerClosureActive && (
-                <Badge variant="outline" className="border-slate-400 text-slate-600">
-                  Clôturée par le propriétaire
-                </Badge>
-              )}
-            </div>
+            ) : dealStatus === 'concluded' ? (
+              <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-xs">
+                ✓ Affaire conclue
+              </Badge>
+            ) : dealStatus === 'not_concluded' ? (
+              <Badge variant="outline" className="border-slate-400 text-slate-600 text-xs">
+                Affaire non conclue
+              </Badge>
+            ) : dealStatus === 'pending_conclusion' ? (
+              <Badge variant="outline" className="border-orange-400 text-orange-700 text-xs">
+                ⏳ Clôture en attente
+              </Badge>
+            ) : (
+              <span className="text-xs text-gray-400">Discussion en cours</span>
+            )}
 
-            <div className="flex flex-wrap gap-2">
-              {isConversationSeller ? (
-                <Button onClick={handleOwnerClosureAction} disabled={ownerClosureLoading} variant={isOwnerClosureActive ? 'outline' : 'default'} size="sm" className="h-8 text-xs">
-                  {ownerClosureLoading ? '...' : isOwnerClosureActive ? 'Réouvrir la discussion' : 'Clôturer la discussion'}
-                </Button>
-              ) : null}
-
-              {/*
-              Bloc conservé en commentaire: ancienne logique d'actions "affaire".
-              On garde uniquement le bouton de clôture propriétaire pour éviter la duplication.
-
-              {dealStatus === 'open' && isConversationSeller ? (
-                <Button onClick={() => handleDealAction('request')} disabled={dealActionLoading} size="sm" className="h-8 bg-[#ec5a13] hover:bg-[#d94f0f] text-white text-xs">
-                  {dealActionLoading ? 'En cours...' : 'Marquer conclue'}
-                </Button>
-              ) : null}
-
-              {dealStatus === 'pending_conclusion' ? (
-                isDealRequester ? (
-                  <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" size="sm" className="h-8 text-xs">
-                    Annuler demande
-                  </Button>
-                ) : !isConversationSeller ? (
-                  <>
-                    <Button onClick={() => handleDealAction('confirm')} disabled={dealActionLoading} size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
-                      Confirmer
-                    </Button>
-                    <Button onClick={() => handleDealAction('reject')} disabled={dealActionLoading} variant="outline" size="sm" className="h-8 text-xs">
-                      Non conclue
-                    </Button>
-                  </>
-                ) : null
-              ) : null}
-
-              {(dealStatus === 'concluded' || dealStatus === 'not_concluded') && isConversationSeller ? (
-                <Button onClick={() => handleDealAction('reopen')} disabled={dealActionLoading} variant="outline" size="sm" className="h-8 text-xs">
-                  Réouvrir
-                </Button>
-              ) : null}
-              */}
-            </div>
+            {/* Bouton vendeur */}
+            {isConversationSeller ? (
+              <Button
+                onClick={handleOwnerClosureAction}
+                disabled={ownerClosureLoading}
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs flex-shrink-0"
+              >
+                {ownerClosureLoading ? '…' : isOwnerClosureActive ? 'Réouvrir' : 'Clôturer'}
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -747,7 +726,7 @@ export default function ChatPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push(`/items/${conversation.item?.id}`)}
+                onClick={() => { if (conversation.item?.id) router.push(`/items/${conversation.item.id}`); }}
                 className="flex-shrink-0 hover:bg-gray-100 h-8 w-8 p-0"
               >
                 <ExternalLink className="h-4 w-4 text-gray-500" />
