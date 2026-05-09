@@ -38,49 +38,13 @@ import VoiceRecorder from '@/components/VoiceRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
 import { formatPriceFCFA } from '@/lib/utils';
 
-const mergeClosureHistory = (messages: Message[], closureHistory: Conversation['closureHistory'] = []) => {
-  if (!Array.isArray(closureHistory) || closureHistory.length === 0) return messages;
-
-  const merged = [...messages];
-
-  closureHistory.forEach((entry) => {
-    const historyId = `closure-history-${entry.messageId}`;
-    const alreadyExists = merged.some((msg) => msg.id === entry.messageId || msg.id === historyId || msg.systemId === historyId);
-    if (alreadyExists) return;
-
-    const systemMessage: Message = {
-      id: historyId,
-      systemId: historyId,
-      conversationId: '',
-      senderId: entry.actorId,
-      senderName: entry.actorName,
-      senderAvatar: undefined,
-      content: entry.content,
-      timestamp: entry.timestamp,
-      read: true,
-      type: 'system',
-      postClosure: false,
-      attachments: [],
-    };
-
-    const insertedAt = new Date(entry.timestamp).getTime();
-    const index = merged.findIndex((msg) => new Date(msg.timestamp).getTime() > insertedAt);
-    if (index === -1) {
-      merged.push(systemMessage);
-    } else {
-      merged.splice(index, 0, systemMessage);
-    }
-  });
-
-  return merged;
-};
 
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
   const conversationId = params?.id as string;
   const { user, token, loading: authLoading } = useAuth();
-  const { isConnected, joinConversation, sendMessage: socketSendMessage, on, off, startTyping, stopTyping, markMessageAsRead: socketMarkAsRead } = useSocket({
+  const { isConnected, joinConversation, sendMessage: socketSendMessage, on, off, startTyping, stopTyping, markMessageAsRead: socketMarkAsRead, isUserOnline } = useSocket({
     enabled: !!token,
     token: token || undefined
   });
@@ -98,7 +62,11 @@ export default function ChatPage() {
   const [ownerClosureLoading, setOwnerClosureLoading] = useState(false);
   const [optimisticDealStatus, setOptimisticDealStatus] = useState<Conversation['deal'] extends { status: infer S } ? S | null : string | null>(null);
   const [reviewEligible, setReviewEligible] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Charger la conversation et les messages
@@ -122,7 +90,9 @@ export default function ChatPage() {
 
         // Charger les messages
         const messagesResponse = await getMessages(conversationId);
-        setMessages(mergeClosureHistory(messagesResponse.data, convResponse.data.closureHistory));
+        setMessages(messagesResponse.data);
+        setCurrentPage(1);
+        setHasMoreMessages(Boolean(messagesResponse.pagination?.hasMore));
 
         // Scroll instantané vers le bas après chargement initial
         setTimeout(() => {
@@ -311,20 +281,58 @@ export default function ChatPage() {
     checkEligibility();
   }, [conversation?.closedByOwner, conversation?.item]);
 
+  const loadOlderMessages = async () => {
+    if (loadingOlder || !hasMoreMessages || !conversationId) return;
+    const scrollEl = messagesScrollRef.current;
+    const prevScrollHeight = scrollEl?.scrollHeight ?? 0;
+    try {
+      setLoadingOlder(true);
+      const nextPage = currentPage + 1;
+      const response = await getMessages(conversationId, nextPage);
+      const older: Message[] = response?.data || [];
+      if (older.length > 0) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const unique = older.filter((m) => !existingIds.has(m.id));
+          return [...unique, ...prev];
+        });
+        setCurrentPage(nextPage);
+        setHasMoreMessages(Boolean(response?.pagination?.hasMore));
+        // Maintenir la position de scroll après ajout en tête
+        requestAnimationFrame(() => {
+          if (scrollEl) {
+            scrollEl.scrollTop = scrollEl.scrollHeight - prevScrollHeight;
+          }
+        });
+      } else {
+        setHasMoreMessages(false);
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
+  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (e.currentTarget.scrollTop < 80 && hasMoreMessages && !loadingOlder) {
+      loadOlderMessages();
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const formatMessageTime = (timestamp: string) => {
+    return format(new Date(timestamp), 'HH:mm');
+  };
+
+  const formatDateSeparator = (timestamp: string) => {
     const date = new Date(timestamp);
-    
-    if (isToday(date)) {
-      return format(date, 'HH:mm');
-    } else if (isYesterday(date)) {
-      return `Hier ${format(date, 'HH:mm')}`;
-    } else {
-      return format(date, 'dd MMM HH:mm', { locale: fr });
-    }
+    if (isToday(date)) return "Aujourd'hui";
+    if (isYesterday(date)) return 'Hier';
+    return format(date, 'EEEE d MMMM yyyy', { locale: fr });
   };
 
   const handleSendMessage = () => {
@@ -459,6 +467,7 @@ export default function ChatPage() {
   // Déterminer qui est l'autre participant (celui qui n'est pas l'utilisateur actuel)
   const currentUserId = String(user?.id || '').trim();
   const otherParticipant = currentUserId === seller.id ? buyer : seller;
+  const peerIsOnline = isUserOnline(String(otherParticipant?.id || ''));
   const isConversationSeller = currentUserId === seller.id;
   const isOwnerClosureActive = Boolean(conversation.closedByOwner);
   const dealStatus = optimisticDealStatus || conversation.deal?.status || 'open';
@@ -606,7 +615,6 @@ export default function ChatPage() {
               {/* Info interlocuteur */}
               <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-gray-100 rounded-lg p-2 -m-2 transition-colors"
                    onClick={() => {
-                     // Rediriger vers la page du vendeur si l'interlocuteur est le vendeur
                      if (otherParticipant.id === seller.id) {
                        router.push(`/seller/${seller.id}`);
                      }
@@ -621,30 +629,22 @@ export default function ChatPage() {
                       </div>
                     )}
                   </Avatar>
+                  {/* Dot statut en ligne sur l'avatar */}
+                  <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${peerIsOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <h2 className="font-semibold text-gray-900 truncate">
                       {otherParticipant.name}
                     </h2>
-                    {/* Badge vérifié sur la même ligne que le nom du store */}
                     {otherParticipant.id === seller.id && seller.verified && (
                       <CheckCheck className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     )}
                   </div>
-                  {/* Afficher rating et location seulement si c'est le seller */}
-                  {otherParticipant.id === seller.id && (
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        {seller.rating}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {seller.location}
-                      </span>
-                    </div>
-                  )}
+                  {/* Statut en ligne sous le nom */}
+                  <p className={`text-xs font-medium ${peerIsOnline ? 'text-green-600' : 'text-gray-400'}`}>
+                    {isConnected ? (peerIsOnline ? 'En ligne' : 'Hors ligne') : 'Connexion…'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -720,9 +720,66 @@ export default function ChatPage() {
         </div>
       </div>
 
+      {/* Carte produit fixe — hors de la zone scrollable */}
+      {conversation.item && (
+        <div className="bg-white border-b border-gray-100 shadow-sm">
+          <div className="container mx-auto px-4 py-2.5 max-w-4xl">
+            <div className="flex items-center gap-3">
+              <img
+                src={conversation.item.image}
+                alt={conversation.item.title}
+                className="w-12 h-12 object-cover rounded-lg shadow-sm flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">À propos de</p>
+                <h3 className="font-semibold text-gray-900 truncate text-sm leading-tight">
+                  {conversation.item.title}
+                </h3>
+                <p className="text-sm font-bold text-[#ec5a13]">
+                  {formatPriceFCFA(conversation.item.price)}
+                </p>
+              </div>
+              {productDetails && productDetails.status !== 'active' && (
+                <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-1 rounded-full flex-shrink-0">
+                  {productDetails.status === 'sold' ? 'Vendu' : productDetails.status === 'expired' ? 'Expiré' : 'En attente'}
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/items/${conversation.item?.id}`)}
+                className="flex-shrink-0 hover:bg-gray-100 h-8 w-8 p-0"
+              >
+                <ExternalLink className="h-4 w-4 text-gray-500" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Zone des messages */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div
+        ref={messagesScrollRef}
+        className="flex-1 overflow-y-auto bg-gray-50"
+        onScroll={handleMessagesScroll}
+      >
         <div className="container mx-auto px-4 py-6 max-w-4xl">
+          {/* Bouton/indicateur charger plus anciens */}
+          {loadingOlder && (
+            <div className="flex items-center justify-center gap-2 py-3 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin text-[#ec5a13]" />
+              <span>Chargement des messages plus anciens…</span>
+            </div>
+          )}
+          {!loadingOlder && hasMoreMessages && (
+            <button
+              onClick={loadOlderMessages}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-[#ec5a13] hover:bg-orange-50 rounded-lg transition-colors mb-2"
+            >
+              <span>↑ Messages plus anciens</span>
+            </button>
+          )}
+
           {reviewEligible && conversation.closedByOwner && (
             <Card className="mb-4 p-4 border-emerald-200 bg-emerald-50 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -734,46 +791,6 @@ export default function ChatPage() {
                 </div>
                 <Button onClick={handleOpenReview} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                   Aller au formulaire
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          {/* Carte du produit concerné */}
-          {conversation.item && (
-            <Card className="mb-4 p-4 bg-white shadow-md border-0 rounded-xl">
-              {productDetails && productDetails.status !== 'active' && (
-                <div className="mb-3 flex items-center gap-2 text-amber-800 bg-amber-100 p-2.5 rounded-lg">
-                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                  <p className="text-xs font-medium">
-                    {productDetails.status === 'sold' && 'Cette annonce a été vendue'}
-                    {productDetails.status === 'expired' && 'Cette annonce n\'est plus disponible'}
-                    {productDetails.status === 'pending' && 'Cette annonce est en attente de validation'}
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center gap-4">
-                <img
-                  src={conversation.item.image}
-                  alt={conversation.item.title}
-                  className="w-16 h-16 object-cover rounded-lg shadow-sm"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">À propos de cette annonce</p>
-                  <h3 className="font-semibold text-gray-900 truncate text-sm">
-                    {conversation.item.title}
-                  </h3>
-                  <p className="text-base font-bold text-[#ec5a13] mt-1">
-                    {formatPriceFCFA(conversation.item.price)}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push(`/items/${conversation.item?.id}`)}
-                  className="flex-shrink-0 hover:bg-gray-100"
-                >
-                  <ExternalLink className="h-4 w-4 text-gray-700" />
                 </Button>
               </div>
             </Card>
@@ -817,10 +834,13 @@ export default function ChatPage() {
                 });
               }
               
-              // Vérifier si le message précédent est du même expéditeur
+              // Séparateur de date
               const prevMsg = index > 0 ? messages[index - 1] : null;
               const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
-              const isSameSenderAsPrev = prevMsg && prevMsg.senderId === msg.senderId;
+              const msgDay = new Date(msg.timestamp).toDateString();
+              const prevDay = prevMsg ? new Date(prevMsg.timestamp).toDateString() : null;
+              const showDateSeparator = msgDay !== prevDay;
+              const isSameSenderAsPrev = prevMsg && prevMsg.senderId === msg.senderId && msgDay === prevDay;
               const isSameSenderAsNext = nextMsg && nextMsg.senderId === msg.senderId;
               
               // Déterminer le style de la bulle selon la position dans le groupe
@@ -831,8 +851,17 @@ export default function ChatPage() {
               const showAvatar = !isCurrentUser && isLastInGroup;
 
               return (
+                <div key={msg.id}>
+                  {showDateSeparator && (
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="flex-1 h-px bg-gray-200" />
+                      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap px-1">
+                        {formatDateSeparator(msg.timestamp)}
+                      </span>
+                      <div className="flex-1 h-px bg-gray-200" />
+                    </div>
+                  )}
                 <div
-                  key={msg.id}
                   className={`w-full flex items-end gap-2 ${
                     isCurrentUser ? 'flex-row-reverse' : 'flex-row'
                   } ${!isLastInGroup ? 'mb-0.5' : 'mb-3'}`}
@@ -913,11 +942,14 @@ export default function ChatPage() {
                           {isCurrentUser && (
                             <>
                               {msg.read ? (
-                                <CheckCheck className="h-4 w-4 text-emerald-300" />
+                                /* Vu — ambre pâle, analogique de l'orange */
+                                <CheckCheck className="h-[15px] w-[15px]" style={{ color: '#fde68a' }} />
                               ) : msg.delivered ? (
-                                <CheckCheck className="h-4 w-4 text-white/70" />
+                                /* Livré — blanc plein */
+                                <CheckCheck className="h-[15px] w-[15px] text-white/90" />
                               ) : (
-                                <Check className="h-4 w-4 text-white/70" />
+                                /* Envoyé — blanc discret */
+                                <Check className="h-[15px] w-[15px] text-white/45" />
                               )}
                             </>
                           )}
@@ -925,6 +957,7 @@ export default function ChatPage() {
                       </div>
                     </div>
                   </div>
+                </div>
                 </div>
               );
             })}
