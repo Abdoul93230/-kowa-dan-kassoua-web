@@ -31,7 +31,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getProductById } from '@/lib/api/products';
 import { getMessages, getConversationById, markMessageAsRead as apiMarkMessageAsRead, markConversationAsRead, sendVoiceMessage, updateConversationDeal, closeConversationByOwner, reopenConversationByOwner } from '@/lib/api/messaging';
-import { checkReviewEligibility } from '@/lib/api/reviews';
+import { checkReviewEligibility, createReview } from '@/lib/api/reviews';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 import VoiceRecorder from '@/components/VoiceRecorder';
@@ -62,6 +62,10 @@ export default function ChatPage() {
   const [ownerClosureLoading, setOwnerClosureLoading] = useState(false);
   const [optimisticDealStatus, setOptimisticDealStatus] = useState<Conversation['deal'] extends { status: infer S } ? S | null : string | null>(null);
   const [reviewEligible, setReviewEligible] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -589,14 +593,26 @@ export default function ChatPage() {
     }
   };
 
-  const handleOpenReview = () => {
+  const submitReview = async () => {
+    if (reviewRating === 0 || submittingReview) return;
     const productId = conversation?.item?.id ? String(conversation.item.id) : '';
     if (!productId) return;
-    router.push(`/items/${productId}?scrollToReviewForm=1`);
+    try {
+      setSubmittingReview(true);
+      await createReview({ productId, rating: reviewRating, comment: reviewComment.trim() });
+      setReviewModalOpen(false);
+      setReviewRating(0);
+      setReviewComment('');
+      setReviewEligible(false);
+    } catch (err: any) {
+      console.error('❌ Erreur publication avis:', err);
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Header de la conversation */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-2.5">
@@ -648,53 +664,37 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Badge statut + bouton vendeur sur la même ligne */}
             <div className="flex items-center gap-2 flex-shrink-0">
+              {isOwnerClosureActive ? (
+                <Badge variant="outline" className="border-slate-400 text-slate-500 text-[11px] px-2 py-0.5">🔒 Clôturée</Badge>
+              ) : dealStatus === 'concluded' ? (
+                <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[11px] px-2 py-0.5">✓ Conclue</Badge>
+              ) : dealStatus === 'not_concluded' ? (
+                <Badge variant="outline" className="border-slate-400 text-slate-500 text-[11px] px-2 py-0.5">Non conclue</Badge>
+              ) : dealStatus === 'pending_conclusion' ? (
+                <Badge variant="outline" className="border-orange-400 text-orange-600 text-[11px] px-2 py-0.5">⏳ En attente</Badge>
+              ) : null}
+              {isConversationSeller && (
+                <Button
+                  onClick={handleOwnerClosureAction}
+                  disabled={ownerClosureLoading}
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[11px] px-2 py-0"
+                >
+                  {ownerClosureLoading ? '…' : isOwnerClosureActive ? 'Réouvrir' : 'Clôturer'}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push(`/seller/${seller.id}`)}
-                className="hover:bg-gray-100"
+                className="hover:bg-gray-100 h-7 w-7 p-0"
               >
-                <Info className="h-5 w-5 text-gray-700" />
+                <Info className="h-4 w-4 text-gray-500" />
               </Button>
             </div>
-          </div>
-
-          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
-            {/* Badge unique — état le plus pertinent */}
-            {isOwnerClosureActive ? (
-              <Badge variant="outline" className="border-slate-400 text-slate-600 text-xs">
-                🔒 Discussion clôturée
-              </Badge>
-            ) : dealStatus === 'concluded' ? (
-              <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-xs">
-                ✓ Affaire conclue
-              </Badge>
-            ) : dealStatus === 'not_concluded' ? (
-              <Badge variant="outline" className="border-slate-400 text-slate-600 text-xs">
-                Affaire non conclue
-              </Badge>
-            ) : dealStatus === 'pending_conclusion' ? (
-              <Badge variant="outline" className="border-orange-400 text-orange-700 text-xs">
-                ⏳ Clôture en attente
-              </Badge>
-            ) : (
-              <span className="text-xs text-gray-400">Discussion en cours</span>
-            )}
-
-            {/* Bouton vendeur */}
-            {isConversationSeller ? (
-              <Button
-                onClick={handleOwnerClosureAction}
-                disabled={ownerClosureLoading}
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs flex-shrink-0"
-              >
-                {ownerClosureLoading ? '…' : isOwnerClosureActive ? 'Réouvrir' : 'Clôturer'}
-              </Button>
-            ) : null}
           </div>
         </div>
       </div>
@@ -736,6 +736,91 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Bannière avis — fixe entre la carte produit et les messages */}
+      {reviewEligible && conversation.closedByOwner && !reviewModalOpen && (
+        <div className="bg-white border-b border-amber-100 flex-shrink-0">
+          <div className="container mx-auto px-4 py-0 max-w-4xl">
+            <button
+              onClick={() => { setReviewRating(0); setReviewComment(''); setReviewModalOpen(true); }}
+              className="w-full flex items-center gap-3 p-3 hover:bg-amber-50 transition-colors text-left"
+            >
+              <span className="text-xl">⭐</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-amber-900 text-sm leading-tight">Donnez votre avis</p>
+                <p className="text-xs text-amber-700">Discussion clôturée — notez ce produit en 10 secondes</p>
+              </div>
+              <span className="text-amber-500 font-bold text-sm flex-shrink-0">Noter →</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Formulaire avis inline — fixe entre la carte produit et les messages */}
+      {reviewModalOpen && (
+        <div className="bg-white border-b border-orange-200 flex-shrink-0 shadow-sm">
+          <div className="container mx-auto px-4 py-3 max-w-4xl">
+            {/* En-tête produit */}
+            {conversation.item && (
+              <div className="flex items-center gap-3 mb-3">
+                <img
+                  src={conversation.item.image}
+                  alt={conversation.item.title}
+                  className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-orange-600 font-medium uppercase tracking-wide">Votre avis sur</p>
+                  <p className="font-semibold text-gray-900 text-sm truncate">{conversation.item.title}</p>
+                </div>
+                <button onClick={() => setReviewModalOpen(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 text-xl leading-none">×</button>
+              </div>
+            )}
+
+            {/* Étoiles */}
+            <div className="flex justify-center gap-2 mb-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setReviewRating(star)}
+                  className="text-3xl transition-transform hover:scale-110 active:scale-95"
+                  style={{ color: reviewRating >= star ? '#f59e0b' : '#d1d5db', lineHeight: 1 }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            {reviewRating > 0 && (
+              <p className="text-center text-xs font-semibold text-amber-500 mb-3">
+                {['', 'Très déçu', 'Déçu', 'Correct', 'Bien', 'Excellent !'][reviewRating]}
+              </p>
+            )}
+
+            {/* Commentaire */}
+            <Textarea
+              placeholder="Décrivez votre expérience (facultatif)"
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value.slice(0, 500))}
+              className="resize-none text-sm min-h-[60px] mb-1"
+              rows={2}
+            />
+            <p className="text-xs text-gray-400 text-right mb-3">{reviewComment.length}/500</p>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setReviewModalOpen(false)} className="flex-1 h-9 text-sm">
+                Annuler
+              </Button>
+              <Button
+                onClick={submitReview}
+                disabled={reviewRating === 0 || submittingReview}
+                className="flex-[2] h-9 text-sm bg-[#ec5a13] hover:bg-[#d94f0f] text-white disabled:opacity-50"
+              >
+                {submittingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publier mon avis'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Zone des messages */}
       <div
         ref={messagesScrollRef}
@@ -757,22 +842,6 @@ export default function ChatPage() {
             >
               <span>↑ Messages plus anciens</span>
             </button>
-          )}
-
-          {reviewEligible && conversation.closedByOwner && (
-            <Card className="mb-4 p-4 border-emerald-200 bg-emerald-50 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-emerald-900">📝 Donnez votre avis</p>
-                  <p className="text-sm text-emerald-800">
-                    La discussion est clôturée. Vous pouvez maintenant laisser un avis sur cet article.
-                  </p>
-                </div>
-                <Button onClick={handleOpenReview} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Aller au formulaire
-                </Button>
-              </div>
-            </Card>
           )}
 
           {/* Messages */}

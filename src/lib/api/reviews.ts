@@ -117,11 +117,7 @@ export const checkReviewEligibility = async (productId: string): Promise<ReviewE
     const response = await api.get<ReviewEligibilityResponse>(`/reviews/eligibility/${productId}`);
     return response.data;
   } catch (error: any) {
-    console.error('❌ Erreur vérification éligibilité avis:', error);
-    throw new Error(
-      error.response?.data?.message ||
-      'Erreur lors de la vérification de l\'éligibilité'
-    );
+    return { success: false, eligible: false, reason: error.response?.data?.message || 'Non éligible' };
   }
 };
 

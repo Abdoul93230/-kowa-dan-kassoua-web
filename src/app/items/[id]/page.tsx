@@ -9,7 +9,7 @@ import { SimilarItemsCarousel } from '../../../components/home/SimilarItemsCarou
 import { Item } from '@/types/index';
 import { getProductById, getProducts } from '@/lib/api/products';
 import { createOrGetConversation } from '@/lib/api/messaging';
-import { getProductReviews, getReviewStats, markReviewHelpful, checkReviewEligibility, type Review, type ReviewStats } from '@/lib/api/reviews';
+import { getProductReviews, getReviewStats, markReviewHelpful, checkReviewEligibility, createReview, type Review, type ReviewStats } from '@/lib/api/reviews';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Star,
@@ -45,10 +45,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
-import ReviewForm from '@/components/ReviewForm';
 import { formatRelativeDate, formatPriceFCFA } from '@/lib/utils';
 
 export default function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -68,6 +68,12 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const [creatingConversation, setCreatingConversation] = useState(false);
   const [reviewEligible, setReviewEligible] = useState(false);
   const [checkingReviewEligibility, setCheckingReviewEligibility] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   // Charger le produit depuis l'API
   useEffect(() => {
@@ -204,6 +210,25 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
       setAllReviews(reviewsResponse.data);
     } catch (err) {
       console.error('❌ Erreur marquage avis utile:', err);
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (reviewRating === 0 || submittingReview || !item) return;
+    try {
+      setSubmittingReview(true);
+      setReviewError(null);
+      await createReview({ productId: String(item.id), rating: reviewRating, comment: reviewComment.trim() });
+      setReviewSuccess(true);
+      setReviewRating(0);
+      setReviewComment('');
+      setReviewEligible(false);
+      await handleReviewSubmitted();
+    } catch (err: any) {
+      setReviewError(err.message || 'Erreur lors de la publication');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -703,9 +728,79 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
                   )}
                   <div ref={reviewFormRef}>
-                    {reviewEligible ? (
-                      <ReviewForm itemId={String(item.id)} onReviewSubmitted={handleReviewSubmitted} />
-                    ) : null}
+                    {reviewEligible && !reviewSuccess && (
+                      <div className="mt-4 rounded-2xl border border-orange-200 bg-white shadow-md overflow-hidden">
+                        {/* En-tête */}
+                        <div className="flex items-center gap-3 p-4 bg-orange-50 border-b border-orange-100">
+                          <img
+                            src={item.mainImage || item.images?.[0]}
+                            alt={item.title}
+                            className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide">Votre avis sur</p>
+                            <p className="font-semibold text-gray-900 text-sm truncate">{item.title}</p>
+                          </div>
+                        </div>
+
+                        <form onSubmit={handleSubmitReview} className="p-5 space-y-4">
+                          {/* Étoiles */}
+                          <div>
+                            <p className="text-sm font-semibold text-gray-700 mb-3 text-center">Quelle note donnez-vous ?</p>
+                            <div className="flex justify-center gap-1 mb-2">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => setReviewRating(star)}
+                                  onMouseEnter={() => setReviewHover(star)}
+                                  onMouseLeave={() => setReviewHover(0)}
+                                  className="text-5xl transition-transform hover:scale-110 active:scale-95 leading-none"
+                                  style={{ color: star <= (reviewHover || reviewRating) ? '#f59e0b' : '#d1d5db' }}
+                                >
+                                  ★
+                                </button>
+                              ))}
+                            </div>
+                            {reviewRating > 0 && (
+                              <p className="text-center text-sm font-semibold text-amber-500">
+                                {['', 'Très déçu', 'Déçu', 'Correct', 'Bien', 'Excellent !'][reviewRating]}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Commentaire */}
+                          <div>
+                            <Textarea
+                              placeholder="Décrivez votre expérience (facultatif)"
+                              value={reviewComment}
+                              onChange={(e) => setReviewComment(e.target.value.slice(0, 500))}
+                              className="resize-none text-sm min-h-[80px]"
+                              rows={3}
+                            />
+                            <p className="text-xs text-gray-400 text-right mt-1">{reviewComment.length}/500</p>
+                          </div>
+
+                          {reviewError && (
+                            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{reviewError}</p>
+                          )}
+
+                          <Button
+                            type="submit"
+                            disabled={reviewRating === 0 || submittingReview}
+                            className="w-full bg-[#ec5a13] hover:bg-[#d94f0f] text-white disabled:opacity-50 h-11"
+                          >
+                            {submittingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publier mon avis'}
+                          </Button>
+                        </form>
+                      </div>
+                    )}
+                    {reviewSuccess && (
+                      <div className="mt-4 flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200 text-green-800">
+                        <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+                        <p className="font-semibold text-sm">Merci ! Votre avis a été publié.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
