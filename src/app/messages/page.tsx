@@ -25,6 +25,7 @@ import { Conversation } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuickAuth } from '@/contexts/QuickAuthContext';
 import { useSocket } from '@/hooks/useSocket';
 import { getConversations } from '@/lib/api/messaging';
 import { formatPriceFCFA } from '@/lib/utils';
@@ -32,6 +33,7 @@ import { formatPriceFCFA } from '@/lib/utils';
 export default function MessagesPage() {
   const router = useRouter();
   const { user, token, loading: authLoading } = useAuth();
+  const { openQuickAuth } = useQuickAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +51,8 @@ export default function MessagesPage() {
     if (authLoading) return;
     
     if (!user || !token) {
-      router.push('/login');
+      // Ancien comportement conservé en dormant : router.push('/login');
+      openQuickAuth('messages');
       return;
     }
 

@@ -11,6 +11,7 @@ import { getProductById, getProducts } from '@/lib/api/products';
 import { createOrGetConversation } from '@/lib/api/messaging';
 import { getProductReviews, getReviewStats, markReviewHelpful, checkReviewEligibility, createReview, type Review, type ReviewStats } from '@/lib/api/reviews';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuickAuth } from '@/contexts/QuickAuthContext';
 import {
   Star,
   MapPin,
@@ -55,6 +56,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   const { id } = use(params);
   const { user, token } = useAuth();
+  const { openQuickAuth } = useQuickAuth();
   const reviewFormRef = useRef<HTMLDivElement>(null);
 
   const [selectedImage, setSelectedImage] = useState(0);
@@ -520,10 +522,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                     }
                     
                     if (!user || !token) {
-                      router.push('/login');
+                      // Ancien : router.push('/login');
+                      openQuickAuth(`/items/${id}`);
                       return;
                     }
-                    
+
                     try {
                       setCreatingConversation(true);
                       // Créer ou récupérer la conversation via l'API
@@ -697,238 +700,210 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
 
 
-            {/* Avis */}
-            <Card className="p-3 sm:p-4 md:p-6 border-gray-200 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <Star className="h-5 w-5 sm:h-6 sm:w-6 text-amber-400 fill-amber-400" />
+            {/* ── Section Avis ───────────────────────────── */}
+            <Card className="border-gray-200 shadow-sm overflow-hidden" ref={reviewFormRef}>
+
+              {/* En-tête */}
+              <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
                   Avis clients
                 </h2>
-                <div className="flex items-center gap-3">
-                  {reviews.length > 0 && (
-                    <div className="text-left sm:text-right">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl sm:text-3xl font-bold text-gray-900">{item.rating}</span>
-                        <div>
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${
-                                  i < Math.floor(item.rating)
-                                    ? 'text-amber-400 fill-amber-400'
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <p className="text-sm text-gray-600">{item.totalReviews} avis</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={reviewFormRef}>
-                    {reviewEligible && !reviewSuccess && (
-                      <div className="mt-4 rounded-2xl border border-orange-200 bg-white shadow-md overflow-hidden">
-                        {/* En-tête */}
-                        <div className="flex items-center gap-3 p-4 bg-orange-50 border-b border-orange-100">
-                          <img
-                            src={item.mainImage || item.images?.[0]}
-                            alt={item.title}
-                            className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide">Votre avis sur</p>
-                            <p className="font-semibold text-gray-900 text-sm truncate">{item.title}</p>
-                          </div>
-                        </div>
-
-                        <form onSubmit={handleSubmitReview} className="p-5 space-y-4">
-                          {/* Étoiles */}
-                          <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-3 text-center">Quelle note donnez-vous ?</p>
-                            <div className="flex justify-center gap-1 mb-2">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <button
-                                  key={star}
-                                  type="button"
-                                  onClick={() => setReviewRating(star)}
-                                  onMouseEnter={() => setReviewHover(star)}
-                                  onMouseLeave={() => setReviewHover(0)}
-                                  className="text-5xl transition-transform hover:scale-110 active:scale-95 leading-none"
-                                  style={{ color: star <= (reviewHover || reviewRating) ? '#f59e0b' : '#d1d5db' }}
-                                >
-                                  ★
-                                </button>
-                              ))}
-                            </div>
-                            {reviewRating > 0 && (
-                              <p className="text-center text-sm font-semibold text-amber-500">
-                                {['', 'Très déçu', 'Déçu', 'Correct', 'Bien', 'Excellent !'][reviewRating]}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Commentaire */}
-                          <div>
-                            <Textarea
-                              placeholder="Décrivez votre expérience (facultatif)"
-                              value={reviewComment}
-                              onChange={(e) => setReviewComment(e.target.value.slice(0, 500))}
-                              className="resize-none text-sm min-h-[80px]"
-                              rows={3}
-                            />
-                            <p className="text-xs text-gray-400 text-right mt-1">{reviewComment.length}/500</p>
-                          </div>
-
-                          {reviewError && (
-                            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{reviewError}</p>
-                          )}
-
-                          <Button
-                            type="submit"
-                            disabled={reviewRating === 0 || submittingReview}
-                            className="w-full bg-[#ec5a13] hover:bg-[#d94f0f] text-white disabled:opacity-50 h-11"
-                          >
-                            {submittingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publier mon avis'}
-                          </Button>
-                        </form>
-                      </div>
-                    )}
-                    {reviewSuccess && (
-                      <div className="mt-4 flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200 text-green-800">
-                        <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-                        <p className="font-semibold text-sm">Merci ! Votre avis a été publié.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
-                
-              {/* Indicateur de scroll pour mobile */}
-              {reviews.length > 0 && (
-                <>
-                  <div className="md:hidden flex items-center justify-between mb-3 px-1">
-                    <p className="text-xs text-gray-500 flex items-center gap-1">
-                      <span>Glissez pour voir plus</span>
-                      <ChevronRight className="h-3 w-3 animate-pulse" />
-                    </p>
-                    <div className="flex gap-1">
-                      {reviews.slice(0, 3).map((_, idx) => (
-                        <div key={idx} className="h-1.5 w-1.5 rounded-full bg-gray-300"></div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Carousel sur mobile, liste sur desktop */}
-                  <div className="md:space-y-4">
-                  {/* Version mobile : Carousel avec gradient indicateur */}
-                  <div className="relative md:hidden">
-                    <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2 -mx-3 px-3 snap-x snap-mandatory">
-                      {reviews.slice(0, 3).map((review) => (
-                        <div key={review.id} className="flex-shrink-0 w-[85vw] sm:w-[70vw] snap-start">
-                          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <div className="flex items-start gap-3">
-                              <Avatar className="flex-shrink-0">
-                                <AvatarImage src={review.userAvatar || undefined} />
-                                <AvatarFallback>{review.userName[0]}</AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between mb-2 gap-2">
-                                  <p className="font-semibold text-sm text-gray-900 truncate">{review.userName}</p>
-                                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-3 w-3 ${
-                                          i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                                <p className="text-sm text-gray-700 mb-2 line-clamp-3">{review.comment}</p>
-                                <div className="flex items-center justify-between">
-                                  <p className="text-xs text-gray-500">{formatRelativeDate(review.date)}</p>
-                                  <button
-                                    onClick={() => handleMarkHelpful(review.id)}
-                                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#ec5a13] transition-colors"
-                                  >
-                                    <ThumbsUp className="h-3 w-3" />
-                                    <span>{review.helpful > 0 ? review.helpful : ''}</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Gradient indicateur sur le bord droit */}
-                    <div className="absolute top-0 right-0 bottom-2 w-12 bg-gradient-to-l from-white via-white/50 to-transparent pointer-events-none"></div>
-                  </div>
 
-                  {/* Version desktop : Liste */}
-                  <div className="hidden md:block space-y-4">
-                    {reviews.slice(0, 3).map((review) => (
-                      <div key={review.id} className="border-t border-gray-200 pt-4 first:border-t-0 first:pt-0">
+              <div className="p-6 space-y-8">
+
+                {/* ── Bloc résumé + distribution ── */}
+                {reviews.length > 0 && reviewStats && (
+                  <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center p-5 rounded-2xl bg-amber-50 border border-amber-100">
+                    {/* Score global */}
+                    <div className="flex flex-col items-center min-w-[96px]">
+                      <span className="text-5xl font-extrabold text-gray-900 leading-none">
+                        {Number(item.rating).toFixed(1)}
+                      </span>
+                      <div className="flex items-center gap-0.5 mt-2">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${i <= Math.round(item.rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{item.totalReviews} avis</p>
+                    </div>
+
+                    {/* Barres de distribution */}
+                    <div className="flex-1 w-full space-y-1.5">
+                      {([5, 4, 3, 2, 1] as const).map((star) => {
+                        const count = reviewStats.ratingDistribution[star] ?? 0;
+                        const pct = item.totalReviews > 0 ? Math.round((count / item.totalReviews) * 100) : 0;
+                        return (
+                          <div key={star} className="flex items-center gap-2 text-xs">
+                            <span className="w-3 text-gray-600 text-right font-medium">{star}</span>
+                            <Star className="h-3 w-3 text-amber-400 fill-amber-400 flex-shrink-0" />
+                            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="w-8 text-gray-500 text-right">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Formulaire avis ── */}
+                {reviewEligible && !reviewSuccess && (
+                  <div className="rounded-2xl border border-orange-200 overflow-hidden shadow-sm">
+                    {/* Header produit */}
+                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-100">
+                      <img
+                        src={item.mainImage || item.images?.[0]}
+                        alt={item.title}
+                        className="w-11 h-11 object-cover rounded-xl flex-shrink-0 shadow-sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-[#ec5a13] font-bold uppercase tracking-widest mb-0.5">Votre avis sur</p>
+                        <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{item.title}</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleSubmitReview} className="px-5 py-5 space-y-5 bg-white">
+                      {/* Étoiles */}
+                      <div className="text-center">
+                        <p className="text-sm font-semibold text-gray-700 mb-3">Quelle note donnez-vous ?</p>
+                        <div className="flex justify-center gap-1 mb-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewRating(star)}
+                              onMouseEnter={() => setReviewHover(star)}
+                              onMouseLeave={() => setReviewHover(0)}
+                              className="text-[42px] transition-all duration-100 hover:scale-110 active:scale-95 leading-none focus:outline-none"
+                              style={{ color: star <= (reviewHover || reviewRating) ? '#f59e0b' : '#e5e7eb' }}
+                            >
+                              ★
+                            </button>
+                          ))}
+                        </div>
+                        <div className="h-5">
+                          {reviewRating > 0 && (
+                            <p className="text-sm font-semibold text-amber-500">
+                              {['', 'Très déçu 😞', 'Déçu 😕', 'Correct 😐', 'Bien 😊', 'Excellent ! 🤩'][reviewRating]}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Commentaire */}
+                      <div>
+                        <Textarea
+                          placeholder="Décrivez votre expérience (facultatif)"
+                          value={reviewComment}
+                          onChange={(e) => setReviewComment(e.target.value.slice(0, 500))}
+                          className="resize-none text-sm min-h-[88px] border-gray-200 focus:border-[#ec5a13] focus:ring-[#ec5a13]"
+                          rows={3}
+                        />
+                        <p className="text-xs text-gray-400 text-right mt-1">{reviewComment.length}/500</p>
+                      </div>
+
+                      {reviewError && (
+                        <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+                          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                          {reviewError}
+                        </div>
+                      )}
+
+                      <Button
+                        type="submit"
+                        disabled={reviewRating === 0 || submittingReview}
+                        className="w-full bg-[#ec5a13] hover:bg-[#d94f0f] text-white disabled:opacity-40 h-11 font-semibold rounded-xl shadow-sm"
+                      >
+                        {submittingReview
+                          ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Publication…</>
+                          : 'Publier mon avis'}
+                      </Button>
+                    </form>
+                  </div>
+                )}
+
+                {/* Succès */}
+                {reviewSuccess && (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-green-800 text-sm">Merci pour votre avis !</p>
+                      <p className="text-xs text-green-600">Il sera visible par les autres acheteurs.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Chargement ── */}
+                {loadingReviews && (
+                  <div className="flex items-center justify-center gap-3 py-10 text-gray-400">
+                    <Loader2 className="h-5 w-5 animate-spin text-[#ec5a13]" />
+                    <span className="text-sm">Chargement des avis…</span>
+                  </div>
+                )}
+
+                {/* ── Liste des avis ── */}
+                {!loadingReviews && reviews.length > 0 && (
+                  <div className="space-y-0 divide-y divide-gray-100">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="py-5 first:pt-0 last:pb-0">
                         <div className="flex items-start gap-3">
-                          <Avatar>
+                          <Avatar className="h-9 w-9 flex-shrink-0 border border-gray-100 shadow-sm">
                             <AvatarImage src={review.userAvatar || undefined} />
-                            <AvatarFallback>{review.userName[0]}</AvatarFallback>
+                            <AvatarFallback className="bg-orange-100 text-[#ec5a13] text-xs font-bold">
+                              {review.userName[0].toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="font-semibold text-gray-900">{review.userName}</p>
-                              <div className="flex items-center gap-1">
-                                {[...Array(5)].map((_, i) => (
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <p className="font-semibold text-sm text-gray-900">{review.userName}</p>
+                              <div className="flex items-center gap-0.5 flex-shrink-0">
+                                {[1, 2, 3, 4, 5].map((i) => (
                                   <Star
                                     key={i}
-                                    className={`h-4 w-4 ${
-                                      i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'
-                                    }`}
+                                    className={`h-3.5 w-3.5 ${i <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`}
                                   />
                                 ))}
                               </div>
                             </div>
-                            <p className="text-gray-700 mb-2">{review.comment}</p>
+                            {review.comment && (
+                              <p className="text-sm text-gray-700 leading-relaxed mb-2">{review.comment}</p>
+                            )}
                             <div className="flex items-center justify-between">
-                              <p className="text-sm text-gray-500">{formatRelativeDate(review.date)}</p>
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                              <p className="text-xs text-gray-400">{formatRelativeDate(review.date)}</p>
+                              <button
                                 onClick={() => handleMarkHelpful(review.id)}
-                                className="flex items-center gap-2 text-gray-500 hover:text-[#ec5a13] h-8"
+                                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#ec5a13] transition-colors"
                               >
-                                <ThumbsUp className="h-4 w-4" />
-                                {review.helpful > 0 && <span className="text-sm">{review.helpful}</span>}
-                                <span className="text-sm">Utile</span>
-                              </Button>
+                                <ThumbsUp className="h-3.5 w-3.5" />
+                                <span>{review.helpful > 0 ? `Utile (${review.helpful})` : 'Utile'}</span>
+                              </button>
                             </div>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-                </>
-              )}
-              
-              {/* Message si aucun avis */}
-              {!loadingReviews && reviews.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">Aucun avis pour le moment</p>
-                  <p className="text-sm text-gray-400 mb-4">Soyez le premier à laisser un avis!</p>
-                </div>
-              )}
-              
-              {/* Chargement des avis */}
-              {loadingReviews && (
-                <div className="text-center py-8">
-                  <Loader2 className="h-8 w-8 text-[#ec5a13] animate-spin mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">Chargement des avis...</p>
-                </div>
-              )}
+                )}
+
+                {/* ── Aucun avis ── */}
+                {!loadingReviews && reviews.length === 0 && !reviewEligible && (
+                  <div className="text-center py-10">
+                    <Star className="h-10 w-10 text-gray-200 fill-gray-200 mx-auto mb-3" />
+                    <p className="font-semibold text-gray-500 mb-1">Aucun avis pour le moment</p>
+                    <p className="text-sm text-gray-400">Soyez le premier à partager votre expérience</p>
+                  </div>
+                )}
+
+              </div>
             </Card>
           </div>
 
@@ -953,8 +928,8 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   )}
                   <div className="flex items-center justify-center gap-2 mt-2 sm:mt-3">
                     <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-yellow-500 text-yellow-500" />
-                    <span className="text-lg sm:text-xl font-bold text-gray-900">{seller.rating}</span>
-                    <span className="text-gray-600 text-xs sm:text-sm">({seller.totalReviews} avis)</span>
+                    <span className="text-lg sm:text-xl font-bold text-gray-900">{Number(item.rating).toFixed(1)}</span>
+                    <span className="text-gray-600 text-xs sm:text-sm">({item.totalReviews} avis)</span>
                   </div>
                 </div>
                 
@@ -1014,10 +989,11 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                       }
                       
                       if (!user || !token) {
-                        router.push('/login');
+                        // Ancien : router.push('/login');
+                        openQuickAuth(`/items/${id}`);
                         return;
                       }
-                      
+
                       if (item.status === 'active') {
                         try {
                           setCreatingConversation(true);

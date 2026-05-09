@@ -1,872 +1,550 @@
-// components/auth/PasswordReset.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Mail,
-  Phone,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  RefreshCw,
-  Shield,
-  Clock,
-  Send,
-  Key,
-  Smartphone,
-  Timer,
-  ShoppingBag
-} from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import { forgotPassword, verifyResetCode, resetPassword } from '@/lib/api/auth';
 
-// Liste des pays avec leurs indicatifs
-const countries = [
-  { code: 'NE', name: 'Niger', dialCode: '+227', flag: '🇳🇪' },
-  { code: 'SN', name: 'Sénégal', dialCode: '+221', flag: '🇸🇳' },
-  { code: 'CI', name: 'Côte d\'Ivoire', dialCode: '+225', flag: '🇨🇮' },
-  { code: 'BF', name: 'Burkina Faso', dialCode: '+226', flag: '🇧🇫' },
-  { code: 'ML', name: 'Mali', dialCode: '+223', flag: '🇲🇱' },
-  { code: 'TG', name: 'Togo', dialCode: '+228', flag: '🇹🇬' },
-  { code: 'BJ', name: 'Bénin', dialCode: '+229', flag: '🇧🇯' },
-  { code: 'CM', name: 'Cameroun', dialCode: '+237', flag: '🇨🇲' },
+// ── Pays (même liste que QuickAuthModal) ─────────────────────────────────────
+const COUNTRIES = [
+  { code: 'NE', name: 'Niger',         dialCode: '+227', flag: '🇳🇪', length: 8,  pattern: [2,2,2,2],   sample: '90 12 34 56' },
+  { code: 'SN', name: 'Sénégal',       dialCode: '+221', flag: '🇸🇳', length: 9,  pattern: [2,3,2,2],   sample: '77 123 45 67' },
+  { code: 'CI', name: "Côte d'Ivoire", dialCode: '+225', flag: '🇨🇮', length: 10, pattern: [2,2,2,2,2], sample: '07 12 34 56 78' },
+  { code: 'BF', name: 'Burkina Faso',  dialCode: '+226', flag: '🇧🇫', length: 8,  pattern: [2,2,2,2],   sample: '70 12 34 56' },
+  { code: 'ML', name: 'Mali',          dialCode: '+223', flag: '🇲🇱', length: 8,  pattern: [2,2,2,2],   sample: '60 12 34 56' },
+  { code: 'TG', name: 'Togo',          dialCode: '+228', flag: '🇹🇬', length: 8,  pattern: [2,2,2,2],   sample: '90 12 34 56' },
+  { code: 'BJ', name: 'Bénin',         dialCode: '+229', flag: '🇧🇯', length: 8,  pattern: [2,2,2,2],   sample: '90 12 34 56' },
 ];
 
-interface PhoneNumber {
-  countryCode: string;
-  number: string;
+function onlyDigits(v: string) { return v.replace(/\D/g, ''); }
+
+function formatPhone(digits: string, pattern: number[]): string {
+  let pos = 0;
+  const parts: string[] = [];
+  for (const len of pattern) {
+    const chunk = digits.slice(pos, pos + len);
+    if (!chunk) break;
+    parts.push(chunk);
+    pos += len;
+  }
+  return parts.join(' ');
 }
 
-interface ResetData {
-  resetType: 'email' | 'phone';
-  email: string;
-  phone: PhoneNumber;
-  verificationCode: string;
-  newPassword: string;
-  confirmPassword: string;
-}
+type Step = 'identify' | 'verify' | 'reset' | 'success';
+type RecoveryType = 'phone' | 'email';
 
-interface PasswordResetProps {
-  onCancel?: () => void;
-  onSuccess?: () => void;
-  showHeader?: boolean;
-}
-
-export default function PasswordReset({ onCancel, onSuccess, showHeader = true }: PasswordResetProps) {
+export default function PasswordResetPage() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<'identify' | 'verify' | 'reset' | 'success'>('identify');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [successMessage, setSuccessMessage] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
-  const [attempts, setAttempts] = useState(0);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [blockTimeLeft, setBlockTimeLeft] = useState(0);
-  
-  const [resetData, setResetData] = useState<ResetData>({
-    resetType: 'email',
-    email: '',
-    phone: {
-      countryCode: '+227',
-      number: ''
-    },
-    verificationCode: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+  const [step, setStep] = useState<Step>('identify');
+  const [recoveryType, setRecoveryType] = useState<RecoveryType>('phone');
+  const [country, setCountry] = useState(COUNTRIES[0]);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [phoneDigits, setPhoneDigits] = useState('');
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [devCode, setDevCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Timer pour le renvoi du code
+  // identifier envoyé à l'API (format DB : "+227 90123456")
+  const apiPhone = `${country.dialCode} ${phoneDigits}`;
+  const identifier = recoveryType === 'phone' ? apiPhone : email.trim().toLowerCase();
+  const rawFormatted = formatPhone(phoneDigits, country.pattern);
+
   useEffect(() => {
-    if (resendTimer > 0) {
-      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendTimer]);
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown(v => v - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
-  // Timer pour le blocage
-  useEffect(() => {
-    if (blockTimeLeft > 0) {
-      const timer = setTimeout(() => setBlockTimeLeft(blockTimeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (blockTimeLeft === 0 && isBlocked) {
-      setIsBlocked(false);
-      setAttempts(0);
-    }
-  }, [blockTimeLeft, isBlocked]);
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const validateEmail = (email: string): boolean => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const validatePhone = (phone: PhoneNumber): boolean => {
-    return phone.number.length >= 7;
-  };
-
-  const validatePassword = (password: string): boolean => {
-    // Au moins 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
-    return regex.test(password);
-  };
-
-  const handleSendCode = async () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (resetData.resetType === 'email') {
-      if (!resetData.email.trim()) {
-        newErrors.email = 'L\'email est requis';
-      } else if (!validateEmail(resetData.email)) {
-        newErrors.email = 'Email invalide';
+  // ── Étape 1 : envoyer code ────────────────────────────────────────────────
+  const handleSend = async () => {
+    if (recoveryType === 'phone') {
+      if (phoneDigits.length !== country.length) {
+        setError(`Numéro invalide — exactement ${country.length} chiffres attendus`);
+        return;
       }
     } else {
-      if (!validatePhone(resetData.phone)) {
-        newErrors.phone = 'Numéro de téléphone invalide';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        setError('Adresse email invalide');
+        return;
       }
     }
-    
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-    
-    if (isBlocked) {
-      setErrors({ blocked: `Trop de tentatives. Réessayez dans ${formatTime(blockTimeLeft)}` });
-      return;
-    }
-    
-    setIsLoading(true);
-    
+    setLoading(true); setError('');
     try {
-      // 📧 Envoyer la demande de réinitialisation au backend
-      const identifier = resetData.resetType === 'email' 
-        ? resetData.email 
-        : `${resetData.phone.countryCode} ${resetData.phone.number}`;
-      
-      console.log('📤 Envoi demande de réinitialisation:', identifier);
-      const response = await forgotPassword(identifier);
-      
-      // ✅ Succès - Passer à l'étape de vérification
-      setCurrentStep('verify');
-      setResendTimer(60); // 60 secondes avant de pouvoir renvoyer
-      setSuccessMessage(response.message || `Code envoyé à ${resetData.resetType === 'email' ? resetData.email : `${resetData.phone.countryCode} ${resetData.phone.number}`}`);
-      
-      // Afficher le code en mode dev (pour les tests)
-      if (response.devCode) {
-        console.log('🔑 Code de test:', response.devCode);
-        alert(`Code de test (dev only): ${response.devCode}`);
-      }
-      
-      setTimeout(() => setSuccessMessage(''), 5000);
-    } catch (error: any) {
-      console.error('❌ Erreur:', error.message);
-      
-      // ❌ Afficher l'erreur du backend
-      setAttempts(attempts + 1);
-      if (attempts + 1 >= 3) {
-        setIsBlocked(true);
-        setBlockTimeLeft(300); // 5 minutes de blocage
-        setErrors({ blocked: 'Trop de tentatives. Compte bloqué pour 5 minutes.' });
-      } else {
-        setErrors({ notFound: error.message });
-      }
+      const res = await forgotPassword(identifier);
+      setDevCode(res.devCode || '');
+      setResendCooldown(60);
+      setStep('verify');
+    } catch (e: any) {
+      setError(e.message || 'Erreur lors de l\'envoi');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleVerifyCode = async () => {
-    if (!resetData.verificationCode.trim()) {
-      setErrors({ code: 'Le code est requis' });
-      return;
-    }
-    
-    // Validation basique du format (6 chiffres)
-    if (!/^\d{6}$/.test(resetData.verificationCode)) {
-      setErrors({ code: 'Le code doit contenir 6 chiffres' });
-      return;
-    }
-    
-    setIsLoading(true);
-    setErrors({});
-    
+  // ── Étape 2 : vérifier OTP ────────────────────────────────────────────────
+  const handleVerify = async () => {
+    const code = otp.join('');
+    if (code.length < 6) { setError('Code incomplet'); return; }
+    setLoading(true); setError('');
     try {
-      // 🔐 Vérifier le code OTP avec le backend
-      const identifier = resetData.resetType === 'email' 
-        ? resetData.email 
-        : `${resetData.phone.countryCode} ${resetData.phone.number}`;
-      
-      console.log('🔍 Vérification du code pour:', identifier);
-      await verifyResetCode(identifier, resetData.verificationCode);
-      
-      // ✅ Code valide - passer à l'étape suivante
-      console.log('✅ Code vérifié avec succès');
-      setCurrentStep('reset');
-      setAttempts(0);
-      setSuccessMessage('Code vérifié avec succès !');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error: any) {
-      console.error('❌ Erreur vérification:', error.message);
-      setErrors({ code: error.message || 'Code invalide. Veuillez réessayer.' });
-      setAttempts(prev => prev + 1);
+      await verifyResetCode(identifier, code);
+      setStep('reset');
+    } catch (e: any) {
+      setError(e.message || 'Code incorrect');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleResendCode = async () => {
-    if (resendTimer > 0) return;
-    
-    setIsLoading(true);
-    
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    setLoading(true); setError('');
     try {
-      // 🔄 Renvoyer le code via l'API
-      const identifier = resetData.resetType === 'email' 
-        ? resetData.email 
-        : `${resetData.phone.countryCode} ${resetData.phone.number}`;
-      
-      const response = await forgotPassword(identifier);
-      
-      setResendTimer(60);
-      setSuccessMessage('Code renvoyé avec succès !');
-      
-      // Afficher le code en mode dev
-      if (response.devCode) {
-        console.log('🔑 Nouveau code:', response.devCode);
-        alert(`Nouveau code de test (dev only): ${response.devCode}`);
-      }
-      
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error: any) {
-      console.error('❌ Erreur renvoi:', error.message);
-      setErrors({ resend: error.message || 'Erreur lors du renvoi du code.' });
+      const res = await forgotPassword(identifier);
+      setDevCode(res.devCode || '');
+      setResendCooldown(60);
+      setOtp(['', '', '', '', '', '']);
+    } catch (e: any) {
+      setError(e.message || 'Erreur lors du renvoi');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleResetPassword = async () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!validatePassword(resetData.newPassword)) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 8 caractères, 1 majuscule, 1 minuscule et 1 chiffre';
-    }
-    
-    if (resetData.newPassword !== resetData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
-    }
-    
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-    
-    setIsLoading(true);
-    
+  // ── Étape 3 : nouveau mot de passe ────────────────────────────────────────
+  const handleReset = async () => {
+    if (newPassword.length < 8) { setError('Minimum 8 caractères'); return; }
+    if (!/[A-Z]/.test(newPassword)) { setError('Au moins 1 majuscule requise'); return; }
+    if (!/\d/.test(newPassword)) { setError('Au moins 1 chiffre requis'); return; }
+    if (newPassword !== confirmPassword) { setError('Les mots de passe ne correspondent pas'); return; }
+    setLoading(true); setError('');
     try {
-      // 🔐 Réinitialiser le mot de passe avec le backend
-      const identifier = resetData.resetType === 'email' 
-        ? resetData.email 
-        : `${resetData.phone.countryCode} ${resetData.phone.number}`;
-      
-      console.log('🔄 Réinitialisation du mot de passe pour:', identifier);
-      await resetPassword(identifier, resetData.verificationCode, resetData.newPassword);
-      
-      // ✅ Succès
-      setCurrentStep('success');
-      setSuccessMessage('Mot de passe réinitialisé avec succès !');
-      setTimeout(() => {
-        onSuccess?.();
-      }, 3000);
-    } catch (error: any) {
-      console.error('❌ Erreur réinitialisation:', error.message);
-      setErrors({ submit: error.message || 'Une erreur est survenue. Veuillez réessayer.' });
+      await resetPassword(identifier, otp.join(''), newPassword);
+      setStep('success');
+    } catch (e: any) {
+      setError(e.message || 'Erreur lors de la réinitialisation');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const getPasswordStrength = (password: string): { strength: number; label: string; color: string } => {
-    if (!password) return { strength: 0, label: '', color: '' };
-    
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/[a-z]/.test(password)) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/\d/.test(password)) strength++;
-    if (/[@$!%*?&]/.test(password)) strength++;
-    
-    const labels = ['', 'Très faible', 'Faible', 'Moyen', 'Fort', 'Très fort'];
-    const colors = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
-    
-    return { strength, label: labels[strength], color: colors[strength] };
+  // ── OTP inputs ────────────────────────────────────────────────────────────
+  const handleOtpChange = (i: number, val: string) => {
+    const d = onlyDigits(val).slice(-1);
+    const next = [...otp]; next[i] = d; setOtp(next); setError('');
+    if (d && i < 5) otpRefs.current[i + 1]?.focus();
+  };
+  const handleOtpKey = (i: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
+  };
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    const digits = onlyDigits(e.clipboardData.getData('text')).slice(0, 6);
+    if (digits.length === 6) { setOtp(digits.split('')); otpRefs.current[5]?.focus(); }
   };
 
-  const passwordStrength = getPasswordStrength(resetData.newPassword);
+  // ── Strength mot de passe ─────────────────────────────────────────────────
+  const pwdChecks = [
+    { ok: newPassword.length >= 8,     label: '8 caractères min.' },
+    { ok: /[A-Z]/.test(newPassword),   label: '1 majuscule' },
+    { ok: /[a-z]/.test(newPassword),   label: '1 minuscule' },
+    { ok: /\d/.test(newPassword),      label: '1 chiffre' },
+  ];
+  const pwdStrength = pwdChecks.filter(c => c.ok).length;
+  const strengthColor = ['bg-gray-200', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-500'][pwdStrength];
 
-  if (currentStep === 'success') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#ffe9de]/30 via-white to-orange-50/30 flex items-center justify-center p-4">
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-                <ShoppingBag className="h-8 w-8 text-[#ec5a13]" />
-                <span className="text-2xl font-bold text-gray-900">MarketHub</span>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={() => router.push('/login')}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour
-              </Button>
-            </div>
-          </div>
-        </div>
+  const fmtDisplay = recoveryType === 'phone' ? `${country.dialCode} ${rawFormatted}` : email;
 
-        <div className="w-full max-w-md mt-20">
-          <Card className="p-8 shadow-xl border-0">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="h-10 w-10 text-green-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                Mot de passe réinitialisé !
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
-              </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5 text-green-600" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-green-900">Conseils de sécurité</p>
-                    <ul className="text-xs text-green-700 mt-1 space-y-1">
-                      <li>• Utilisez un mot de passe unique</li>
-                      <li>• Ne le partagez avec personne</li>
-                      <li>• Changez-le régulièrement</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <Button
-                onClick={() => router.push('/login')}
-                className="w-full bg-[#ec5a13] hover:bg-[#d94f0f]"
-              >
-                Se connecter maintenant
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  const stepMeta: Record<Step, { icon: string; title: string; sub: string }> = {
+    identify: { icon: '🔒', title: 'Mot de passe oublié ?',    sub: 'Choisissez email ou téléphone — nous vous enverrons un code.' },
+    verify:   { icon: '📬', title: 'Code de vérification',     sub: `Code envoyé au ${fmtDisplay}` },
+    reset:    { icon: '🔑', title: 'Nouveau mot de passe',     sub: 'Choisissez un mot de passe fort' },
+    success:  { icon: '✅', title: 'Mot de passe mis à jour !', sub: 'Vous pouvez maintenant vous connecter.' },
+  };
+  const meta = stepMeta[step];
+
+  const stepNum = { identify: 1, verify: 2, reset: 3, success: 3 }[step];
+  const totalSteps = 3;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#ffe9de]/30 via-white to-orange-50/30 flex items-center justify-center p-4">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-              <ShoppingBag className="h-8 w-8 text-[#ec5a13]" />
-              <span className="text-2xl font-bold text-gray-900">MarketHub</span>
-            </div>
-            <Button
-              variant="ghost"
-              onClick={() => router.push('/login')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour à la connexion
-            </Button>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+
+      {/* ── Header gradient (même que QuickAuthModal) ── */}
+      <header
+        className="flex items-center justify-between px-5 py-4 flex-shrink-0"
+        style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', borderBottom: '3px solid #ec5a13' }}
+      >
+        <button
+          onClick={() => step === 'identify' ? router.push('/') : setStep(step === 'verify' ? 'identify' : 'verify')}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ec5a13] to-[#d94f0f] flex items-center justify-center shadow">
+            <ShoppingBag className="h-4 w-4 text-white" />
           </div>
+          <span className="text-white font-extrabold text-base tracking-tight">MarketHub</span>
         </div>
-      </div>
-
-      <div className="w-full max-w-md mt-20">
-        {/* Message de succès */}
-        {successMessage && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-            {successMessage}
-          </div>
-        )}
-
-        <Card className="p-8 shadow-xl border-0">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
-          <Key className="h-8 w-8 text-[#ec5a13]" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {currentStep === 'identify' && 'Réinitialiser le mot de passe'}
-          {currentStep === 'verify' && 'Vérification'}
-          {currentStep === 'reset' && 'Nouveau mot de passe'}
-        </h2>
-        <p className="text-gray-600">
-          {currentStep === 'identify' && 'Choisissez comment recevoir votre code de réinitialisation'}
-            {currentStep === 'verify' && 'Entrez le code que nous vous avons envoyé'}
-            {currentStep === 'reset' && 'Choisissez votre nouveau mot de passe sécurisé'}
-          </p>
-        </div>
-
-      {/* Progress indicator */}
-      <div className="flex items-center justify-center mb-8">
-        {['identify', 'verify', 'reset'].map((step, index) => (
-          <div key={step} className="flex items-center">
+        {/* Indicateur étapes */}
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: totalSteps }).map((_, i) => (
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
-                (currentStep === step) || 
-                (currentStep === 'verify' && step === 'identify') ||
-                (currentStep === 'reset' && step !== 'identify')
-                  ? 'bg-[#ec5a13] text-white'
-                  : 'bg-slate-200 text-slate-600'
-              }`}
-            >
-              {step === 'identify' && <Mail className="h-4 w-4" />}
-              {step === 'verify' && <Smartphone className="h-4 w-4" />}
-              {step === 'reset' && <Lock className="h-4 w-4" />}
-            </div>
-            {index < 2 && (
-              <div
-                className={`w-12 h-1 mx-2 ${
-                  (currentStep === 'verify' && index === 0) ||
-                  (currentStep === 'reset' && index < 2)
-                    ? 'bg-[#ec5a13]'
-                    : 'bg-slate-200'
-                }`}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Messages */}
-      {successMessage && (
-        <div className="mb-4 p-3 bg-green-100 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-          {successMessage}
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i < stepNum ? 'bg-[#ec5a13] w-6' : 'bg-white/20 w-4'}`}
+            />
+          ))}
         </div>
-      )}
+      </header>
 
-      {errors.blocked && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          {errors.blocked}
-        </div>
-      )}
+      {/* ── Corps scrollable ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-md mx-auto px-5 py-8">
 
-      {/* Étape 1: Identification */}
-      {currentStep === 'identify' && (
-        <div className="space-y-6">
-          <div>
-            <Label className="text-sm font-medium text-slate-700 mb-3 block">
-              Comment souhaitez-vous recevoir le code ?
-            </Label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setResetData({ ...resetData, resetType: 'email' })}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  resetData.resetType === 'email'
-                    ? 'border-[#ec5a13] bg-[#ffe9de]'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <Mail
-                  className={`h-6 w-6 mx-auto mb-2 ${
-                    resetData.resetType === 'email' ? 'text-[#ec5a13]' : 'text-slate-400'
-                  }`}
-                />
-                <p
-                  className={`text-sm font-medium ${
-                    resetData.resetType === 'email' ? 'text-[#d94f0f]' : 'text-slate-700'
-                  }`}
-                >
-                  Email
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setResetData({ ...resetData, resetType: 'phone' })}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  resetData.resetType === 'phone'
-                    ? 'border-[#ec5a13] bg-[#ffe9de]'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <Phone
-                  className={`h-6 w-6 mx-auto mb-2 ${
-                    resetData.resetType === 'phone' ? 'text-[#ec5a13]' : 'text-slate-400'
-                  }`}
-                />
-                <p
-                  className={`text-sm font-medium ${
-                    resetData.resetType === 'phone' ? 'text-[#d94f0f]' : 'text-slate-700'
-                  }`}
-                >
-                  SMS
-                </p>
-              </button>
+          {/* Hero */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="relative mb-5">
+              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#ec5a13] to-[#d94f0f] flex items-center justify-center shadow-lg shadow-[#ec5a13]/30">
+                <span className="text-4xl">{meta.icon}</span>
+              </div>
+              <div className="absolute -inset-2 rounded-[32px] border-2 border-[#ec5a13]/30 pointer-events-none" />
             </div>
+            <h1 className="text-2xl font-black text-gray-900 text-center tracking-tight">{meta.title}</h1>
+            <p className="text-sm text-gray-500 text-center mt-2 leading-relaxed">{meta.sub}</p>
           </div>
 
-          {resetData.resetType === 'email' ? (
-            <div>
-              <Label htmlFor="email" className="text-sm font-medium text-slate-700 mb-2 block">
-                Adresse email
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="contact@exemple.com"
-                  value={resetData.email}
-                  onChange={(e) => setResetData({ ...resetData, email: e.target.value })}
-                  className="pl-10"
+          {/* ── ÉTAPE IDENTIFY ── */}
+          {step === 'identify' && (
+            <div className="space-y-5">
+              {/* Tab switcher */}
+              <div className="relative flex bg-gray-100 rounded-2xl p-1 border border-gray-200">
+                <div
+                  className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-xl shadow transition-all duration-200"
+                  style={{ left: recoveryType === 'phone' ? '4px' : 'calc(50%)' }}
                 />
+                {(['phone', 'email'] as RecoveryType[]).map(type => (
+                  <button
+                    key={type}
+                    onClick={() => { setRecoveryType(type); setError(''); }}
+                    className={`flex-1 relative z-10 py-2.5 text-sm font-bold transition-colors rounded-xl ${
+                      recoveryType === type ? 'text-[#ec5a13]' : 'text-gray-500'
+                    }`}
+                  >
+                    {type === 'phone' ? '📱 Téléphone' : '✉️ Email'}
+                  </button>
+                ))}
               </div>
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-              {errors.notFound && <p className="text-red-500 text-xs mt-1">{errors.notFound}</p>}
-            </div>
-          ) : (
-            <div>
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">
-                Numéro de téléphone
-              </Label>
-              <div className="flex gap-2">
-                <Select 
-                  value={resetData.phone.countryCode} 
-                  onValueChange={(value) => setResetData({
-                    ...resetData,
-                    phone: { ...resetData.phone, countryCode: value }
-                  })}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem key={country.code} value={country.dialCode}>
-                        <span className="flex items-center gap-2">
-                          <span>{country.flag}</span>
-                          <span>{country.dialCode}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="87727272"
-                  value={resetData.phone.number}
-                  onChange={(e) => setResetData({
-                    ...resetData,
-                    phone: { ...resetData.phone, number: e.target.value }
-                  })}
-                  className="flex-1"
-                />
-              </div>
-              {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-              {errors.notFound && <p className="text-red-500 text-xs mt-1">{errors.notFound}</p>}
-            </div>
-          )}
 
-          <div className="bg-[#ffe9de] border border-orange-200 rounded-lg p-4">
-            <div className="flex gap-3">
-              <Shield className="h-5 w-5 text-[#ec5a13] flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-gray-900 mb-1">
-                  Sécurité garantie
-                </p>
-                <p className="text-xs text-gray-700">
+              {/* Champ */}
+              {recoveryType === 'phone' ? (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Numéro de téléphone
+                  </label>
+                  <div className="flex gap-2">
+                    {/* Sélecteur pays */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowCountryPicker(v => !v)}
+                        className="flex items-center gap-1.5 h-11 px-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium whitespace-nowrap"
+                      >
+                        <span className="text-lg">{country.flag}</span>
+                        <span className="text-gray-700">{country.dialCode}</span>
+                        <span className="text-gray-400 text-xs">▾</span>
+                      </button>
+                      {showCountryPicker && (
+                        <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-gray-100 z-20 overflow-hidden">
+                          {COUNTRIES.map(c => (
+                            <button
+                              key={c.code}
+                              type="button"
+                              onClick={() => { setCountry(c); setPhoneDigits(''); setShowCountryPicker(false); setError(''); }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${country.code === c.code ? 'bg-orange-50 text-[#ec5a13] font-semibold' : 'text-gray-700'}`}
+                            >
+                              <span className="text-lg">{c.flag}</span>
+                              <span className="flex-1 text-left">{c.name}</span>
+                              <span className="text-gray-400">{c.dialCode}</span>
+                              {country.code === c.code && <span className="text-[#ec5a13] font-bold">✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      className="flex-1 h-11 px-4 rounded-xl border border-gray-200 focus:border-[#ec5a13] focus:ring-2 focus:ring-[#ec5a13]/20 outline-none text-sm tracking-wide transition-all"
+                      placeholder={country.sample}
+                      value={rawFormatted}
+                      onChange={e => { setPhoneDigits(onlyDigits(e.target.value).slice(0, country.length)); setError(''); }}
+                      onKeyDown={e => e.key === 'Enter' && handleSend()}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-xs text-gray-400">ex: {country.sample}</p>
+                    <p className={`text-xs font-medium ${phoneDigits.length === country.length ? 'text-green-600' : 'text-gray-400'}`}>
+                      {phoneDigits.length}/{country.length}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Adresse email
+                  </label>
+                  <input
+                    type="email"
+                    className="w-full h-11 px-4 rounded-xl border border-gray-200 focus:border-[#ec5a13] focus:ring-2 focus:ring-[#ec5a13]/20 outline-none text-sm transition-all"
+                    placeholder="exemple@email.com"
+                    value={email}
+                    onChange={e => { setEmail(e.target.value); setError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleSend()}
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              {/* Info box */}
+              <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-orange-50 border border-orange-100">
+                <span className="text-base flex-shrink-0">🔒</span>
+                <p className="text-xs text-orange-800 leading-relaxed">
                   Le code expirera après 10 minutes pour votre sécurité.
                 </p>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex gap-3">
-            {onCancel && (
-              <Button
-                variant="outline"
-                onClick={onCancel}
-                className="flex-1"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Annuler
-              </Button>
-            )}
-            <Button
-              onClick={handleSendCode}
-              disabled={isLoading || isBlocked}
-              className="flex-1 bg-[#ec5a13] hover:bg-[#d94f0f]"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Envoi en cours...
-                </>
-              ) : (
-                <>
-                  Envoyer le code
-                  <Send className="h-4 w-4 ml-2" />
-                </>
+          {/* ── ÉTAPE VERIFY ── */}
+          {step === 'verify' && (
+            <div className="space-y-6">
+              {/* Numéro/email affiché */}
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200">
+                <span className="text-lg">{recoveryType === 'phone' ? country.flag : '✉️'}</span>
+                <span className="text-sm font-medium text-gray-700 flex-1">{fmtDisplay}</span>
+                <button onClick={() => setStep('identify')} className="text-xs text-[#ec5a13] font-semibold hover:underline">
+                  Modifier
+                </button>
+              </div>
+
+              {/* Badge dev */}
+              {devCode && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-yellow-300">
+                  <span className="text-2xl">🔧</span>
+                  <div>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-0.5">Mode développement</p>
+                    <p className="text-2xl font-black text-[#ec5a13] tracking-[0.3em]">{devCode}</p>
+                  </div>
+                </div>
               )}
-            </Button>
-          </div>
-        </div>
-      )}
 
-      {/* Étape 2: Vérification */}
-      {currentStep === 'verify' && (
-        <div className="space-y-6">
-          <div>
-            <Label htmlFor="code" className="text-sm font-medium text-slate-700 mb-2 block">
-              Code de vérification
-            </Label>
-            <Input
-              id="code"
-              placeholder="123456"
-              value={resetData.verificationCode}
-              onChange={(e) => setResetData({ ...resetData, verificationCode: e.target.value })}
-              className="text-center text-2xl tracking-widest"
-              maxLength={6}
-            />
-            {errors.code && <p className="text-red-500 text-xs mt-1">{errors.code}</p>}
-          </div>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={handleResendCode}
-              disabled={resendTimer > 0 || isLoading}
-              className="text-sm text-[#ec5a13] hover:text-[#d94f0f] disabled:text-slate-400 disabled:cursor-not-allowed"
-            >
-              {resendTimer > 0 ? (
-                <span className="flex items-center gap-2">
-                  <Timer className="h-4 w-4" />
-                  Renvoyer dans {formatTime(resendTimer)}
-                </span>
-              ) : (
-                'Renvoyer le code'
-              )}
-            </button>
-          </div>
-
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentStep('identify')}
-              className="flex-1"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-            </Button>
-            <Button
-              onClick={handleVerifyCode}
-              disabled={isLoading}
-              className="flex-1 bg-[#ec5a13] hover:bg-[#d94f0f]"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Vérification...
-                </>
-              ) : (
-                <>
-                  Vérifier
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Étape 3: Nouveau mot de passe */}
-      {currentStep === 'reset' && (
-        <div className="space-y-6">
-          <div>
-            <Label htmlFor="newPassword" className="text-sm font-medium text-slate-700 mb-2 block">
-              Nouveau mot de passe
-            </Label>
-            <div className="relative">
-              <Input
-                id="newPassword"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={resetData.newPassword}
-                onChange={(e) => setResetData({ ...resetData, newPassword: e.target.value })}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-            
-            {/* Indicateur de force du mot de passe */}
-            {resetData.newPassword && (
-              <div className="mt-2">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-slate-600">Force du mot de passe</span>
-                  <span className={`text-xs font-medium ${
-                    passwordStrength.color.replace('bg-', 'text-')
-                  }`}>
-                    {passwordStrength.label}
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
-                    style={{ width: `${(passwordStrength.strength / 5) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-            
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-            
-            {/* Critères du mot de passe */}
-            <div className="mt-3 space-y-1">
-              <p className="text-xs text-slate-600 mb-2">Le mot de passe doit contenir :</p>
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                  resetData.newPassword.length >= 8 ? 'bg-green-100' : 'bg-slate-100'
-                }`}>
-                  {resetData.newPassword.length >= 8 && (
-                    <CheckCircle2 className="h-3 w-3 text-green-600" />
-                  )}
-                </div>
-                <span className="text-xs text-slate-600">Au moins 8 caractères</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                  /[A-Z]/.test(resetData.newPassword) ? 'bg-green-100' : 'bg-slate-100'
-                }`}>
-                  {/[A-Z]/.test(resetData.newPassword) && (
-                    <CheckCircle2 className="h-3 w-3 text-green-600" />
-                  )}
-                </div>
-                <span className="text-xs text-slate-600">1 majuscule</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                  /[a-z]/.test(resetData.newPassword) ? 'bg-green-100' : 'bg-slate-100'
-                }`}>
-                  {/[a-z]/.test(resetData.newPassword) && (
-                    <CheckCircle2 className="h-3 w-3 text-green-600" />
-                  )}
-                </div>
-                <span className="text-xs text-slate-600">1 minuscule</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                  /\d/.test(resetData.newPassword) ? 'bg-green-100' : 'bg-slate-100'
-                }`}>
-                  {/\d/.test(resetData.newPassword) && (
-                    <CheckCircle2 className="h-3 w-3 text-green-600" />
-                  )}
-                </div>
-                <span className="text-xs text-slate-600">1 chiffre</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700 mb-2 block">
-              Confirmer le mot de passe
-            </Label>
-            <div className="relative">
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={resetData.confirmPassword}
-                onChange={(e) => setResetData({ ...resetData, confirmPassword: e.target.value })}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              {/* OTP 6 cases */}
               <div>
-                <p className="text-sm font-medium text-amber-900 mb-1">
-                  Important
-                </p>
-                <p className="text-xs text-amber-700">
-                  Choisissez un mot de passe fort que vous n'utilisez nulle part ailleurs.
-                </p>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                  Code reçu
+                </label>
+                <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
+                  {otp.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={el => { otpRefs.current[i] = el; }}
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={e => handleOtpChange(i, e.target.value)}
+                      onKeyDown={e => handleOtpKey(i, e)}
+                      className={`w-11 h-14 text-center text-xl font-bold rounded-xl border-2 outline-none transition-all ${
+                        digit
+                          ? 'border-[#ec5a13] bg-orange-50 text-[#ec5a13]'
+                          : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-[#ec5a13] focus:bg-white'
+                      }`}
+                      autoFocus={i === 0}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Renvoi */}
+              <div className="text-center">
+                {resendCooldown > 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Renvoyer dans <span className="font-semibold text-[#ec5a13]">{resendCooldown}s</span>
+                  </p>
+                ) : (
+                  <button
+                    onClick={handleResend}
+                    disabled={loading}
+                    className="text-sm text-[#ec5a13] font-semibold hover:underline disabled:opacity-50"
+                  >
+                    Renvoyer le code
+                  </button>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentStep('verify')}
-              className="flex-1"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-            </Button>
-            <Button
-              onClick={handleResetPassword}
-              disabled={isLoading}
-              className="flex-1 bg-[#ec5a13] hover:bg-[#d94f0f]"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Réinitialisation...
-                </>
-              ) : (
-                <>
-                  Réinitialiser
-                  <RefreshCw className="h-4 w-4 ml-2" />
-                </>
-              )}
-            </Button>
-          </div>
+          {/* ── ÉTAPE RESET ── */}
+          {step === 'reset' && (
+            <div className="space-y-5">
+              {/* Nouveau mot de passe */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Nouveau mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPwd ? 'text' : 'password'}
+                    className="w-full h-11 px-4 pr-10 rounded-xl border border-gray-200 focus:border-[#ec5a13] focus:ring-2 focus:ring-[#ec5a13]/20 outline-none text-sm transition-all"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={e => { setNewPassword(e.target.value); setError(''); }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {/* Barre de force */}
+                {newPassword && (
+                  <div className="mt-2">
+                    <div className="flex gap-1 mb-2">
+                      {[1, 2, 3, 4].map(i => (
+                        <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i <= pwdStrength ? strengthColor : 'bg-gray-200'}`} />
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {pwdChecks.map(c => (
+                        <div key={c.label} className="flex items-center gap-1.5">
+                          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${c.ok ? 'bg-green-100' : 'bg-gray-100'}`}>
+                            {c.ok && <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />}
+                          </div>
+                          <span className={`text-xs ${c.ok ? 'text-green-700' : 'text-gray-400'}`}>{c.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirmer */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Confirmer le mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPwd ? 'text' : 'password'}
+                    className={`w-full h-11 px-4 pr-10 rounded-xl border-2 outline-none text-sm transition-all ${
+                      confirmPassword && confirmPassword !== newPassword
+                        ? 'border-red-300 focus:border-red-400 bg-red-50'
+                        : confirmPassword && confirmPassword === newPassword
+                        ? 'border-green-400 focus:border-green-500 bg-green-50'
+                        : 'border-gray-200 focus:border-[#ec5a13] focus:ring-2 focus:ring-[#ec5a13]/20'
+                    }`}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPwd(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── SUCCÈS ── */}
+          {step === 'success' && (
+            <div className="text-center space-y-4">
+              <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-green-50 border border-green-200">
+                <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-sm font-bold text-green-900">Mot de passe réinitialisé !</p>
+                  <p className="text-xs text-green-700 mt-0.5">Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 mt-6">
+                <button
+                  onClick={() => { window.dispatchEvent(new CustomEvent('quickauth:open', { detail: { returnTo: '/' } })); router.push('/'); }}
+                  className="w-full h-12 bg-gradient-to-r from-[#ec5a13] to-[#d94f0f] text-white font-bold rounded-xl shadow-sm shadow-[#ec5a13]/30 text-[15px]"
+                >
+                  Se connecter →
+                </button>
+                <button
+                  onClick={() => router.push('/')}
+                  className="w-full h-11 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Retour à l'accueil
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Bannière erreur ── */}
+          {error && (
+            <div className="mt-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
+              <span className="text-red-500 flex-shrink-0">⚠️</span>
+              <p className="flex-1 text-sm font-medium text-red-700">{error}</p>
+              <button onClick={() => setError('')} className="text-red-400 hover:text-red-600 font-bold text-xs">✕</button>
+            </div>
+          )}
+
+          {/* Lien retour connexion */}
+          {step === 'identify' && (
+            <p className="text-center text-xs text-gray-400 mt-6">
+              Vous vous souvenez ?{' '}
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('quickauth:open', { detail: { returnTo: window.location.pathname } }))}
+                className="text-[#ec5a13] font-semibold hover:underline"
+              >
+                Se connecter
+              </button>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Footer bouton sticky ── */}
+      {step !== 'success' && (
+        <div className="px-5 pb-6 pt-3 border-t border-gray-100 bg-white flex-shrink-0">
+          <button
+            onClick={step === 'identify' ? handleSend : step === 'verify' ? handleVerify : handleReset}
+            disabled={
+              loading ||
+              (step === 'identify' && recoveryType === 'phone' && phoneDigits.length !== country.length) ||
+              (step === 'verify' && otp.join('').length < 6)
+            }
+            className="w-full h-12 bg-gradient-to-r from-[#ec5a13] to-[#d94f0f] text-white font-bold rounded-xl shadow-sm shadow-[#ec5a13]/30 disabled:opacity-50 disabled:cursor-not-allowed text-[15px] flex items-center justify-center gap-2 transition-opacity"
+          >
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <>
+                {step === 'identify' && 'Envoyer le code →'}
+                {step === 'verify' && 'Vérifier →'}
+                {step === 'reset' && 'Réinitialiser mon mot de passe →'}
+              </>
+            )}
+          </button>
         </div>
       )}
-      </Card>
-      </div>
     </div>
   );
 }

@@ -33,17 +33,38 @@ import { getProductById } from '@/lib/api/products';
 import { getMessages, getConversationById, markMessageAsRead as apiMarkMessageAsRead, markConversationAsRead, sendVoiceMessage, updateConversationDeal, closeConversationByOwner, reopenConversationByOwner } from '@/lib/api/messaging';
 import { checkReviewEligibility, createReview } from '@/lib/api/reviews';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuickAuth } from '@/contexts/QuickAuthContext';
 import { useSocket } from '@/hooks/useSocket';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
 import { formatPriceFCFA } from '@/lib/utils';
 
 
+function extractMongoId(value: any): string {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    const m = value.match(/[a-fA-F0-9]{24}/);
+    return m ? m[0] : value;
+  }
+  if (typeof value === 'object') {
+    if (value._id) return extractMongoId(value._id);
+    if (value.$oid) return String(value.$oid);
+    if (typeof value.toString === 'function') {
+      const s = value.toString();
+      if (/^[a-fA-F0-9]{24}$/.test(s)) return s;
+      const m = s.match(/[a-fA-F0-9]{24}/);
+      if (m) return m[0];
+    }
+  }
+  return String(value);
+}
+
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
   const conversationId = params?.id as string;
   const { user, token, loading: authLoading } = useAuth();
+  const { openQuickAuth } = useQuickAuth();
   const { isConnected, joinConversation, sendMessage: socketSendMessage, on, off, startTyping, stopTyping, markMessageAsRead: socketMarkAsRead, isUserOnline } = useSocket({
     enabled: !!token,
     token: token || undefined
@@ -79,7 +100,8 @@ export default function ChatPage() {
     if (authLoading) return;
     
     if (!token || !user) {
-      router.push('/login');
+      // Ancien : router.push('/login');
+      openQuickAuth(`/messages/${conversationId}`);
       return;
     }
 
@@ -90,7 +112,15 @@ export default function ChatPage() {
 
         // Charger les détails de la conversation
         const convResponse = await getConversationById(conversationId);
-        setConversation(convResponse.data);
+        const convData = convResponse.data;
+        setConversation(convData);
+
+        // Vérifier l'éligibilité avis dès le chargement si la conversation est clôturée
+        if (convData?.closedByOwner && convData?.item?.id) {
+          checkReviewEligibility(extractMongoId(convData.item.id))
+            .then((r) => setReviewEligible(Boolean(r?.eligible)))
+            .catch(() => setReviewEligible(false));
+        }
 
         // Charger les messages
         const messagesResponse = await getMessages(conversationId);
@@ -198,16 +228,27 @@ export default function ChatPage() {
 
     const handleConversationUpdate = (data: any) => {
       if (String(data?.conversationId || '') !== String(conversationId)) return;
-      setConversation((prev) => (prev ? {
-        ...prev,
-        lastMessage: data.lastMessage || prev.lastMessage,
-        unreadCount: typeof data.unreadCount === 'number' ? data.unreadCount : prev.unreadCount,
-        status: data.status || prev.status,
-        closedByOwner: typeof data.closedByOwner === 'boolean' ? data.closedByOwner : prev.closedByOwner,
-        closedAt: data.closedAt !== undefined ? data.closedAt : prev.closedAt,
-        closedById: data.closedById !== undefined ? data.closedById : prev.closedById,
-        deal: data.deal || prev.deal,
-      } : prev));
+      setConversation((prev) => {
+        if (!prev) return prev;
+        const newClosed = typeof data.closedByOwner === 'boolean' ? data.closedByOwner : prev.closedByOwner;
+        // Recharger l'éligibilité si la conversation vient d'être clôturée
+        if (newClosed && !prev.closedByOwner && prev.item?.id) {
+          checkReviewEligibility(extractMongoId(prev.item.id))
+            .then((r) => setReviewEligible(Boolean(r?.eligible)))
+            .catch(() => {});
+        }
+        if (!newClosed) setReviewEligible(false);
+        return {
+          ...prev,
+          lastMessage: data.lastMessage || prev.lastMessage,
+          unreadCount: typeof data.unreadCount === 'number' ? data.unreadCount : prev.unreadCount,
+          status: data.status || prev.status,
+          closedByOwner: newClosed,
+          closedAt: data.closedAt !== undefined ? data.closedAt : prev.closedAt,
+          closedById: data.closedById !== undefined ? data.closedById : prev.closedById,
+          deal: data.deal || prev.deal,
+        };
+      });
     };
 
     // Utilisateur en train d'écrire
@@ -265,25 +306,24 @@ export default function ChatPage() {
   }, [conversation?.deal?.status, optimisticDealStatus]);
 
   useEffect(() => {
-    const checkEligibility = async () => {
-      const productId = conversation?.item?.id ? String(conversation.item.id) : '';
+    const productId = extractMongoId(conversation?.item?.id);
 
-      if (!conversation?.closedByOwner || !productId) {
-        setReviewEligible(false);
-        return;
-      }
+    if (!productId) return;
 
-      try {
-        const response = await checkReviewEligibility(productId);
-        setReviewEligible(Boolean(response?.eligible));
-      } catch (error) {
-        console.error('❌ Erreur vérification éligibilité avis conversation:', error);
-        setReviewEligible(false);
-      }
-    };
+    if (!conversation?.closedByOwner) {
+      setReviewEligible(false);
+      return;
+    }
 
-    checkEligibility();
-  }, [conversation?.closedByOwner, conversation?.item]);
+    let cancelled = false;
+    checkReviewEligibility(productId).then((response) => {
+      if (!cancelled) setReviewEligible(Boolean(response?.eligible));
+    }).catch(() => {
+      if (!cancelled) setReviewEligible(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [conversation?.closedByOwner, conversation?.item?.id]);
 
   const loadOlderMessages = async () => {
     if (loadingOlder || !hasMoreMessages || !conversationId) return;
@@ -595,7 +635,7 @@ export default function ChatPage() {
 
   const submitReview = async () => {
     if (reviewRating === 0 || submittingReview) return;
-    const productId = conversation?.item?.id ? String(conversation.item.id) : '';
+    const productId = extractMongoId(conversation?.item?.id);
     if (!productId) return;
     try {
       setSubmittingReview(true);
@@ -726,7 +766,7 @@ export default function ChatPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { if (conversation.item?.id) router.push(`/items/${conversation.item.id}`); }}
+                onClick={() => { const pid = extractMongoId(conversation.item?.id); if (pid) router.push(`/items/${pid}`); }}
                 className="flex-shrink-0 hover:bg-gray-100 h-8 w-8 p-0"
               >
                 <ExternalLink className="h-4 w-4 text-gray-500" />

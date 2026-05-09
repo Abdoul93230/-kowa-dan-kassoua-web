@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Star, MessageSquarePlus, AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useQuickAuth } from '@/contexts/QuickAuthContext';
 
 interface ReviewFormProps {
   itemId: string;  // Changé de number à string (pour MongoDB ObjectId)
@@ -17,7 +17,7 @@ interface ReviewFormProps {
 
 export default function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProps) {
   const { user, token } = useAuth();
-  const router = useRouter();
+  const { openQuickAuth } = useQuickAuth();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -30,8 +30,8 @@ export default function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProp
     e.preventDefault();
     
     if (!user || !token) {
-      alert('Vous devez être connecté pour laisser un avis');
-      router.push('/login');
+      // Ancien : router.push('/login');
+      openQuickAuth(window.location.pathname);
       return;
     }
     
@@ -82,8 +82,8 @@ export default function ReviewForm({ itemId, onReviewSubmitted }: ReviewFormProp
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen && (!user || !token)) {
-      alert('Vous devez être connecté pour laisser un avis');
-      router.push('/login');
+      // Ancien : router.push('/login');
+      openQuickAuth(window.location.pathname);
       return;
     }
     setOpen(newOpen);

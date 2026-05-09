@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, ShoppingBag, X, MessageSquare, Heart, User, LogOut, Settings, Package } from 'lucide-react';
+import { Menu, ShoppingBag, X, MessageSquare, Heart, User, LogOut, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,6 +18,7 @@ import { useFavorites } from '@/contexts/FavoritesContext';
 import { getUnreadCount } from '@/lib/api/messaging';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
+import { useQuickAuth } from '@/contexts/QuickAuthContext';
 
 export function Header() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export function Header() {
   const { favorites } = useFavorites();
   const [unreadCount, setUnreadCount] = useState(0);
   const { user, token, isAuthenticated: isLoggedIn, logout } = useAuth();
+  const { openQuickAuth } = useQuickAuth();
   const { isConnected, on, off } = useSocket({
     enabled: !!token,
     token: token || undefined
@@ -165,6 +167,16 @@ export function Header() {
     setMobileMenuOpen(false);
   };
 
+  // Navigation vers une page protégée : ouvre QuickAuth si non connecté
+  const handleProtectedNav = (path: string) => {
+    setMobileMenuOpen(false);
+    if (!isLoggedIn) {
+      openQuickAuth(path);
+      return;
+    }
+    router.push(path);
+  };
+
   const handleLogout = async () => {
     await logout();
     router.push('/');
@@ -193,8 +205,8 @@ export function Header() {
               <span className="text-2xl font-bold text-gray-900">MarketHub</span>
             </div>
 
-            <Button 
-              onClick={() => handleNavigation(isLoggedIn ? '/publish' : '/login')}
+            <Button
+              onClick={() => handleProtectedNav('/publish')}
               className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white hidden md:inline-flex"
             >
               Publier une annonce
@@ -244,8 +256,8 @@ export function Header() {
 
           <div className="flex items-center gap-4">
             {/* Bouton Favoris */}
-            <Button 
-              onClick={() => handleNavigation(isLoggedIn ? '/favoris' : '/login')}
+            <Button
+              onClick={() => handleProtectedNav('/favoris')}
               variant="ghost"
               size="icon"
               className="relative hidden md:inline-flex hover:bg-[#ffe9de] hover:text-[#ec5a13]"
@@ -259,8 +271,8 @@ export function Header() {
             </Button>
             
             {/* Bouton Messages */}
-            <Button 
-              onClick={() => handleNavigation(isLoggedIn ? '/messages' : '/login')}
+            <Button
+              onClick={() => handleProtectedNav('/messages')}
               variant="ghost"
               size="icon"
               className="relative hidden md:inline-flex hover:bg-[#ffe9de] hover:text-[#ec5a13]"
@@ -318,8 +330,8 @@ export function Header() {
                     )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleNavigation('/profile')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Paramètres
+                    <User className="mr-2 h-4 w-4" />
+                    Mon profil
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
@@ -332,9 +344,9 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button 
-                onClick={() => handleNavigation('/login')}
-                variant="outline" 
+              <Button
+                onClick={() => openQuickAuth('/')}
+                variant="outline"
                 className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] hidden md:inline-flex"
               >
                 Connexion
@@ -398,8 +410,8 @@ export function Header() {
                   Mes Annonces
                 </button>
               )}
-              <button 
-                onClick={() => handleNavigation(isLoggedIn ? '/favoris' : '/login')}
+              <button
+                onClick={() => handleProtectedNav('/favoris')}
                 className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 flex items-center justify-between ${
                   pathname === '/favoris'
                     ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
@@ -416,8 +428,8 @@ export function Header() {
                   </Badge>
                 )}
               </button>
-              <button 
-                onClick={() => handleNavigation(isLoggedIn ? '/messages' : '/login')}
+              <button
+                onClick={() => handleProtectedNav('/messages')}
                 className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 flex items-center justify-between ${
                   pathname === '/messages'
                     ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
@@ -435,8 +447,8 @@ export function Header() {
                 )}
               </button>
               <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">
-                <Button 
-                  onClick={() => handleNavigation(isLoggedIn ? '/publish' : '/login')}
+                <Button
+                  onClick={() => handleProtectedNav('/publish')}
                   className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white w-full"
                 >
                   Publier une annonce
@@ -456,13 +468,13 @@ export function Header() {
                         <p className="text-xs text-gray-500">{user.email || user.phone}</p>
                       </div>
                     </div>
-                    <Button 
+                    <Button
                       onClick={() => handleNavigation('/profile')}
-                      variant="outline" 
+                      variant="outline"
                       className="w-full"
                     >
-                      <Settings className="mr-2 h-4 w-4" />
-                      Paramètres
+                      <User className="mr-2 h-4 w-4" />
+                      Mon profil
                     </Button>
                     <Button 
                       onClick={handleLogout}
@@ -474,9 +486,9 @@ export function Header() {
                     </Button>
                   </>
                 ) : (
-                  <Button 
-                    onClick={() => handleNavigation('/login')}
-                    variant="outline" 
+                  <Button
+                    onClick={() => openQuickAuth('/')}
+                    variant="outline"
                     className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] w-full"
                   >
                     Connexion

@@ -4,7 +4,7 @@ import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useQuickAuth } from '@/contexts/QuickAuthContext';
 import { cn } from '@/lib/utils';
 
 interface FavoriteButtonProps {
@@ -21,7 +21,7 @@ export function FavoriteButton({
   showToast = true
 }: FavoriteButtonProps) {
   const { user } = useAuth();
-  const router = useRouter();
+  const { openQuickAuth } = useQuickAuth();
   const { isFavorite, toggleFavorite, isToggling } = useFavorites();
   const [animating, setAnimating] = useState(false);
 
@@ -29,9 +29,9 @@ export function FavoriteButton({
     e.preventDefault();
     e.stopPropagation();
 
-    // Rediriger vers login si non connecté
     if (!user) {
-      router.push('/login?redirect=' + encodeURIComponent(window.location.pathname));
+      // Ancien : router.push('/login?redirect=' + encodeURIComponent(window.location.pathname));
+      openQuickAuth(window.location.pathname);
       return;
     }
 

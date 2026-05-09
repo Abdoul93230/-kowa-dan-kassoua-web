@@ -12,9 +12,11 @@ import { useFavorites } from '@/contexts/FavoritesContext';
 import { Item } from '@/types';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQuickAuth } from '@/contexts/QuickAuthContext';
 
 export default function FavorisPage() {
   const router = useRouter();
+  const { openQuickAuth } = useQuickAuth();
   const [favoritesList, setFavoritesList] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +38,9 @@ export default function FavorisPage() {
       } catch (err: any) {
         console.error('❌ Erreur chargement favoris:', err);
         
-        // Si erreur d'authentification, rediriger vers login
+        // Si erreur d'authentification, ouvrir QuickAuth (ancien : router.push('/login?redirect=/favoris'))
         if (err.message?.includes('authentification') || err.message?.includes('connecté')) {
-          router.push('/login?redirect=/favoris');
+          openQuickAuth('/favoris');
           return;
         }
         

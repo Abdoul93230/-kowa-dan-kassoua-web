@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
+import { QuickAuthProvider } from "@/contexts/QuickAuthContext";
+import QuickAuthModal from "@/components/QuickAuthModal";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -30,11 +32,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <FavoritesProvider>
-          {children}
-          <ScrollToTop />
-          <Toaster position="top-right" richColors />
-        </FavoritesProvider>
+        <QuickAuthProvider>
+          <FavoritesProvider>
+            {children}
+            <ScrollToTop />
+            <Toaster position="top-right" richColors />
+            <QuickAuthModal />
+          </FavoritesProvider>
+        </QuickAuthProvider>
       </body>
     </html>
   );

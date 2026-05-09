@@ -1,1051 +1,815 @@
-// app/register/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { register, formatPhoneForAPI, sendOTP, verifyOTP, isAuthenticated } from '@/lib/api/auth';
-import { toast } from 'sonner';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { register, sendOTP, verifyOTP, isAuthenticated } from '@/lib/api/auth';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import {
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Store,
-  Briefcase,
-  CheckCircle2,
-  ArrowRight,
-  ArrowLeft,
-  Shield,
-  Star,
-  Clock,
-  MessageSquare,
-  Globe,
-  Camera,
-  Eye,
-  EyeOff,
-  Loader2,
-  Check,
-  X,
-  AlertCircle,
-  Sparkles,
-  Users
+  Eye, EyeOff, Loader2, Camera, MapPin, Check,
 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 
-// Liste des pays avec leurs indicatifs
-const countries = [
-  { code: 'NE', name: 'Niger', dialCode: '+227', flag: '🇳🇪' },
-  { code: 'SN', name: 'Sénégal', dialCode: '+221', flag: '🇸🇳' },
-  { code: 'CI', name: 'Côte d\'Ivoire', dialCode: '+225', flag: '🇨🇮' },
-  { code: 'BF', name: 'Burkina Faso', dialCode: '+226', flag: '🇧🇫' },
-  { code: 'ML', name: 'Mali', dialCode: '+223', flag: '🇲🇱' },
-  { code: 'TG', name: 'Togo', dialCode: '+228', flag: '🇹🇬' },
-  { code: 'BJ', name: 'Bénin', dialCode: '+229', flag: '🇧🇯' },
-  { code: 'CM', name: 'Cameroun', dialCode: '+237', flag: '🇨🇲' },
+// ── Données pays ──────────────────────────────────────────────────────────────
+const COUNTRIES = [
+  { code: 'NE', name: 'Niger',         dialCode: '+227', flag: '🇳🇪', nationalLength: 8,  phoneGroups: [2,2,2,2],   sample: '90 12 34 56' },
+  { code: 'SN', name: 'Sénégal',       dialCode: '+221', flag: '🇸🇳', nationalLength: 9,  phoneGroups: [2,3,2,2],   sample: '77 123 45 67' },
+  { code: 'ML', name: 'Mali',          dialCode: '+223', flag: '🇲🇱', nationalLength: 8,  phoneGroups: [2,2,2,2],   sample: '60 12 34 56' },
+  { code: 'BF', name: 'Burkina Faso',  dialCode: '+226', flag: '🇧🇫', nationalLength: 8,  phoneGroups: [2,2,2,2],   sample: '70 12 34 56' },
+  { code: 'CI', name: "Côte d'Ivoire", dialCode: '+225', flag: '🇨🇮', nationalLength: 10, phoneGroups: [2,2,2,2,2], sample: '07 12 34 56 78' },
+  { code: 'BJ', name: 'Bénin',         dialCode: '+229', flag: '🇧🇯', nationalLength: 8,  phoneGroups: [2,2,2,2],   sample: '90 12 34 56' },
+  { code: 'TG', name: 'Togo',          dialCode: '+228', flag: '🇹🇬', nationalLength: 8,  phoneGroups: [2,2,2,2],   sample: '90 12 34 56' },
 ];
 
-// Villes principales du Niger
-const nigerCities = [
-  'Niamey', 'Zinder', 'Maradi', 'Agadez', 'Tahoua', 'Dosso', 
-  'Tillabéri', 'Diffa', 'Arlit', 'Birni N\'Konni', 'Gaya', 'Tessaoua'
+const NIGER_CITIES = [
+  'Niamey','Zinder','Maradi','Agadez','Tahoua',
+  'Dosso','Tillabéri','Diffa','Arlit',"Birni N'Konni",'Gaya','Tessaoua',
 ];
 
-interface PhoneNumber {
-  countryCode: string;
-  number: string;
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const onlyDigits = (v: string) => v.replace(/\D/g, '').replace(/^0+/, '');
 
-interface FormData {
-  // Étape 1: Informations de base
-  name: string;
-  phone: PhoneNumber;
-  whatsapp: PhoneNumber;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  
-  // Étape 2: Profil vendeur
-  businessType: 'individual' | 'professional';
-  businessName: string;
-  description: string;
-  location: string;
-  avatar: string;
-}
+const fmtNational = (country: typeof COUNTRIES[0], digits: string) => {
+  let result = '';
+  let i = 0;
+  for (const len of country.phoneGroups) {
+    const chunk = digits.slice(i, i + len);
+    if (!chunk) break;
+    result += (result ? ' ' : '') + chunk;
+    i += len;
+  }
+  return result;
+};
+
+const pwdScore = (p: string) => {
+  if (!p) return 0;
+  let s = 0;
+  if (p.length >= 6)         s++;
+  if (p.length >= 10)        s++;
+  if (/[A-Z]/.test(p))       s++;
+  if (/[0-9]/.test(p))       s++;
+  if (/[@$!%*?&]/.test(p))   s++;
+  return s;
+};
+
+// ── Étapes phase 1 ────────────────────────────────────────────────────────────
+const STEPS1 = [
+  { id: 'name',            icon: '👋', label: 'Comment vous appelez-vous ?',  hint: 'Votre nom complet' },
+  { id: 'country',         icon: '🌍', label: 'Votre pays ?',                 hint: 'Sélectionnez votre pays' },
+  { id: 'phone',           icon: '📱', label: 'Votre numéro de téléphone ?',  hint: 'Numéro principal' },
+  { id: 'whatsapp',        icon: '💬', label: 'Votre WhatsApp ?',              hint: 'Optionnel — même numéro par défaut' },
+  { id: 'email',           icon: '✉️', label: 'Votre email ?',                hint: 'Optionnel' },
+  { id: 'password',        icon: '🔒', label: 'Choisissez un mot de passe',   hint: 'Minimum 6 caractères' },
+  { id: 'confirmPassword', icon: '✅', label: 'Confirmez votre mot de passe', hint: 'Retapez votre mot de passe' },
+];
+
+// ── Étapes phase 2 ────────────────────────────────────────────────────────────
+const STEPS2_ALL = [
+  { id: 'businessType', icon: '🏪', label: 'Quel type de compte ?',    hint: 'Particulier ou professionnel', always: true },
+  { id: 'businessName', icon: '🏷️', label: "Nom de votre activité ?",  hint: 'Uniquement pour les professionnels', always: false },
+  { id: 'description',  icon: '✍️', label: 'Décrivez votre activité',  hint: 'Optionnel', always: false },
+  { id: 'location',     icon: '📍', label: 'Où êtes-vous situé ?',      hint: 'Votre ville', always: true },
+  { id: 'avatar',       icon: '🤳', label: 'Une photo de profil ?',     hint: 'Optionnel — rassurez vos acheteurs', always: true },
+];
+
+// ── Composant principal ───────────────────────────────────────────────────────
+type Phase = 'step1' | 'otp' | 'step2';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [devOTPCode, setDevOTPCode] = useState(''); // Code OTP en mode dev
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [successMessage, setSuccessMessage] = useState('');
-  
-  // 🔒 Rate limiting pour OTP
-  const [otpAttemptsRemaining, setOtpAttemptsRemaining] = useState(3);
-  const [otpCooldown, setOtpCooldown] = useState(0); // Secondes restantes avant prochain envoi
-  const [canResendOTP, setCanResendOTP] = useState(true);
-  
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    phone: {
-      countryCode: '+227',
-      number: ''
-    },
-    whatsapp: {
-      countryCode: '+227',
-      number: ''
-    },
-    email: '',
-    password: '',
-    confirmPassword: '',
-    businessType: 'individual',
-    businessName: '',
-    description: '',
-    location: '',
-    avatar: ''
+
+  useEffect(() => { if (isAuthenticated()) router.push('/'); }, []);
+
+  // ── Phase courante ──────────────────────────────────────────────────────────
+  const [phase, setPhase] = useState<Phase>('step1');
+
+  // ── Phase 1 ─────────────────────────────────────────────────────────────────
+  const [idx1,       setIdx1]       = useState(0);
+  const [country,    setCountry]    = useState(COUNTRIES[0]);
+  const [showPicker, setShowPicker] = useState(false);
+  const [showPwd,    setShowPwd]    = useState(false);
+  const [showCPwd,   setShowCPwd]   = useState(false);
+  const [form1, setForm1] = useState({
+    name: '', phoneDigits: '', waDigits: '', email: '', password: '', confirmPassword: '',
   });
+  const [err1, setErr1] = useState('');
 
-  const [avatarPreview, setAvatarPreview] = useState('');
+  // ── OTP ─────────────────────────────────────────────────────────────────────
+  const [otp,        setOtp]        = useState(['','','','','','']);
+  const [devOtp,     setDevOtp]     = useState('');
+  const [otpCooldown,setOtpCooldown]= useState(0);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [errOtp,     setErrOtp]     = useState('');
+  const otpRefs = useRef<(HTMLInputElement|null)[]>([]);
 
-  // Rediriger si déjà connecté
+  // OTP countdown
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (otpCooldown <= 0) return;
+    const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCooldown]);
+
+  // ── Phase 2 ─────────────────────────────────────────────────────────────────
+  const [idx2,         setIdx2]         = useState(0);
+  const [businessType, setBusinessType] = useState<'individual'|'professional'>('individual');
+  const [businessName, setBusinessName] = useState('');
+  const [description,  setDescription]  = useState('');
+  const [location,     setLocation]     = useState('');
+  const [customLoc,    setCustomLoc]    = useState(false);
+  const [avatarUri,    setAvatarUri]    = useState<string|null>(null);
+  const [showCityModal,setShowCityModal]= useState(false);
+  const [err2,         setErr2]         = useState('');
+  const [submitting,   setSubmitting]   = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const steps2 = STEPS2_ALL.filter(s => s.always || businessType === 'professional');
+  const step2  = steps2[idx2];
+
+  // ── Données accumulées (step1 → otp → step2) ─────────────────────────────
+  const apiPhone   = `${country.dialCode} ${form1.phoneDigits}`;
+  const apiWa      = form1.waDigits ? `${country.dialCode} ${form1.waDigits}` : apiPhone;
+  const fmtDisplay = `${country.dialCode} ${fmtNational(country, form1.phoneDigits)}`;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PHASE 1 — validation & navigation
+  // ─────────────────────────────────────────────────────────────────────────────
+  const validateStep1 = (): string => {
+    const s = STEPS1[idx1];
+    switch (s.id) {
+      case 'name':
+        if (!form1.name.trim() || form1.name.trim().length < 2) return 'Minimum 2 caractères requis';
+        break;
+      case 'phone': {
+        const d = form1.phoneDigits;
+        if (!d || d.length !== country.nationalLength) return `Exactement ${country.nationalLength} chiffres pour ${country.name}`;
+        if (/^(\d)\1+$/.test(d)) return 'Numéro invalide';
+        break;
+      }
+      case 'whatsapp': {
+        if (form1.waDigits && form1.waDigits.length !== country.nationalLength) return `Exactement ${country.nationalLength} chiffres pour ${country.name}`;
+        if (form1.waDigits && /^(\d)\1+$/.test(form1.waDigits)) return 'Numéro invalide';
+        break;
+      }
+      case 'email':
+        if (form1.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form1.email)) return 'Email invalide';
+        break;
+      case 'password':
+        if (!form1.password || form1.password.length < 6) return 'Minimum 6 caractères';
+        break;
+      case 'confirmPassword':
+        if (form1.password !== form1.confirmPassword) return 'Les mots de passe ne correspondent pas';
+        break;
+    }
+    return '';
+  };
+
+  const goNext1 = async () => {
+    const e = validateStep1();
+    if (e) { setErr1(e); return; }
+    setErr1('');
+
+    // Auto-fill whatsapp si vide quand on quitte phone
+    if (STEPS1[idx1].id === 'phone' && !form1.waDigits) {
+      setForm1(p => ({ ...p, waDigits: p.phoneDigits }));
+    }
+
+    if (idx1 < STEPS1.length - 1) {
+      setIdx1(i => i + 1);
+    } else {
+      // Dernier step phase 1 → envoyer OTP
+      await handleSendOTP();
+    }
+  };
+
+  const handleSendOTP = async () => {
+    setOtpLoading(true); setErr1('');
+    try {
+      const res = await sendOTP(apiPhone);
+      const devCode = res.devOTP || res.data?.devOTP;
+      if (devCode) setDevOtp(String(devCode));
+      setOtpCooldown(res.data?.cooldownSeconds || 60);
+      setPhase('otp');
+    } catch (e: any) {
+      setErr1(e.message || "Erreur lors de l'envoi du code");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const goPrev1 = () => {
+    setErr1('');
+    if (idx1 > 0) setIdx1(i => i - 1);
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PHASE OTP
+  // ─────────────────────────────────────────────────────────────────────────────
+  const handleOtpChange = (i: number, val: string) => {
+    const d = val.replace(/\D/g,'').slice(-1);
+    const next = [...otp];
+    next[i] = d;
+    setOtp(next);
+    if (d && i < 5) otpRefs.current[i+1]?.focus();
+  };
+
+  const handleOtpKey = (i: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) {
+      otpRefs.current[i-1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);
+    if (text.length === 6) {
+      setOtp(text.split(''));
+      otpRefs.current[5]?.focus();
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    const code = otp.join('');
+    if (code.length < 6) { setErrOtp('Entrez les 6 chiffres'); return; }
+    setOtpLoading(true); setErrOtp('');
+    try {
+      await verifyOTP(apiPhone, code);
+      setPhase('step2');
+    } catch (e: any) {
+      setErrOtp(e.message || 'Code incorrect ou expiré');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PHASE 2 — validation & navigation
+  // ─────────────────────────────────────────────────────────────────────────────
+  const validateStep2 = (): string => {
+    switch (step2.id) {
+      case 'businessName':
+        if (!businessName.trim()) return "Le nom de votre activité est requis";
+        break;
+      case 'location':
+        if (!location.trim()) return 'Veuillez sélectionner votre ville';
+        break;
+    }
+    return '';
+  };
+
+  const goNext2 = async () => {
+    const e = validateStep2();
+    if (e) { setErr2(e); return; }
+    setErr2('');
+    if (idx2 < steps2.length - 1) {
+      setIdx2(i => i + 1);
+    } else {
+      await handleSubmit();
+    }
+  };
+
+  const goPrev2 = () => {
+    setErr2('');
+    if (idx2 > 0) setIdx2(i => i - 1);
+    else setPhase('otp');
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true); setErr2('');
+    try {
+      await register({
+        name:         form1.name.trim(),
+        phone:        apiPhone,
+        whatsapp:     apiWa,
+        email:        form1.email.trim() || undefined,
+        password:     form1.password,
+        businessType,
+        businessName: businessType === 'professional' ? businessName.trim() : form1.name.trim(),
+        description:  description.trim() || undefined,
+        location:     location.trim(),
+        avatar:       avatarUri,
+      });
+      window.dispatchEvent(new Event('auth:changed'));
       router.push('/');
-    }
-  }, [router]);
-
-  // ⏱️ Timer pour le cooldown OTP
-  useEffect(() => {
-    if (otpCooldown > 0) {
-      const timer = setTimeout(() => {
-        setOtpCooldown(otpCooldown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else {
-      setCanResendOTP(otpAttemptsRemaining > 0);
-    }
-  }, [otpCooldown, otpAttemptsRemaining]);
-
-  // Validation par étape
-  const validateStep = (step: number): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    if (step === 1) {
-      if (!formData.name.trim()) newErrors.name = 'Le nom est requis';
-      if (formData.name.length < 2) newErrors.name = 'Le nom doit contenir au moins 2 caractères';
-      
-      if (!formData.phone.number.trim()) newErrors.phone = 'Le numéro de téléphone est requis';
-      if (formData.phone.number.length < 7) newErrors.phone = 'Numéro de téléphone invalide';
-      
-      if (!formData.password) newErrors.password = 'Le mot de passe est requis';
-      if (formData.password.length < 6) newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
-      
-      if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
-      }
-      
-      if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        newErrors.email = 'Email invalide';
-      }
-    } else if (step === 2) {
-      // Le nom de l'activité est requis uniquement pour les professionnels
-      if (formData.businessType === 'professional') {
-        if (!formData.businessName.trim()) newErrors.businessName = 'Le nom de votre activité est requis pour un compte professionnel';
-        
-        if (!formData.description.trim()) newErrors.description = 'La description est requise';
-        if (formData.description.length < 20) newErrors.description = 'Décrivez votre activité en au moins 20 caractères';
-      }
-      
-      if (!formData.location) newErrors.location = 'La localisation est requise';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleNextStep = async () => {
-    if (validateStep(currentStep)) {
-      if (currentStep === 1) {
-        // 📱 Envoyer le code OTP au numéro de téléphone
-        setIsVerifying(true);
-        setErrors({});
-        
-        try {
-          const phoneNumber = formatPhoneForAPI(
-            formData.phone.countryCode, 
-            formData.phone.number
-          );
-          
-          const response = await sendOTP(phoneNumber);
-          
-          // Mettre à jour le nombre de tentatives restantes
-          if (response.data?.attemptsRemaining !== undefined) {
-            setOtpAttemptsRemaining(response.data.attemptsRemaining);
-          }
-          
-          // Démarrer le cooldown
-          if (response.data?.cooldownSeconds) {
-            setOtpCooldown(response.data.cooldownSeconds);
-            setCanResendOTP(false);
-          }
-          
-          // En mode développement, le backend renvoie le code OTP
-          if (response.devOTP) {
-            setDevOTPCode(response.devOTP);
-            console.log('🔑 Code OTP (dev):', response.devOTP);
-          }
-          
-          toast.success('Code envoyé avec succès !');
-          setSuccessMessage('Code envoyé avec succès !');
-          setTimeout(() => setSuccessMessage(''), 3000);
-          setCurrentStep(2.5);
-          
-        } catch (error: any) {
-          // Afficher une alerte visuelle
-          toast.error(error.message || "Erreur lors de l'envoi du code");
-          
-          // Gérer les erreurs de rate limiting (429)
-          if (error.message.includes('Trop de tentatives') || error.message.includes('attendre')) {
-            setErrors({ 
-              general: error.message
-            });
-            setCanResendOTP(false);
-          } else {
-            setErrors({ 
-              general: error.message || "Erreur lors de l'envoi du code"
-            });
-          }
-        } finally {
-          setIsVerifying(false);
-        }
-      } else {
-        setCurrentStep(currentStep + 1);
-      }
-    }
-  };
-
-  const handlePrevStep = () => {
-    if (currentStep === 2.5) {
-      setCurrentStep(1);
-    } else {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    if (!verificationCode || verificationCode.length !== 6) {
-      setErrors({ verification: 'Veuillez entrer un code à 6 chiffres' });
-      return;
-    }
-
-    setIsVerifying(true);
-    setErrors({});
-
-    try {
-      const phoneNumber = formatPhoneForAPI(
-        formData.phone.countryCode, 
-        formData.phone.number
-      );
-      
-      await verifyOTP(phoneNumber, verificationCode);
-      
-      toast.success('Numéro vérifié avec succès ! ✅');
-      setCurrentStep(2);
-      setSuccessMessage('Numéro vérifié avec succès ! ✅');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
-    } catch (error: any) {
-      const errorMsg = error.message || 'Code incorrect ou expiré';
-      toast.error(errorMsg);
-      setErrors({ 
-        verification: errorMsg
-      });
+    } catch (e: any) {
+      setErr2(e.message || 'Une erreur est survenue');
     } finally {
-      setIsVerifying(false);
+      setSubmitting(false);
     }
   };
 
-  const handleResendOTP = async () => {
-    if (!canResendOTP || otpCooldown > 0) {
-      return; // Bloqué par le cooldown ou les tentatives max
-    }
-    
-    setIsVerifying(true);
-    setErrors({});
-    setVerificationCode(''); // Réinitialiser le code entré
-    
-    try {
-      const phoneNumber = formatPhoneForAPI(
-        formData.phone.countryCode, 
-        formData.phone.number
-      );
-      
-      const response = await sendOTP(phoneNumber);
-      
-      // Mettre à jour le nombre de tentatives restantes
-      if (response.data?.attemptsRemaining !== undefined) {
-        setOtpAttemptsRemaining(response.data.attemptsRemaining);
-      }
-      
-      // Démarrer le cooldown
-      if (response.data?.cooldownSeconds) {
-        setOtpCooldown(response.data.cooldownSeconds);
-        setCanResendOTP(false);
-      }
-      
-      // En mode développement, le backend renvoie le code OTP
-      if (response.devOTP) {
-        setDevOTPCode(response.devOTP);
-        console.log('🔑 Nouveau code OTP (dev):', response.devOTP);
-      }
-      
-      toast.success('Nouveau code envoyé avec succès !');
-      setSuccessMessage('Nouveau code envoyé avec succès !');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
-    } catch (error: any) {
-      // Afficher une alerte visuelle
-      toast.error(error.message || "Erreur lors de l'envoi du code");
-      
-      // Gérer les erreurs de rate limiting (429)
-      if (error.message.includes('Trop de tentatives') || error.message.includes('attendre')) {
-        setErrors({ 
-          general: error.message
-        });
-        setCanResendOTP(false);
-        setOtpAttemptsRemaining(0);
-      } else {
-        setErrors({ 
-          general: error.message || "Erreur lors de l'envoi du code"
-        });
-      }
-    } finally {
-      setIsVerifying(false);
-    }
-  };
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SOUS-COMPOSANTS RÉUTILISABLES
+  // ─────────────────────────────────────────────────────────────────────────────
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-        setFormData({ ...formData, avatar: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Header ardoise
+  const Header = ({ segments, activeIdx, total }: { segments: number; activeIdx: number; total: number }) => (
+    <div className="bg-gradient-to-b from-[#1e293b] to-[#0f172a] px-5 pt-5 pb-4 border-b-2 border-[#ec5a13]">
+      {/* Logo + lien connexion */}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => phase === 'step1' ? (idx1 > 0 ? goPrev1() : router.push('/')) : phase === 'otp' ? setPhase('step1') : goPrev2()}
+          className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white font-bold text-lg"
+        >
+          ←
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-gradient-to-br from-[#ec5a13] to-[#d94f0f] rounded-lg flex items-center justify-center">
+            <span className="text-white font-black text-sm">K</span>
+          </div>
+          <span className="text-white font-black text-base">Kowa</span>
+        </div>
+        <button onClick={() => router.push('/login')} className="text-xs font-semibold text-white/70 border border-white/20 px-3 py-1.5 rounded-lg">
+          Connexion
+        </button>
+      </div>
+      {/* Barres segmentées */}
+      <div className="flex gap-1 mb-2">
+        {Array.from({ length: segments }).map((_, i) => (
+          <div key={i} className={`flex-1 h-1 rounded-full transition-all ${
+            i < activeIdx ? 'bg-[#ec5a13]' : i === activeIdx ? 'bg-amber-400' : 'bg-white/15'
+          }`} />
+        ))}
+      </div>
+      <span className="text-[11px] font-semibold text-white/40">{activeIdx + 1} / {total}</span>
+    </div>
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateStep(2)) return;
-    
-    setIsLoading(true);
-    setErrors({});
-    
-    try {
-      // 🔥 APPEL API RÉEL
-      const response = await register({
-        // Étape 1
-        name: formData.name,
-        phone: formatPhoneForAPI(formData.phone.countryCode, formData.phone.number),
-        whatsapp: formatPhoneForAPI(formData.whatsapp.countryCode, formData.whatsapp.number),
-        email: formData.email || undefined,
-        password: formData.password,
-        // Étape 2
-        businessType: formData.businessType,
-        businessName: formData.businessName,
-        description: formData.description || undefined,
-        location: formData.location,
-        avatar: formData.avatar || null
-      });
-      
-      console.log('✅ Inscription réussie:', response);
-      
-      // Afficher message de succès
-      toast.success('Compte créé avec succès ! Bienvenue sur MarketHub 🎉');
-      setSuccessMessage('Compte créé avec succès ! Bienvenue sur MarketHub 🎉');
-      
-      // Déclencher l'événement de mise à jour pour le Header
-      window.dispatchEvent(new Event('storage'));
-      
-      // Rediriger vers le dashboard après 2 secondes
-      setTimeout(() => {
-        router.push('/');  // Ou '/dashboard' si vous avez une page dashboard
-      }, 2000);
-      
-    } catch (error: any) {
-      console.error('❌ Erreur d\'inscription:', error);
-      const errorMsg = error.message || 'Une erreur est survenue. Veuillez réessayer.';
-      toast.error(errorMsg);
-      setErrors({ 
-        submit: errorMsg
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Bouton footer
+  const Footer = ({ onPress, label, loading, disabled }: { onPress: () => void; label: string; loading?: boolean; disabled?: boolean }) => (
+    <div className="px-5 pb-6 pt-4 bg-white border-t border-gray-100">
+      <button
+        onClick={onPress}
+        disabled={loading || disabled}
+        className="w-full h-14 bg-gradient-to-r from-[#ec5a13] to-[#d94f0f] text-white font-black text-[15px] rounded-2xl shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : label}
+      </button>
+    </div>
+  );
 
-  const formatPhoneNumber = (phone: PhoneNumber): string => {
-    return `${phone.countryCode} ${phone.number}`;
-  };
+  // Erreur inline
+  const ErrBox = ({ msg }: { msg: string }) => msg ? (
+    <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-semibold">
+      ⚠ {msg}
+    </div>
+  ) : null;
 
-  const businessCategories = [
-    'Électronique', 'Alimentation', 'Immobilier', 'Automobile', 
-    'Mode & Beauté', 'Services à domicile', 'Éducation', 'Santé',
-    'Tourisme', 'Artisanat', 'Autre'
-  ];
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDER PHASE 1
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (phase === 'step1') {
+    const step = STEPS1[idx1];
+    const score = pwdScore(form1.password);
+    const scoreColors = ['','bg-red-400','bg-orange-400','bg-yellow-400','bg-green-400','bg-green-500'];
+    const scoreLabels = ['','Faible','Moyen','Bon','Fort','Très fort 💪'];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#ffe9de]/30 via-white to-orange-50/30">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#ec5a13] rounded-lg flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header segments={STEPS1.length} activeIdx={idx1} total={STEPS1.length} />
+
+        <div className="flex-1 overflow-y-auto px-5 pt-8 pb-4">
+          {/* Question */}
+          <div className="mb-8">
+            <span className="text-5xl">{step.icon}</span>
+            <h2 className="mt-4 text-[26px] font-black text-gray-900 leading-tight">{step.label}</h2>
+            <p className="mt-1 text-sm text-gray-400">{step.hint}</p>
+          </div>
+
+          {/* Input selon step */}
+          {step.id === 'name' && (
+            <input
+              autoFocus
+              className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
+              placeholder="Ex: Amadou Diallo"
+              value={form1.name}
+              onChange={e => { setErr1(''); setForm1(p => ({ ...p, name: e.target.value })); }}
+              onKeyDown={e => e.key === 'Enter' && goNext1()}
+            />
+          )}
+
+          {step.id === 'country' && (
+            <>
+              <button
+                onClick={() => setShowPicker(true)}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-200 bg-white"
+              >
+                <span className="text-3xl">{country.flag}</span>
+                <div className="flex-1 text-left">
+                  <p className="font-bold text-gray-900">{country.name}</p>
+                  <p className="text-sm text-gray-400">{country.dialCode}</p>
+                </div>
+                <span className="text-gray-400">▾</span>
+              </button>
+              {/* Modal pays */}
+              {showPicker && (
+                <div className="fixed inset-0 z-50 flex items-end" onClick={() => setShowPicker(false)}>
+                  <div className="w-full bg-white rounded-t-3xl max-h-[70vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mt-3 mb-2" />
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                      <span className="font-black text-gray-900 text-lg">Choisir un pays</span>
+                      <button onClick={() => setShowPicker(false)} className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-xs">✕</button>
+                    </div>
+                    {COUNTRIES.map(c => (
+                      <button key={c.code} onClick={() => { setCountry(c); setShowPicker(false); setErr1(''); setForm1(p => ({ ...p, phoneDigits: '', waDigits: '' })); }}
+                        className={`w-full flex items-center gap-4 px-5 py-4 border-b border-gray-50 ${country.code === c.code ? 'bg-orange-50' : ''}`}>
+                        <span className="text-2xl">{c.flag}</span>
+                        <span className={`flex-1 text-left font-semibold ${country.code === c.code ? 'text-[#ec5a13]' : 'text-gray-800'}`}>{c.name}</span>
+                        <span className="text-gray-400 text-sm">{c.dialCode}</span>
+                        {country.code === c.code && <span className="text-[#ec5a13] font-black">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {(step.id === 'phone' || step.id === 'whatsapp') && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-3 rounded-xl border border-gray-200 bg-gray-50">
+                <span className="text-lg">{country.flag}</span>
+                <span className="font-bold text-gray-700 text-sm">{country.dialCode}</span>
               </div>
-              <span className="font-bold text-xl text-gray-900">MarketHub</span>
+              <input
+                autoFocus
+                inputMode="numeric"
+                className="flex-1 text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
+                placeholder={step.id === 'phone' ? country.sample : `${country.sample} (optionnel)`}
+                value={step.id === 'phone'
+                  ? fmtNational(country, form1.phoneDigits)
+                  : fmtNational(country, form1.waDigits)}
+                onChange={e => {
+                  const digits = onlyDigits(e.target.value).slice(0, country.nationalLength);
+                  setErr1('');
+                  if (step.id === 'phone') setForm1(p => ({ ...p, phoneDigits: digits }));
+                  else setForm1(p => ({ ...p, waDigits: digits }));
+                }}
+                onKeyDown={e => e.key === 'Enter' && goNext1()}
+              />
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {(step.id === 'phone' ? form1.phoneDigits : form1.waDigits).length}/{country.nationalLength}
+              </span>
             </div>
-            <div className="text-sm text-gray-600">
-              Déjà un compte ? 
-              <a href="/login" className="ml-1 text-[#ec5a13] hover:text-[#d94f0f] font-medium">
-                Se connecter
-              </a>
+          )}
+
+          {step.id === 'email' && (
+            <input
+              autoFocus
+              type="email"
+              className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
+              placeholder="exemple@email.com (optionnel)"
+              value={form1.email}
+              onChange={e => { setErr1(''); setForm1(p => ({ ...p, email: e.target.value })); }}
+              onKeyDown={e => e.key === 'Enter' && goNext1()}
+            />
+          )}
+
+          {step.id === 'password' && (
+            <div>
+              <div className="relative">
+                <input
+                  autoFocus
+                  type={showPwd ? 'text' : 'password'}
+                  className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 pr-10 outline-none placeholder:font-normal placeholder:text-gray-300"
+                  placeholder="Minimum 6 caractères"
+                  value={form1.password}
+                  onChange={e => { setErr1(''); setForm1(p => ({ ...p, password: e.target.value })); }}
+                  onKeyDown={e => e.key === 'Enter' && goNext1()}
+                />
+                <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-0 top-2 text-gray-400">
+                  {showPwd ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {form1.password.length > 0 && (
+                <>
+                  <div className="flex gap-1 mt-4">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${i <= score ? scoreColors[score] : 'bg-gray-200'}`} />
+                    ))}
+                  </div>
+                  <p className={`text-xs font-bold mt-1 ${['','text-red-500','text-orange-500','text-yellow-600','text-green-500','text-green-600'][score]}`}>
+                    {scoreLabels[score]}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {[
+                      { ok: form1.password.length >= 6, txt: '6 car. min' },
+                      { ok: /[A-Z]/.test(form1.password), txt: 'Majuscule' },
+                      { ok: /[0-9]/.test(form1.password), txt: 'Chiffre' },
+                      { ok: /[@$!%*?&]/.test(form1.password), txt: 'Spécial' },
+                    ].map((c, i) => (
+                      <span key={i} className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${c.ok ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {c.ok ? '✓' : '○'} {c.txt}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+          )}
+
+          {step.id === 'confirmPassword' && (
+            <div>
+              <div className="relative">
+                <input
+                  autoFocus
+                  type={showCPwd ? 'text' : 'password'}
+                  className={`w-full text-xl font-bold border-b-[3px] bg-transparent pb-3 pr-10 outline-none placeholder:font-normal placeholder:text-gray-300 ${
+                    form1.confirmPassword && form1.confirmPassword !== form1.password ? 'border-red-400 text-red-600' :
+                    form1.confirmPassword && form1.confirmPassword === form1.password ? 'border-green-500 text-gray-900' :
+                    'border-[#ec5a13] text-gray-900'
+                  }`}
+                  placeholder="Retapez votre mot de passe"
+                  value={form1.confirmPassword}
+                  onChange={e => { setErr1(''); setForm1(p => ({ ...p, confirmPassword: e.target.value })); }}
+                  onKeyDown={e => e.key === 'Enter' && goNext1()}
+                />
+                <button type="button" onClick={() => setShowCPwd(v => !v)} className="absolute right-0 top-2 text-gray-400">
+                  {showCPwd ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {form1.confirmPassword.length > 0 && (
+                <div className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold ${
+                  form1.password === form1.confirmPassword ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+                }`}>
+                  {form1.password === form1.confirmPassword ? '✓ Identiques' : '✕ Différents'}
+                </div>
+              )}
+            </div>
+          )}
+
+          <ErrBox msg={err1} />
+        </div>
+
+        <Footer onPress={goNext1} label={idx1 < STEPS1.length - 1 ? 'Continuer →' : '✓ Envoyer le code'} loading={otpLoading} />
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDER OTP
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (phase === 'otp') {
+    const codeComplete = otp.every(d => d !== '');
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        {/* Header simple */}
+        <div className="bg-gradient-to-b from-[#1e293b] to-[#0f172a] px-5 pt-5 pb-5 border-b-2 border-[#ec5a13]">
+          <div className="flex items-center justify-between">
+            <button onClick={() => setPhase('step1')} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white font-bold text-lg">←</button>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-gradient-to-br from-[#ec5a13] to-[#d94f0f] rounded-lg flex items-center justify-center">
+                <span className="text-white font-black text-sm">K</span>
+              </div>
+              <span className="text-white font-black text-base">Kowa</span>
+            </div>
+            <div className="w-9" />
           </div>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Progress indicator */}
+        <div className="flex-1 px-5 pt-10 pb-4">
+          {/* Hero */}
+          <div className="mb-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ec5a13] to-[#d94f0f] flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-3xl">💬</span>
+            </div>
+            <h2 className="text-2xl font-black text-gray-900">Vérifiez votre numéro</h2>
+            <p className="mt-2 text-sm text-gray-500">Code envoyé au <span className="font-bold text-gray-800">{fmtDisplay}</span></p>
+          </div>
+
+          {/* Badge dev OTP */}
+          {devOtp && (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-yellow-300 mb-6">
+              <span className="text-2xl">🔧</span>
+              <div>
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-0.5">Mode développement</p>
+                <p className="text-2xl font-black text-[#ec5a13] tracking-[0.3em]">{devOtp}</p>
+              </div>
+            </div>
+          )}
+
+          {/* 6 cases OTP */}
+          <div className="flex gap-2 justify-center mb-4" onPaste={handleOtpPaste}>
+            {otp.map((d, i) => (
+              <input
+                key={i}
+                ref={el => { otpRefs.current[i] = el; }}
+                inputMode="numeric"
+                maxLength={1}
+                value={d}
+                onChange={e => handleOtpChange(i, e.target.value)}
+                onKeyDown={e => handleOtpKey(i, e)}
+                className={`w-12 h-14 text-center text-2xl font-black rounded-xl border-2 outline-none transition-all ${
+                  d ? 'border-[#ec5a13] bg-orange-50 text-[#ec5a13]' : 'border-gray-200 bg-white text-gray-900'
+                } focus:border-[#ec5a13] focus:ring-2 focus:ring-[#ec5a13]/20`}
+              />
+            ))}
+          </div>
+
+          {errOtp && <div className="text-center text-sm text-red-600 font-semibold mb-4">⚠ {errOtp}</div>}
+
+          {/* Renvoyer */}
+          <div className="text-center">
+            <button
+              onClick={handleSendOTP}
+              disabled={otpLoading || otpCooldown > 0}
+              className="text-sm text-[#ec5a13] font-semibold disabled:opacity-40"
+            >
+              {otpCooldown > 0 ? `Renvoyer dans ${otpCooldown}s` : 'Renvoyer le code'}
+            </button>
+          </div>
+        </div>
+
+        <Footer onPress={handleVerifyOTP} label="Vérifier →" loading={otpLoading} disabled={!codeComplete} />
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDER PHASE 2
+  // ─────────────────────────────────────────────────────────────────────────────
+  const isLastStep2 = idx2 === steps2.length - 1;
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header segments={steps2.length} activeIdx={idx2} total={steps2.length} />
+
+      <div className="flex-1 overflow-y-auto px-5 pt-8 pb-4">
+        {/* Question */}
         <div className="mb-8">
-          <div className="flex items-center justify-center mb-4">
-            {[1, 2].map((step) => (
-              <div key={step} className="flex items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
-                    currentStep >= step || (currentStep === 2.5 && step === 2)
-                      ? 'bg-[#ec5a13] text-white shadow-lg'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
-                >
-                  {step === 1 && <User className="h-5 w-5" />}
-                  {step === 2 && <Store className="h-5 w-5" />}
-                  {step === 3 && <CheckCircle2 className="h-5 w-5" />}
-                </div>
-                <span
-                  className={`ml-3 text-sm font-medium ${
-                    currentStep >= step || (currentStep === 2.5 && step === 2)
-                      ? 'text-gray-900'
-                      : 'text-gray-500'
-                  }`}
-                >
-                  {step === 1 && 'Compte'}
-                  {step === 2 && 'Profil'}
+          <span className="text-5xl">{step2.icon}</span>
+          <h2 className="mt-4 text-[26px] font-black text-gray-900 leading-tight">{step2.label}</h2>
+          <p className="mt-1 text-sm text-gray-400">{step2.hint}</p>
+        </div>
+
+        {/* businessType */}
+        {step2.id === 'businessType' && (
+          <div className="grid grid-cols-2 gap-3">
+            {(['individual','professional'] as const).map(t => (
+              <button key={t} onClick={() => setBusinessType(t)}
+                className={`flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all ${
+                  businessType === t ? 'border-[#ec5a13] bg-orange-50' : 'border-gray-200 bg-white'
+                }`}>
+                <span className="text-3xl">{t === 'individual' ? '👤' : '💼'}</span>
+                <span className={`font-bold text-sm ${businessType === t ? 'text-[#ec5a13]' : 'text-gray-700'}`}>
+                  {t === 'individual' ? 'Particulier' : 'Professionnel'}
                 </span>
-                {step < 2 && (
-                  <div
-                    className={`flex-1 h-1 mx-6 w-20 ${
-                      currentStep > step || (currentStep === 2.5 && step === 1)
-                        ? 'bg-[#ec5a13]'
-                        : 'bg-gray-200'
-                    }`}
-                  />
+                <span className="text-xs text-gray-400 text-center leading-tight">
+                  {t === 'individual' ? 'Vendre vos biens personnels' : 'Gérer votre activité commerciale'}
+                </span>
+                {businessType === t && (
+                  <div className="w-6 h-6 rounded-full bg-[#ec5a13] flex items-center justify-center">
+                    <Check className="h-3.5 w-3.5 text-white" />
+                  </div>
                 )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* businessName */}
+        {step2.id === 'businessName' && (
+          <input
+            autoFocus
+            className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
+            placeholder="Ex: Boutique Amadou"
+            value={businessName}
+            onChange={e => { setErr2(''); setBusinessName(e.target.value); }}
+            onKeyDown={e => e.key === 'Enter' && goNext2()}
+          />
+        )}
+
+        {/* description */}
+        {step2.id === 'description' && (
+          <div>
+            <textarea
+              autoFocus
+              rows={4}
+              className="w-full text-base font-semibold text-gray-900 rounded-2xl border-2 border-gray-200 focus:border-[#ec5a13] bg-white px-4 py-3 outline-none resize-none transition-all"
+              placeholder="Décrivez votre activité, vos produits ou services…"
+              value={description}
+              onChange={e => { setErr2(''); setDescription(e.target.value); }}
+            />
+            <p className={`text-xs font-semibold mt-1.5 ${description.length >= 20 ? 'text-green-600' : 'text-gray-400'}`}>
+              {description.length} / 20 min {description.length >= 20 ? '✓' : ''}
+            </p>
+          </div>
+        )}
+
+        {/* location */}
+        {step2.id === 'location' && (
+          <div>
+            {!customLoc ? (
+              <>
+                <button onClick={() => setShowCityModal(true)}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-200 bg-white mb-2">
+                  <span className="text-xl">📍</span>
+                  <span className={`flex-1 text-left font-semibold ${location ? 'text-gray-900' : 'text-gray-400 font-normal'}`}>
+                    {location || 'Sélectionner votre ville…'}
+                  </span>
+                  <span className="text-gray-400">▾</span>
+                </button>
+                <button onClick={() => setCustomLoc(true)} className="text-sm text-[#ec5a13] font-semibold">
+                  ✎ Saisir manuellement
+                </button>
+              </>
+            ) : (
+              <div>
+                <input
+                  autoFocus
+                  className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
+                  placeholder="Entrez votre localisation"
+                  value={location}
+                  onChange={e => { setErr2(''); setLocation(e.target.value); }}
+                />
+                <button onClick={() => { setCustomLoc(false); setShowCityModal(true); }} className="mt-3 text-sm text-[#ec5a13] font-semibold">
+                  ← Choisir dans la liste
+                </button>
+              </div>
+            )}
+
+            {/* Modal villes */}
+            {showCityModal && (
+              <div className="fixed inset-0 z-50 flex items-end" onClick={() => setShowCityModal(false)}>
+                <div className="w-full bg-white rounded-t-3xl max-h-[70vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+                  <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mt-3 mb-2" />
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                    <span className="font-black text-gray-900 text-lg">Sélectionner votre ville</span>
+                    <button onClick={() => setShowCityModal(false)} className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-xs">✕</button>
+                  </div>
+                  {NIGER_CITIES.map(city => (
+                    <button key={city} onClick={() => { setLocation(`${city}, Niger`); setCustomLoc(false); setShowCityModal(false); setErr2(''); }}
+                      className={`w-full flex items-center gap-3 px-5 py-4 border-b border-gray-50 ${location === `${city}, Niger` ? 'bg-orange-50' : ''}`}>
+                      <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <span className={`flex-1 text-left font-semibold ${location === `${city}, Niger` ? 'text-[#ec5a13]' : 'text-gray-800'}`}>{city}, Niger</span>
+                      {location === `${city}, Niger` && <span className="text-[#ec5a13] font-black">✓</span>}
+                    </button>
+                  ))}
+                  <button onClick={() => { setCustomLoc(true); setShowCityModal(false); }}
+                    className="w-full flex items-center gap-3 px-5 py-4 text-amber-500 font-semibold">
+                    <span className="text-lg">✏️</span> Autre ville…
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* avatar */}
+        {step2.id === 'avatar' && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <button onClick={() => fileRef.current?.click()}
+                className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl bg-gray-100 flex items-center justify-center">
+                {avatarUri
+                  ? <img src={avatarUri} alt="avatar" className="w-full h-full object-cover" />
+                  : <div className="flex flex-col items-center gap-2"><Camera className="h-10 w-10 text-gray-300" /><span className="text-xs text-gray-400 font-semibold">Appuyer</span></div>}
+              </button>
+              <button onClick={() => fileRef.current?.click()}
+                className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-gradient-to-br from-[#ec5a13] to-[#d94f0f] border-2 border-white flex items-center justify-center shadow">
+                <span className="text-white text-sm">✏️</span>
+              </button>
+            </div>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => setAvatarUri(reader.result as string);
+                reader.readAsDataURL(file);
+                e.target.value = '';
+              }} />
+            <p className={`text-sm font-semibold ${avatarUri ? 'text-green-600' : 'text-gray-400'}`}>
+              {avatarUri ? '✓ Photo sélectionnée' : 'JPG ou PNG'}
+            </p>
+            {avatarUri && (
+              <button onClick={() => setAvatarUri(null)} className="text-xs text-red-400 font-semibold">Supprimer et rechoisir</button>
+            )}
+          </div>
+        )}
+
+        <ErrBox msg={err2} />
+
+        {/* Carte bénéfices à la dernière étape */}
+        {isLastStep2 && (
+          <div className="mt-6 p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#ec5a13] to-[#d94f0f] flex items-center justify-center">
+                <span className="text-xl">🎉</span>
+              </div>
+              <span className="font-black text-gray-900">Vous êtes prêt à commencer !</span>
+            </div>
+            {['Publiez des annonces gratuitement','Accès à des milliers d\'acheteurs au Niger','Messagerie directe avec vos clients','Support client dédié'].map((b, i) => (
+              <div key={i} className="flex items-center gap-3 mb-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#ec5a13]" />
+                <span className="text-sm text-gray-500">{b}</span>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Étape 1: Informations de base */}
-        {currentStep === 1 && (
-          <Card className="p-8 shadow-xl border-0">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="h-8 w-8 text-[#ec5a13]" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Créez votre compte
-              </h2>
-              <p className="text-gray-600">
-                Rejoignez des milliers de vendeurs et commencez à vendre dès aujourd'hui
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Nom complet *
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="name"
-                    placeholder="Ex: Ali Traoré"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="pl-10 text-base"
-                  />
-                </div>
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Numéro de téléphone *
-                </Label>
-                <div className="flex gap-2">
-                  <Select 
-                    value={formData.phone.countryCode} 
-                    onValueChange={(value) => setFormData({
-                      ...formData,
-                      phone: { ...formData.phone, countryCode: value }
-                    })}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.code} value={country.dialCode}>
-                          <span className="flex items-center gap-2">
-                            <span>{country.flag}</span>
-                            <span>{country.dialCode}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="87727272"
-                    value={formData.phone.number}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      phone: { ...formData.phone, number: e.target.value }
-                    })}
-                    className="flex-1"
-                  />
-                </div>
-                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  WhatsApp (optionnel)
-                </Label>
-                <div className="flex gap-2">
-                  <Select 
-                    value={formData.whatsapp.countryCode} 
-                    onValueChange={(value) => setFormData({
-                      ...formData,
-                      whatsapp: { ...formData.whatsapp, countryCode: value }
-                    })}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.code} value={country.dialCode}>
-                          <span className="flex items-center gap-2">
-                            <span>{country.flag}</span>
-                            <span>{country.dialCode}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="87727272"
-                    value={formData.whatsapp.number}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      whatsapp: { ...formData.whatsapp, number: e.target.value }
-                    })}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Email (optionnel)
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="contact@exemple.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="pl-10 text-base"
-                  />
-                </div>
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Mot de passe *
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Confirmer le mot de passe *
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-                {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
-              </div>
-
-              <div className="bg-[#ffe9de] border border-[#ec5a13]/30 rounded-lg p-4">
-                <div className="flex gap-3">
-                  <Shield className="h-5 w-5 text-[#ec5a13] flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-[#ec5a13] mb-1">
-                      Sécurité garantie
-                    </p>
-                    <p className="text-xs text-gray-700">
-                      Vos données sont protégées par un chiffrement de bout en bout. 
-                      Nous ne partageons jamais vos informations.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end mt-8">
-              <Button
-                onClick={handleNextStep}
-                disabled={isVerifying}
-                className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
-              >
-                {isVerifying ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Envoi du code...
-                  </>
-                ) : (
-                  <>
-                    Continuer
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Étape de vérification */}
-        {currentStep === 2.5 && (
-          <Card className="p-8 shadow-xl border-0">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-8 w-8 text-[#ec5a13]" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Vérifiez votre numéro
-              </h2>
-              <p className="text-gray-600">
-                Nous avons envoyé un code de vérification à {formatPhoneNumber(formData.phone)}
-              </p>
-              
-              {/* Mode développement - Afficher le code OTP */}
-              {devOTPCode && (
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs text-amber-800 font-medium mb-1">
-                    🔧 Mode Développement
-                  </p>
-                  <p className="text-sm text-amber-900">
-                    Code OTP: <span className="font-bold text-lg">{devOTPCode}</span>
-                  </p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    (En production, ce code sera envoyé par SMS)
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="code" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Code de vérification
-                </Label>
-                <Input
-                  id="code"
-                  placeholder="123456"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  className="text-center text-2xl tracking-widest"
-                  maxLength={6}
-                />
-                {errors.verification && <p className="text-red-500 text-xs mt-1">{errors.verification}</p>}
-              </div>
-
-              {/* Message d'erreur global (rate limiting, etc.) */}
-              {errors.general && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-800">
-                    {errors.general}
-                  </p>
-                </div>
-              )}
-
-              <div className="text-center space-y-2">
-                <button
-                  type="button"
-                  onClick={handleResendOTP}
-                  disabled={isVerifying || !canResendOTP || otpCooldown > 0}
-                  className="text-sm text-[#ec5a13] hover:text-[#d94f0f] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isVerifying ? 'Envoi en cours...' : 
-                   otpCooldown > 0 ? `Attendre ${otpCooldown}s` :
-                   !canResendOTP ? 'Limite atteinte' :
-                   'Renvoyer le code'}
-                </button>
-                
-                {otpAttemptsRemaining < 3 && (
-                  <p className="text-xs text-gray-500">
-                    {otpAttemptsRemaining > 0 
-                      ? `${otpAttemptsRemaining} tentative(s) restante(s)` 
-                      : 'Aucune tentative restante. Réessayez dans 15 minutes.'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={handlePrevStep}
-                disabled={isVerifying}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Retour
-              </Button>
-              <Button
-                onClick={handleVerifyCode}
-                disabled={isVerifying}
-                className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
-              >
-                {isVerifying ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Vérification...
-                  </>
-                ) : (
-                  <>
-                    Vérifier
-                    <CheckCircle2 className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Étape 2: Profil vendeur */}
-        {currentStep === 2 && (
-          <Card className="p-8 shadow-xl border-0">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-[#ffe9de] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Store className="h-8 w-8 text-[#ec5a13]" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Votre profil vendeur
-              </h2>
-              <p className="text-gray-600">
-                Présentez votre activité pour attirer plus de clients
-              </p>
-              {successMessage && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-                  {successMessage}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                  Type de vendeur
-                </Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, businessType: 'individual' })}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      formData.businessType === 'individual'
-                        ? 'border-emerald-600 bg-[#ffe9de]/50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <User
-                      className={`h-8 w-8 mx-auto mb-2 ${
-                        formData.businessType === 'individual' ? 'text-[#ec5a13]' : 'text-gray-400'
-                      }`}
-                    />
-                    <p
-                      className={`font-medium ${
-                        formData.businessType === 'individual' ? 'text-[#d94f0f]' : 'text-gray-700'
-                      }`}
-                    >
-                      Particulier
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, businessType: 'professional' })}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      formData.businessType === 'professional'
-                        ? 'border-emerald-600 bg-[#ffe9de]/50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <Briefcase
-                      className={`h-8 w-8 mx-auto mb-2 ${
-                        formData.businessType === 'professional' ? 'text-[#ec5a13]' : 'text-gray-400'
-                      }`}
-                    />
-                    <p
-                      className={`font-medium ${
-                        formData.businessType === 'professional' ? 'text-[#d94f0f]' : 'text-gray-700'
-                      }`}
-                    >
-                      Professionnel
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="businessName" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Nom de votre activité {formData.businessType === 'professional' && '*'}
-                </Label>
-                <div className="relative">
-                  <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="businessName"
-                    placeholder={formData.businessType === 'professional' ? "Ex: Ali Tech Solutions" : "Ex: Vendeur de téléphones (optionnel)"}
-                    value={formData.businessName}
-                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                    className="pl-10 text-base"
-                  />
-                </div>
-                {errors.businessName && <p className="text-red-500 text-xs mt-1">{errors.businessName}</p>}
-              </div>
-
-              {/* Description - Affiché uniquement pour les professionnels */}
-              {formData.businessType === 'professional' && (
-                <div>
-                  <Label htmlFor="description" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Description de votre activité *
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Décrivez ce que vous proposez, votre expérience, ce qui vous rend unique..."
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="min-h-24 text-base"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formData.description.length} caractères
-                  </p>
-                  {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="location" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Localisation *
-                </Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Select value={formData.location} onValueChange={(value) => setFormData({ ...formData, location: value })}>
-                    <SelectTrigger className="pl-10">
-                      <SelectValue placeholder="Sélectionnez votre ville" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {nigerCities.map((city) => (
-                        <SelectItem key={city} value={`${city}, Niger`}>
-                          {city}, Niger
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="Autre">Autre...</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formData.location === 'Autre' && (
-                    <Input
-                      placeholder="Entrez votre localisation"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="mt-2"
-                    />
-                  )}
-                </div>
-                {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Photo de profil (optionnel)
-                </Label>
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                    {avatarPreview ? (
-                      <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <Camera className="h-8 w-8 text-gray-400" />
-                    )}
-                  </div>
-                  <div>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="hidden"
-                      id="avatar"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById('avatar')?.click()}
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Choisir une photo
-                    </Button>
-                    <p className="text-xs text-gray-500 mt-1">
-                      JPG, PNG - Max 2MB
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-[#ffe9de]/50 to-orange-50/50 border border-[#ec5a13]/30 rounded-lg p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-[#ec5a13] rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">
-                      Vous êtes prêt à commencer !
-                    </h3>
-                    <ul className="space-y-2 text-sm text-gray-700">
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-[#ec5a13]" />
-                        <span>Publiez illimité d'annonces</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-[#ec5a13]" />
-                        <span>Accès à des milliers d'acheteurs</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-[#ec5a13]" />
-                        <span>Outils de promotion intégrés</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-[#ec5a13]" />
-                        <span>Support client dédié</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {errors.submit && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex gap-3">
-                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700">{errors.submit}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={handlePrevStep}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Retour
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="bg-[#ec5a13] hover:bg-[#d94f0f] px-8"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Création du compte...
-                  </>
-                ) : (
-                  <>
-                    Créer mon compte
-                    <CheckCircle2 className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </Card>
         )}
       </div>
+
+      <Footer
+        onPress={goNext2}
+        label={isLastStep2 ? '🎉 Créer mon compte' : 'Continuer →'}
+        loading={submitting}
+        disabled={step2.id === 'location' && !location.trim()}
+      />
     </div>
   );
 }
-

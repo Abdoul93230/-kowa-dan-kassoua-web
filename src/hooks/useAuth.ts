@@ -78,15 +78,15 @@ export function useAuth() {
     // Charger initial
     loadUser();
 
-    // Écouter les changements de storage (cross-tabs)
-    const handleStorageChange = () => {
-      loadUser();
-    };
+    // Écouter les changements de storage (cross-tabs ET même onglet)
+    const handleStorageChange = () => loadUser();
 
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('auth:changed', handleStorageChange);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth:changed', handleStorageChange);
     };
   }, []);
 
@@ -191,11 +191,19 @@ export function useAuth() {
  * }
  * ```
  */
-export function useAuthGuard(redirectTo: string = '/login') {
+export function useAuthGuard(redirectTo?: string) {
   const auth = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    auth.requireAuth(redirectTo);
+    if (auth.loading || auth.user) return;
+    if (redirectTo) {
+      // Ancien comportement conservé en dormant
+      router.push(redirectTo);
+    } else {
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+      window.dispatchEvent(new CustomEvent('quickauth:open', { detail: { returnTo: currentPath } }));
+    }
   }, [auth.loading, auth.user]);
 
   return auth;

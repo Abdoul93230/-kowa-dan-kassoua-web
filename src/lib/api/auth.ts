@@ -412,9 +412,77 @@ export const verifyOTP = async (phone: string, code: string) => {
     return response.data;
   } catch (error: any) {
     throw new Error(
-      error.response?.data?.message || 
+      error.response?.data?.message ||
       'Erreur lors de la vérification du code'
     );
+  }
+};
+
+// ── QuickAuth helpers ─────────────────────────────────────────────────────────
+
+export const checkPhone = async (phone: string): Promise<{ success: boolean; data: { exists: boolean } }> => {
+  try {
+    const response = await api.post('/auth/check-phone', { phone });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Erreur de vérification');
+  }
+};
+
+export const quickRegister = async (data: { name: string; phone: string }): Promise<{
+  success: boolean;
+  data: { user: any; tokens: { accessToken: string; refreshToken: string } };
+  devTempPassword?: string;
+}> => {
+  try {
+    const response = await api.post('/auth/quick-register', data);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Erreur lors de la création du compte');
+  }
+};
+
+// ── Profil utilisateur ────────────────────────────────────────────────────────
+
+export const updateProfile = async (data: {
+  name?: string;
+  email?: string;
+  whatsapp?: string;
+  description?: string;
+  businessType?: string;
+  businessName?: string;
+  location?: string;
+  avatarFile?: File | null;
+}) => {
+  try {
+    const { avatarFile, ...fields } = data;
+    if (avatarFile) {
+      const form = new FormData();
+      Object.entries(fields).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) form.append(k, v as string);
+      });
+      form.append('avatar', avatarFile);
+      const token = localStorage.getItem('accessToken');
+      const response = await axios.put(`${API_URL}/auth/profile`, form, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      return response.data;
+    }
+    const response = await api.put('/auth/profile', fields);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Erreur lors de la mise à jour du profil');
+  }
+};
+
+export const changePassword = async (data: { currentPassword: string; newPassword: string }) => {
+  try {
+    const response = await api.put('/auth/change-password', data);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Erreur lors du changement de mot de passe');
   }
 };
 
