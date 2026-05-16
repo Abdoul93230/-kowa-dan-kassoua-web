@@ -31,7 +31,7 @@ interface UseSocketReturn {
     postClosure?: boolean;
   }) => void;
   markMessageAsRead: (messageId: string, conversationId: string) => void;
-  startTyping: (conversationId: string) => void;
+  startTyping: (conversationId: string, type?: 'text' | 'recording') => void;
   stopTyping: (conversationId: string) => void;
   isUserOnline: (userId: string) => boolean;
   onlineUsers: Set<string>;
