@@ -211,8 +211,8 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
   }, [emit]);
 
   // Commencer à taper
-  const startTyping = useCallback((conversationId: string) => {
-    emit('typing:start', { conversationId });
+  const startTyping = useCallback((conversationId: string, type: 'text' | 'recording' = 'text') => {
+    emit('typing:start', { conversationId, type });
   }, [emit]);
 
   // Arrêter de taper

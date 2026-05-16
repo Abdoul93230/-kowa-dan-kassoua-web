@@ -76,6 +76,7 @@ export default function ChatPage() {
   const [productDetails, setProductDetails] = useState<Item | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [typingType, setTypingType] = useState<'text' | 'recording'>('text');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -252,12 +253,13 @@ export default function ChatPage() {
     };
 
     // Utilisateur en train d'écrire
-    const handleTypingStart = ({ userId, userName }: { userId: string; userName: string; conversationId: string }) => {
+    const handleTypingStart = ({ userId, userName, type }: { userId: string; userName: string; conversationId: string; type?: string }) => {
       const currentUserId = String(user?.id || '').trim();
       const typingUserId = String(userId || '').trim();
-      
+
       if (typingUserId !== currentUserId) {
         setTypingUsers((prev) => new Set(prev).add(userName));
+        setTypingType(type === 'recording' ? 'recording' : 'text');
       }
     };
 
@@ -265,13 +267,14 @@ export default function ChatPage() {
     const handleTypingStop = ({ userId, userName }: { userId: string; userName: string; conversationId: string }) => {
       const currentUserId = String(user?.id || '').trim();
       const typingUserId = String(userId || '').trim();
-      
+
       if (typingUserId !== currentUserId) {
         setTypingUsers((prev) => {
           const newSet = new Set(prev);
           newSet.delete(userName);
           return newSet;
         });
+        setTypingType('text');
       }
     };
 
@@ -426,7 +429,7 @@ export default function ChatPage() {
   };
 
   const handleStartRecording = () => {
-    startTyping(conversationId);
+    startTyping(conversationId, 'recording');
   };
 
   const handleStopRecording = () => {
@@ -1065,11 +1068,18 @@ export default function ChatPage() {
                   </Avatar>
                 </div>
                 <div className="bg-white border border-gray-200 shadow-sm rounded-2xl rounded-bl-md px-5 py-3">
-                  <div className="flex gap-1.5 items-center">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
+                  {typingType === 'recording' ? (
+                    <div className="flex gap-1.5 items-center">
+                      <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+                      <span className="text-xs text-gray-500">Enregistrement vocal...</span>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5 items-center">
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
