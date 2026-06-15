@@ -73,17 +73,17 @@ export function FeaturedSection() {
                 )}
                 <Badge
                   className={`absolute top-3 right-3 font-semibold ${
-                    item.type === 'service' 
-                      ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                      : 'bg-white text-gray-900 hover:bg-gray-100'
+                    item.type === 'service'
+                      ? 'bg-blue-500 text-white hover:bg-blue-600'
+                      : 'bg-[#ec5a13] text-white hover:bg-orange-600'
                   }`}
                 >
-                  {item.type === 'service' ? '🛠️ Service' : '📦 Produit'}
+                  {item.type === 'service' ? '🛠 Service' : '📦 Produit'}
                 </Badge>
               </div>
 
               <div className="p-5">
-                <h3 className="font-semibold text-lg text-gray-900 mb-2 group-hover:text-[#ec5a13] transition-colors line-clamp-1">
+                <h3 className={`font-semibold text-lg text-gray-900 mb-2 transition-colors line-clamp-1 ${item.type === 'service' ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
                   {item.title}
                 </h3>
 

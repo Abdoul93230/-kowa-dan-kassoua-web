@@ -46,7 +46,7 @@ function formatPhone(digits: string, pattern: number[]): string {
 
 export default function QuickAuthModal() {
   const router = useRouter();
-  const { isOpen, returnTo, closeQuickAuth, triggerSuccess } = useQuickAuth();
+  const { isOpen, returnTo, sessionExpired, closeQuickAuth, triggerSuccess } = useQuickAuth();
 
   const [step, setStep] = useState<Step>(STEPS.PHONE);
   const [country, setCountry] = useState(COUNTRIES[0]);
@@ -306,6 +306,12 @@ export default function QuickAuthModal() {
 
         {/* ── Corps scrollable */}
         <div className="overflow-y-auto flex-1 px-5 py-5">
+          {sessionExpired && (
+            <div className="mb-4 flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-500" />
+              <span>Votre session a expiré. Reconnectez-vous pour continuer.</span>
+            </div>
+          )}
 
           {/* Hero */}
           <div className="text-center mb-6">
@@ -560,18 +566,6 @@ export default function QuickAuthModal() {
             </div>
           )}
 
-          {/* Lien vers login standard (dormant, accessible si besoin) */}
-          {(step === STEPS.PHONE || step === STEPS.LOGIN) && (
-            <p className="text-center text-xs text-gray-400 mt-6">
-              Connexion classique ?{' '}
-              <button
-                onClick={() => { closeQuickAuth(); router.push('/login'); }}
-                className="text-[#ec5a13] font-semibold hover:underline"
-              >
-                Cliquez ici
-              </button>
-            </p>
-          )}
         </div>
 
         {/* ── Footer bouton — masqué si mot de passe temporaire affiché (badge a son propre bouton) */}

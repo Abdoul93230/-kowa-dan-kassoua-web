@@ -13,11 +13,13 @@ interface QuickAuthState {
   open: boolean;
   returnTo: QuickAuthReturnTarget | null;
   onSuccess: (() => void) | null;
+  sessionExpired: boolean;
 }
 
 interface QuickAuthContextValue {
   isOpen: boolean;
   returnTo: QuickAuthReturnTarget | null;
+  sessionExpired: boolean;
   openQuickAuth: (returnTo?: QuickAuthReturnTarget, onSuccess?: () => void) => void;
   closeQuickAuth: () => void;
   triggerSuccess: () => void;
@@ -30,10 +32,11 @@ export function QuickAuthProvider({ children }: { children: React.ReactNode }) {
     open: false,
     returnTo: null,
     onSuccess: null,
+    sessionExpired: false,
   });
 
   const openQuickAuth = useCallback((returnTo?: QuickAuthReturnTarget, onSuccess?: () => void) => {
-    setState({ open: true, returnTo: returnTo ?? null, onSuccess: onSuccess ?? null });
+    setState({ open: true, returnTo: returnTo ?? null, onSuccess: onSuccess ?? null, sessionExpired: false });
   }, []);
 
   const closeQuickAuth = useCallback(() => {
@@ -43,25 +46,31 @@ export function QuickAuthProvider({ children }: { children: React.ReactNode }) {
   const triggerSuccess = useCallback(() => {
     setState((prev) => {
       prev.onSuccess?.();
-      return { open: false, returnTo: null, onSuccess: null };
+      return { open: false, returnTo: null, onSuccess: null, sessionExpired: false };
     });
   }, []);
 
-  // Écoute l'événement dispatché par useAuthGuard (ne peut pas appeler un hook directement)
+  // Écoute l'événement dispatché par useAuthGuard et par l'intercepteur Axios
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ returnTo?: string }>).detail;
-      openQuickAuth(detail?.returnTo);
+      const detail = (e as CustomEvent<{ returnTo?: string; sessionExpired?: boolean }>).detail;
+      setState({
+        open: true,
+        returnTo: detail?.returnTo ?? null,
+        onSuccess: null,
+        sessionExpired: detail?.sessionExpired ?? false,
+      });
     };
     window.addEventListener('quickauth:open', handler);
     return () => window.removeEventListener('quickauth:open', handler);
-  }, [openQuickAuth]);
+  }, []);
 
   return (
     <QuickAuthContext.Provider
       value={{
         isOpen: state.open,
         returnTo: state.returnTo,
+        sessionExpired: state.sessionExpired,
         openQuickAuth,
         closeQuickAuth,
         triggerSuccess,

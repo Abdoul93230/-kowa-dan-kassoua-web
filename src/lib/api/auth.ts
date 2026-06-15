@@ -126,14 +126,18 @@ const handleLogout = async () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
-  
-  // Déclencher l'événement pour mettre à jour le Header
+
+  if (typeof window === 'undefined') return;
+
+  // Notifier le Header que la session a changé
   window.dispatchEvent(new Event('storage'));
-  
-  // Rediriger vers la page de connexion avec un message
-  if (typeof window !== 'undefined') {
-    window.location.href = '/login?session_expired=true';
-  }
+
+  // Toujours ouvrir QuickAuth sans quitter la page
+  window.dispatchEvent(
+    new CustomEvent('quickauth:open', {
+      detail: { returnTo: window.location.pathname, sessionExpired: true },
+    })
+  );
 };
 
 // Types

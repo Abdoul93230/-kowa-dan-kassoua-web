@@ -105,15 +105,15 @@ export function ProductsCarousel() {
                     className={`absolute top-1.5 sm:top-2 right-1.5 sm:right-2 text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 sm:py-1 ${
                       item.type === 'service'
                         ? 'bg-blue-500 text-white hover:bg-blue-600'
-                        : 'bg-white text-gray-900 hover:bg-gray-100'
+                        : 'bg-[#ec5a13] text-white hover:bg-orange-600'
                     }`}
                   >
-                    {item.type === 'service' ? '🛠️ Service' : '📦 Produit'}
+                    {item.type === 'service' ? '🛠 Service' : '📦 Produit'}
                   </Badge>
                 </div>
 
                 <div className="p-3 sm:p-4">
-                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 mb-2 group-hover:text-[#ec5a13] transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]">
+                  <h3 className={`font-semibold text-sm sm:text-base text-gray-900 mb-2 transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem] ${item.type === 'service' ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
                     {item.title}
                   </h3>
 

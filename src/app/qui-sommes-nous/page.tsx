@@ -2,8 +2,10 @@
 
 import { ShoppingBag, Target, Eye, Heart, Users, TrendingUp, Shield, Award } from 'lucide-react';
 import Link from 'next/link';
+import { useQuickAuth } from '@/contexts/QuickAuthContext';
 
 export default function QuiSommesNousPage() {
+  const { openQuickAuth } = useQuickAuth();
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
       {/* Hero Section */}
@@ -162,12 +164,12 @@ export default function QuiSommesNousPage() {
             Commencez à vendre ou acheter sur notre plateforme.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/register" 
+            <button
+              onClick={() => openQuickAuth('/')}
               className="bg-white text-orange-500 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
             >
               Créer un compte
-            </Link>
+            </button>
             <Link 
               href="/comment-ca-marche" 
               className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/30 transition-colors border-2 border-white/30"

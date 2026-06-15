@@ -158,31 +158,26 @@ export function HeroProductCarousel() {
                 </div>
 
                 <div className="p-3 flex flex-col gap-2">
-                  {/* Icône + Titre */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm sm:text-base flex-shrink-0 w-4 sm:w-5">
-                      {item.type === 'service' ? '🛠️' : '📦'}
-                    </span>
-                    <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
-                      {item.title}
-                    </h3>
-                  </div>
+                  {/* Badge type */}
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full self-start ${item.type === 'service' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
+                    {item.type === 'service' ? '🛠 Service' : '📦 Produit'}
+                  </span>
+
+                  {/* Titre */}
+                  <h3 className={`font-semibold text-xs sm:text-sm md:text-base text-gray-900 transition-colors truncate ${item.type === 'service' ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
+                    {item.title}
+                  </h3>
 
                   {/* Localité + Distance */}
                   <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600">
-                    <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
-                      <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
-                    </div>
+                    <MapPin className={`h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 ${item.type === 'service' ? 'text-blue-500' : 'text-[#ec5a13]'}`} />
                     <span className="truncate">{getCityName(item.location)}</span>
                     <span className="text-gray-400">•</span>
                     <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
                   </div>
 
                   {/* Prix */}
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-4 sm:w-5 flex-shrink-0"></div>
-                    <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
-                  </div>
+                  <p className={`text-[10px] sm:text-xs md:text-sm font-semibold ${item.type === 'service' ? 'text-blue-600' : 'text-[#ec5a13]'}`}>{formatPriceFCFA(item.price)}</p>
                 </div>
               </Card>
             </Link>

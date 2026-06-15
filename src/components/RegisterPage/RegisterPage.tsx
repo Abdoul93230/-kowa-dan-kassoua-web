@@ -314,9 +314,7 @@ export default function RegisterPage() {
           </div>
           <span className="text-white font-black text-base">Kowa</span>
         </div>
-        <button onClick={() => router.push('/login')} className="text-xs font-semibold text-white/70 border border-white/20 px-3 py-1.5 rounded-lg">
-          Connexion
-        </button>
+        <div />
       </div>
       {/* Barres segmentées */}
       <div className="flex gap-1 mb-2">

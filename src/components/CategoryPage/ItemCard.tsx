@@ -24,7 +24,10 @@ import { getCityName, formatPriceFCFA } from '@/lib/utils';
 export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'list' }) {
   const router = useRouter();
   const isService = item.type === 'service';
-  
+  const accentColor = isService ? 'text-blue-600' : 'text-[#ec5a13]';
+  const hoverBorder = isService ? 'hover:border-blue-500' : 'hover:border-[#ec5a13]';
+  const groupHoverTitle = isService ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]';
+
   // Fonction pour calculer la distance (utilise un hash simple de l'ID)
   const getDistance = (itemId: number | string) => {
     const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
@@ -49,7 +52,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
     return (
       <Card 
         onClick={handleCardClick}
-        className="group overflow-hidden border-gray-200 hover:border-[#ec5a13] hover:shadow-xl transition-all duration-300 cursor-pointer bg-white p-0 gap-0"
+        className={`group overflow-hidden border-gray-200 ${hoverBorder} hover:shadow-xl transition-all duration-300 cursor-pointer bg-white p-0 gap-0`}
       >
         {/* Version mobile - style grille */}
         <div className="md:hidden">
@@ -82,20 +85,20 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
 
           {/* Content */}
           <div className="p-3 flex flex-col gap-2">
-            {/* Icône + Titre */}
+            {/* Badge type + Titre */}
             <div className="flex items-center gap-1.5">
-              <span className="text-sm sm:text-base flex-shrink-0 w-4 sm:w-5">
-                {isService ? '🛠️' : '📦'}
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
+                {isService ? '🛠 Service' : '📦 Produit'}
               </span>
-              <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
-                {item.title}
-              </h3>
             </div>
+            <h3 className={`font-semibold text-xs sm:text-sm md:text-base text-gray-900 ${groupHoverTitle} transition-colors truncate`}>
+              {item.title}
+            </h3>
 
             {/* Localité + Distance */}
             <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600">
               <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
-                <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
+                <MapPin className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${accentColor}`} />
               </div>
               <span className="truncate">{getCityName(item.location)}</span>
               <span className="text-gray-400">•</span>
@@ -104,8 +107,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
 
             {/* Prix */}
             <div className="flex items-center gap-1.5">
-              <div className="w-4 sm:w-5 flex-shrink-0"></div>
-              <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
+              <p className={`text-[10px] sm:text-xs md:text-sm font-semibold ${accentColor}`}>{formatPriceFCFA(item.price)}</p>
             </div>
           </div>
         </div>
@@ -142,20 +144,20 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
 
           {/* Content */}
           <div className="flex-1 flex flex-col p-5 gap-2">
-            {/* Icône + Titre */}
+            {/* Badge type + Titre */}
             <div className="flex items-center gap-2">
-              <span className="text-xl flex-shrink-0 w-6">
-                {isService ? '🛠️' : '📦'}
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
+                {isService ? '🛠 Service' : '📦 Produit'}
               </span>
-              <h3 className="font-semibold text-base sm:text-lg text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
-                {item.title}
-              </h3>
             </div>
+            <h3 className={`font-semibold text-base sm:text-lg text-gray-900 ${groupHoverTitle} transition-colors truncate`}>
+              {item.title}
+            </h3>
 
             {/* Localité + Distance */}
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-6 flex-shrink-0 flex items-center justify-center">
-                <MapPin className="h-4 w-4 text-[#ec5a13]" />
+                <MapPin className={`h-4 w-4 ${accentColor}`} />
               </div>
               <span className="truncate">{getCityName(item.location)}</span>
               <span className="text-gray-400">•</span>
@@ -164,8 +166,7 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
 
             {/* Prix */}
             <div className="flex items-center gap-2">
-              <div className="w-6 flex-shrink-0"></div>
-              <p className="text-base sm:text-lg font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
+              <p className={`text-base sm:text-lg font-semibold ${accentColor}`}>{formatPriceFCFA(item.price)}</p>
             </div>
 
             {/* Description (optionnelle) */}
@@ -224,31 +225,26 @@ export function ItemCard({ item, viewMode }: { item: Item; viewMode: 'grid' | 'l
 
       {/* Content */}
       <div className="p-3 flex flex-col gap-2">
-        {/* Icône + Titre */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm sm:text-base flex-shrink-0 w-4 sm:w-5">
-            {isService ? '🛠️' : '📦'}
-          </span>
-          <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
-            {item.title}
-          </h3>
-        </div>
+        {/* Badge type */}
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full self-start ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
+          {isService ? '🛠 Service' : '📦 Produit'}
+        </span>
+
+        {/* Titre */}
+        <h3 className={`font-semibold text-xs sm:text-sm md:text-base text-gray-900 ${groupHoverTitle} transition-colors truncate`}>
+          {item.title}
+        </h3>
 
         {/* Localité + Distance */}
         <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600">
-          <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
-            <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
-          </div>
+          <MapPin className={`h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 ${accentColor}`} />
           <span className="truncate">{getCityName(item.location)}</span>
           <span className="text-gray-400">•</span>
           <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
         </div>
 
         {/* Prix */}
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 sm:w-5 flex-shrink-0"></div>
-          <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
-        </div>
+        <p className={`text-[10px] sm:text-xs md:text-sm font-semibold ${accentColor}`}>{formatPriceFCFA(item.price)}</p>
       </div>
     </Card>
   );

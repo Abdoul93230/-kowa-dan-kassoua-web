@@ -97,10 +97,10 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     fetchProduct();
   }, [id]);
 
-  // Vérifier l'éligibilité à laisser un avis
+  // Vérifier l'éligibilité à laisser un avis (seulement si connecté)
   useEffect(() => {
     const checkEligibility = async () => {
-      if (!item?.id) {
+      if (!item?.id || !user) {
         setReviewEligible(false);
         return;
       }
@@ -118,7 +118,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
     };
 
     checkEligibility();
-  }, [item?.id]);
+  }, [item?.id, user]);
 
   useEffect(() => {
     if (!reviewEligible) return;
@@ -701,6 +701,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
 
             {/* ── Section Avis ───────────────────────────── */}
+            {(allReviews.length > 0 || reviewEligible || loadingReviews) && (
             <Card className="border-gray-200 shadow-sm overflow-hidden" ref={reviewFormRef}>
 
               {/* En-tête */}
@@ -905,6 +906,7 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
 
               </div>
             </Card>
+            )}
           </div>
 
           {/* Sidebar vendeur */}

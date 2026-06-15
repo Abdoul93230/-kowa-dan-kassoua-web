@@ -422,7 +422,7 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                       href={`/items/${item.id}`}
                       className="block group"
                     >
-                      <Card className="group overflow-hidden border-gray-200 hover:border-[#ec5a13] hover:shadow-xl transition-all duration-300 cursor-pointer bg-white p-0 gap-0">
+                      <Card className={`group overflow-hidden border-gray-200 ${isService ? 'hover:border-blue-500' : 'hover:border-[#ec5a13]'} hover:shadow-xl transition-all duration-300 cursor-pointer bg-white p-0 gap-0`}>
                         {/* Version mobile - style grille */}
                         <div className="md:hidden">
                           <div className="relative h-28 sm:h-32 md:h-36 lg:h-40 xl:h-44 overflow-hidden bg-gray-200">
@@ -438,28 +438,21 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                           </div>
 
                           <div className="p-3 flex flex-col gap-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm sm:text-base flex-shrink-0 w-4 sm:w-5">
-                                {isService ? '🛠️' : '📦'}
-                              </span>
-                              <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
-                                {item.title}
-                              </h3>
-                            </div>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full self-start ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
+                              {isService ? '🛠 Service' : '📦 Produit'}
+                            </span>
+                            <h3 className={`font-semibold text-xs sm:text-sm md:text-base text-gray-900 transition-colors truncate ${isService ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
+                              {item.title}
+                            </h3>
 
                             <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600">
-                              <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
-                                <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
-                              </div>
+                              <MapPin className={`h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 ${isService ? 'text-blue-500' : 'text-[#ec5a13]'}`} />
                               <span className="truncate">{item.location}</span>
                               <span className="text-gray-400">•</span>
                               <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
                             </div>
 
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-4 sm:w-5 flex-shrink-0"></div>
-                              <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
-                            </div>
+                            <p className={`text-[10px] sm:text-xs md:text-sm font-semibold ${isService ? 'text-blue-600' : 'text-[#ec5a13]'}`}>{formatPriceFCFA(item.price)}</p>
                           </div>
                         </div>
 
@@ -476,28 +469,21 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                           </div>
 
                           <div className="flex-1 flex flex-col p-5 gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl flex-shrink-0 w-6">
-                                {isService ? '🛠️' : '📦'}
-                              </span>
-                              <h3 className="font-semibold text-base sm:text-lg text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
-                                {item.title}
-                              </h3>
-                            </div>
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
+                              {isService ? '🛠 Service' : '📦 Produit'}
+                            </span>
+                            <h3 className={`font-semibold text-base sm:text-lg text-gray-900 transition-colors truncate ${isService ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
+                              {item.title}
+                            </h3>
 
                             <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <div className="w-6 flex-shrink-0 flex items-center justify-center">
-                                <MapPin className="h-4 w-4 text-[#ec5a13]" />
-                              </div>
+                              <MapPin className={`h-4 w-4 flex-shrink-0 ${isService ? 'text-blue-500' : 'text-[#ec5a13]'}`} />
                               <span className="truncate">{item.location}</span>
                               <span className="text-gray-400">•</span>
                               <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 flex-shrink-0"></div>
-                              <p className="text-base sm:text-lg font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
-                            </div>
+                            <p className={`text-base sm:text-lg font-semibold ${isService ? 'text-blue-600' : 'text-[#ec5a13]'}`}>{formatPriceFCFA(item.price)}</p>
 
                             {item.description && (
                               <div className="flex items-start gap-2">
@@ -542,31 +528,26 @@ export default function SellerProfilePage({ params }: { params: Promise<{ id: st
                       </div>
 
                       <div className="p-3 flex flex-col gap-2">
-                        {/* Icône + Titre */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm sm:text-base flex-shrink-0 w-4 sm:w-5">
-                            {item.type === 'service' ? '🛠️' : '📦'}
-                          </span>
-                          <h3 className="font-semibold text-xs sm:text-sm md:text-base text-gray-900 group-hover:text-[#ec5a13] transition-colors truncate flex-1">
-                            {item.title}
-                          </h3>
-                        </div>
+                        {/* Badge type */}
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full self-start ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
+                          {isService ? '🛠 Service' : '📦 Produit'}
+                        </span>
+
+                        {/* Titre */}
+                        <h3 className={`font-semibold text-xs sm:text-sm md:text-base text-gray-900 transition-colors truncate ${isService ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
+                          {item.title}
+                        </h3>
 
                         {/* Localité + Distance */}
                         <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600">
-                          <div className="w-4 sm:w-5 flex-shrink-0 flex items-center justify-center">
-                            <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#ec5a13]" />
-                          </div>
+                          <MapPin className={`h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 ${isService ? 'text-blue-500' : 'text-[#ec5a13]'}`} />
                           <span className="truncate">{item.location}</span>
                           <span className="text-gray-400">•</span>
                           <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
                         </div>
 
                         {/* Prix */}
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-4 sm:w-5 flex-shrink-0"></div>
-                          <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#ec5a13]">{formatPriceFCFA(item.price)}</p>
-                        </div>
+                        <p className={`text-[10px] sm:text-xs md:text-sm font-semibold ${isService ? 'text-blue-600' : 'text-[#ec5a13]'}`}>{formatPriceFCFA(item.price)}</p>
                       </div>
                     </Card>
                   </Link>
