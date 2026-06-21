@@ -1,6 +1,7 @@
 'use client';
 
-import { ShoppingBag, Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export function Footer() {
@@ -9,9 +10,14 @@ export function Footer() {
       <div className="container mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <ShoppingBag className="h-7 w-7 text-[#ec5a13]" />
-              <span className="text-xl font-bold text-white">MarketHub</span>
+            <div className="flex items-center mb-3">
+              <Image
+                src="/branding/flogo-removebg-preview.png"
+                alt="TakTak"
+                width={150}
+                height={56}
+                className="h-24 w-auto object-contain"
+              />
             </div>
             <p className="text-gray-400 mb-3 leading-relaxed text-sm">
               La plateforme qui connecte vendeurs et acheteurs dans tous les secteurs d'activité.

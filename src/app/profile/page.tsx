@@ -177,6 +177,14 @@ export default function ProfilePage() {
       const res = await changePassword({ currentPassword: currentPwd, newPassword: newPwd });
       if (res.success) {
         setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
+        // Mettre à jour le localStorage pour que la bannière disparaisse sans reconnexion
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          parsed.needsPasswordChange = false;
+          localStorage.setItem('user', JSON.stringify(parsed));
+          window.dispatchEvent(new Event('auth:changed'));
+        }
         setPwdMsg({ type: 'ok', text: 'Mot de passe mis à jour !' });
         setTimeout(() => { setPwdMsg(null); setPanel(null); }, 2000);
       }

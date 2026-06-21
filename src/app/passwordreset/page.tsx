@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Eye, EyeOff, Loader2, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
+import Image from 'next/image';
 import { forgotPassword, verifyResetCode, resetPassword } from '@/lib/api/auth';
 
 // ── Pays (même liste que QuickAuthModal) ─────────────────────────────────────
@@ -187,11 +188,14 @@ export default function PasswordResetPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ec5a13] to-[#d94f0f] flex items-center justify-center shadow">
-            <ShoppingBag className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-white font-extrabold text-base tracking-tight">MarketHub</span>
+        <div className="flex items-center">
+          <Image
+            src="/branding/flogo-removebg-preview.png"
+            alt="TakTak"
+            width={150}
+            height={56}
+            className="h-24 w-auto object-contain"
+          />
         </div>
         {/* Indicateur étapes */}
         <div className="flex items-center gap-1.5">

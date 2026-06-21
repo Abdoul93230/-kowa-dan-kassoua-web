@@ -8,8 +8,8 @@ import { Footer } from '../../../components/home/Footer';
 import { Breadcrumb } from '../../../components/CategoryPage/Breadcrumb';
 import { FiltersSidebar } from '../../../components/CategoryPage/FiltersSidebar';
 import { ItemCard } from '../../../components/CategoryPage/ItemCard';
-import { categories } from '@/lib/mockData';
 import { Item } from '@/types/index';
+import { getCategoryBySlug, Category as ApiCategory } from '@/lib/api/categories';
 import { 
   SlidersHorizontal, 
   Grid3x3,
@@ -59,6 +59,9 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
     promotedOnly: false
   });
   
+  // Catégorie chargée depuis l'API
+  const [currentCategory, setCurrentCategory] = useState<ApiCategory | null>(null);
+
   // États pour l'API
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,17 +180,24 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
   const productsCount = items.filter(i => i.type === 'product').length;
   const servicesCount = items.filter(i => i.type === 'service').length;
   
-  // Trouver le nom de la catégorie et sous-catégorie
-  const currentCategory = categories.find(cat => cat.slug === slug);
+  // Charger la catégorie depuis l'API
+  useEffect(() => {
+    if (slug && slug !== 'tous') {
+      getCategoryBySlug(slug)
+        .then(res => setCurrentCategory(res.data))
+        .catch(() => setCurrentCategory(null));
+    }
+  }, [slug]);
+
   const currentSubcategory = currentCategory?.subcategories?.find(
     sub => sub.slug === subcategoryParam
   );
-  
-  const categoryName = searchQuery 
-    ? `Résultats pour "${searchQuery}"` 
+
+  const categoryName = searchQuery
+    ? `Résultats pour "${searchQuery}"`
     : subcategoryParam && currentSubcategory
       ? `${currentCategory?.name} - ${currentSubcategory.name}`
-      : (slug === 'tous' ? 'Toutes les catégories' : (currentCategory?.name || 'Catégorie'));
+      : (slug === 'tous' ? 'Toutes les catégories' : (currentCategory?.name || slug));
 
   return (
     <div className="min-h-screen bg-gray-50">

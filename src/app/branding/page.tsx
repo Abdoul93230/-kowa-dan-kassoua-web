@@ -135,6 +135,24 @@ const LOGO_VARIANTS = [
     bg: "bg-white",
     desc: "Fichier vectoriel — tampons, gravure, sérigraphie, impression N&B",
   },
+  {
+    label: "Horizontal flat — fond orange (flogo)",
+    file: "/branding/flogo.png",
+    bg: "bg-[#FF6200]",
+    desc: "Version horizontale style simplifié, lettres colorées, sans contour noir",
+  },
+  {
+    label: "Icône girafes — outline blanc (f1logo)",
+    file: "/branding/f1logo.png",
+    bg: "bg-[#FF6200]",
+    desc: "Icône minimaliste — deux girafes en outline blanc sur fond orange",
+  },
+  {
+    label: "Horizontal — fond transparent (flogo-removebg)",
+    file: "/branding/flogo-removebg-preview.png",
+    bg: "bg-white",
+    desc: "Version active dans le header, footer et favicon de l'app",
+  },
 ];
 
 const MOCKUPS = [

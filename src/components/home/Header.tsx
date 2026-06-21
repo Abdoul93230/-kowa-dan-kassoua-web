@@ -1,6 +1,7 @@
 'use client';
 
-import { Menu, ShoppingBag, X, MessageSquare, Heart, User, LogOut, Package } from 'lucide-react';
+import { Menu, X, MessageSquare, Heart, User, LogOut, Package } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -197,12 +198,18 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4 md:gap-8">
-            <div 
-              className="flex items-center gap-2 cursor-pointer"
+            <div
+              className="flex items-center cursor-pointer"
               onClick={() => handleNavigation('/')}
             >
-              <ShoppingBag className="h-8 w-8 text-[#ec5a13]" />
-              <span className="text-2xl font-bold text-gray-900">MarketHub</span>
+              <Image
+                src="/branding/flogo-removebg-preview.png"
+                alt="TakTak"
+                width={150}
+                height={56}
+                className="h-24 w-auto object-contain mb-2"
+                priority
+              />
             </div>
 
             <Button

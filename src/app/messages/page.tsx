@@ -21,6 +21,7 @@ import {
   Loader2,
   WifiOff
 } from 'lucide-react';
+import Image from 'next/image';
 import { Conversation } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -235,9 +236,14 @@ export default function MessagesPage() {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour
               </Button>
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="h-6 w-6 text-[#ec5a13]" />
-                <span className="text-xl font-bold text-gray-900">MarketHub</span>
+              <div className="flex items-center">
+                <Image
+                  src="/branding/flogo-removebg-preview.png"
+                  alt="TakTak"
+                  width={150}
+                  height={56}
+                  className="h-24 w-auto object-contain mb-4"
+                />
               </div>
             </div>
             {/* Indicateur de connexion Socket */}
