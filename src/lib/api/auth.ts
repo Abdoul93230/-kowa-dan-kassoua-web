@@ -505,3 +505,19 @@ export const getSellerProfile = async (sellerId: string) => {
     );
   }
 };
+
+/**
+ * Supprimer définitivement le compte de l'utilisateur connecté
+ * (conformité Google Play / App Store)
+ */
+export const deleteAccount = async () => {
+  try {
+    const response = await api.delete('/auth/account');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message ||
+      'Erreur lors de la suppression du compte'
+    );
+  }
+};
