@@ -50,6 +50,14 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Requête partie SANS jeton (visiteur non connecté) : rien à rafraîchir ni à « expirer ».
+    // Avant, un simple 401 sur une route protégée affichait « Votre session a expiré »
+    // à des visiteurs qui ne s'étaient jamais connectés.
+    const sentWithToken = Boolean(originalRequest.headers?.Authorization);
+    if (!sentWithToken) {
+      return Promise.reject(error);
+    }
+
     // Si c'est une route de refresh ou d'authentification, ne pas retry
     if (
       originalRequest.url?.includes('/auth/refresh') ||
@@ -75,16 +83,17 @@ api.interceptors.response.use(
         .catch((err) => Promise.reject(err));
     }
 
-    originalRequest._retry = true;
-    isRefreshing = true;
-
     const refreshToken = localStorage.getItem('refreshToken');
 
+    // Vérifié AVANT de verrouiller : sinon isRefreshing restait à true pour toujours
+    // et toutes les requêtes suivantes attendaient indéfiniment
     if (!refreshToken) {
-      console.warn('⚠️ Pas de refresh token - Déconnexion');
-      await handleLogout();
+      await handleLogout(originalRequest);
       return Promise.reject(error);
     }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
 
     try {
       // Tenter de rafraîchir le token
@@ -95,8 +104,9 @@ api.interceptors.response.use(
 
       const { accessToken } = response.data.data;
 
-      // Sauvegarder le nouveau token
+      // Sauvegarder le nouveau token, puis prévenir useAuth (le socket temps réel se reconnecte avec)
       localStorage.setItem('accessToken', accessToken);
+      window.dispatchEvent(new Event('auth:changed'));
 
       // Mettre à jour le header de la requête originale
       if (originalRequest.headers) {
@@ -110,10 +120,18 @@ api.interceptors.response.use(
       console.log('✅ Token rafraîchi avec succès');
       return api(originalRequest);
     } catch (refreshError) {
-      // Si le refresh échoue, déconnecter l'utilisateur
-      console.error('❌ Échec du rafraîchissement du token');
       processQueue(refreshError, null);
-      await handleLogout();
+
+      // Déconnexion UNIQUEMENT si le serveur refuse la session (jeton expiré ou révoqué).
+      // Coupure réseau, serveur qui redémarre, erreur 500 : la session reste valide,
+      // l'utilisateur ne doit pas être déconnecté pour autant.
+      const status = (refreshError as AxiosError)?.response?.status;
+      if (status === 400 || status === 401 || status === 403) {
+        console.warn('Session expirée ou révoquée : déconnexion');
+        await handleLogout(originalRequest);
+      } else {
+        console.warn('Rafraîchissement impossible pour le moment (réseau/serveur), session conservée');
+      }
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
@@ -121,18 +139,32 @@ api.interceptors.response.use(
   }
 );
 
-// Fonction pour gérer la déconnexion automatique
-const handleLogout = async () => {
+// Pages réservées aux membres : sans session, elles n'ont rien à afficher
+const PROTECTED_PAGES = ['/publish', '/mes-annonces', '/favoris', '/profile', '/messages', '/delete-account'];
+const isProtectedPage = (path: string) =>
+  PROTECTED_PAGES.some((page) => path === page || path.startsWith(`${page}/`));
+
+// Fonction pour gérer la déconnexion automatique (session réellement expirée ou révoquée)
+const handleLogout = async (failedRequest?: InternalAxiosRequestConfig) => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
 
   if (typeof window === 'undefined') return;
 
-  // Notifier le Header que la session a changé
+  // Notifier le Header que la session a changé (il affiche alors « Se connecter »)
   window.dispatchEvent(new Event('storage'));
+  window.dispatchEvent(new Event('auth:changed'));
 
-  // Toujours ouvrir QuickAuth sans quitter la page
+  // La fenêtre de connexion ne s'ouvre que si l'utilisateur en a besoin :
+  // - sur une page réservée aux membres (messages, profil, publier…)
+  // - ou si c'est SON action qui a échoué (ajout aux favoris, envoi d'un message…)
+  // Un simple chargement en arrière-plan sur l'accueil ou une annonce ne doit pas
+  // interrompre la visite : l'utilisateur continue en visiteur.
+  const method = String(failedRequest?.method || 'get').toLowerCase();
+  const userAction = method !== 'get';
+  if (!isProtectedPage(window.location.pathname) && !userAction) return;
+
   window.dispatchEvent(
     new CustomEvent('quickauth:open', {
       detail: { returnTo: window.location.pathname, sessionExpired: true },
@@ -144,7 +176,7 @@ const handleLogout = async () => {
 export interface RegisterData {
   // Étape 1
   name: string;
-  phone: string;          // Format: "+227 12345678"
+  phone?: string;         // Format: "+227 12345678" — requis si pas d'email
   whatsapp?: string;      // Format: "+227 98765432"
   email?: string;
   password: string;
@@ -246,7 +278,8 @@ export const login = async (data: LoginData): Promise<AuthResponse> => {
 // ===============================================
 export const logout = async (): Promise<void> => {
   try {
-    await api.post('/auth/logout');
+    // Le jeton identifie la session de CE navigateur : seule celle-ci est fermée côté serveur
+    await api.post('/auth/logout', { refreshToken: localStorage.getItem('refreshToken') });
   } catch (error) {
     console.error('Erreur lors de la déconnexion:', error);
   } finally {
@@ -387,18 +420,26 @@ export const formatPhoneForAPI = (countryCode: string, number: string): string =
   return formatted;
 };
 
+/**
+ * Corps de requête pour un identifiant : { email } s'il contient "@", sinon { phone }
+ */
+export const identifierPayload = (identifier: string): { phone: string } | { email: string } => {
+  const value = identifier.trim();
+  return value.includes('@') ? { email: value.toLowerCase() } : { phone: value };
+};
+
 // ===============================================
 // 📱 OTP (INSCRIPTION UNIQUEMENT)
 // ===============================================
 /**
- * Envoyer un code OTP pour inscription
- * @param phone - Numéro de téléphone
+ * Envoyer un code OTP pour inscription (par SMS ou par email)
+ * @param identifier - Numéro de téléphone ("+227 90123456") ou email
  * @note Pour réinitialisation de mot de passe, utiliser forgotPassword()
  */
-export const sendOTP = async (phone: string) => {
+export const sendOTP = async (identifier: string) => {
   try {
-    console.log('📤 Envoi OTP avec téléphone:', phone);
-    const response = await api.post('/auth/send-otp', { phone });
+    console.log('📤 Envoi OTP à:', identifier);
+    const response = await api.post('/auth/send-otp', identifierPayload(identifier));
     console.log('✅ Réponse OTP:', response.data);
     return response.data;
   } catch (error: any) {
@@ -410,9 +451,9 @@ export const sendOTP = async (phone: string) => {
   }
 };
 
-export const verifyOTP = async (phone: string, code: string) => {
+export const verifyOTP = async (identifier: string, code: string) => {
   try {
-    const response = await api.post('/auth/verify-otp', { phone, code });
+    const response = await api.post('/auth/verify-otp', { ...identifierPayload(identifier), code });
     return response.data;
   } catch (error: any) {
     throw new Error(
@@ -424,22 +465,25 @@ export const verifyOTP = async (phone: string, code: string) => {
 
 // ── QuickAuth helpers ─────────────────────────────────────────────────────────
 
-export const checkPhone = async (phone: string): Promise<{ success: boolean; data: { exists: boolean } }> => {
+export const checkPhone = async (identifier: string): Promise<{ success: boolean; data: { exists: boolean } }> => {
   try {
-    const response = await api.post('/auth/check-phone', { phone });
+    const response = await api.post('/auth/check-phone', identifierPayload(identifier));
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Erreur de vérification');
   }
 };
 
-export const quickRegister = async (data: { name: string; phone: string }): Promise<{
+export const quickRegister = async (data: { name: string; identifier: string }): Promise<{
   success: boolean;
   data: { user: any; tokens: { accessToken: string; refreshToken: string } };
   devTempPassword?: string;
 }> => {
   try {
-    const response = await api.post('/auth/quick-register', data);
+    const response = await api.post('/auth/quick-register', {
+      name: data.name,
+      ...identifierPayload(data.identifier),
+    });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Erreur lors de la création du compte');

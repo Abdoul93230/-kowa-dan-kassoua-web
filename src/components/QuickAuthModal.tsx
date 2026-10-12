@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ArrowLeft, Eye, EyeOff, Loader2, Phone, Lock, User, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, ArrowLeft, Eye, EyeOff, Loader2, Phone, Lock, User, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuickAuth } from '@/contexts/QuickAuthContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +22,10 @@ const COUNTRIES = [
 
 const STEPS = { PHONE: 'phone', LOGIN: 'login', REGISTER: 'register', OTP: 'otp' } as const;
 type Step = typeof STEPS[keyof typeof STEPS];
+
+// Mode d'identification — le téléphone reste le mode par défaut
+type AuthMode = 'phone' | 'email';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const LABELS: Record<string, string> = {
   '': '', '1': 'Très déçu', '2': 'Déçu', '3': 'Correct', '4': 'Bien', '5': 'Excellent !'
@@ -49,9 +53,11 @@ export default function QuickAuthModal() {
   const { isOpen, returnTo, sessionExpired, closeQuickAuth, triggerSuccess } = useQuickAuth();
 
   const [step, setStep] = useState<Step>(STEPS.PHONE);
+  const [mode, setMode] = useState<AuthMode>('phone');
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [name, setName] = useState('');
@@ -70,13 +76,20 @@ export default function QuickAuthModal() {
   const rawDigits = onlyDigits(phone);
   const apiPhone = `${country.dialCode} ${rawDigits}`;
   const fmtPhone = `${country.dialCode} ${formatPhone(rawDigits, country.pattern)}`;
+  const isEmailMode = mode === 'email';
+  const normalizedEmail = email.trim().toLowerCase();
+  // identifier : valeur envoyée à l'API (téléphone format DB ou email)
+  const identifier = isEmailMode ? normalizedEmail : apiPhone;
+  const displayIdentifier = isEmailMode ? normalizedEmail : fmtPhone;
+  const identifierReady = isEmailMode ? EMAIL_REGEX.test(normalizedEmail) : rawDigits.length === country.length;
 
   // Reset au closing
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
         setStep(STEPS.PHONE);
-        setPhone(''); setPassword(''); setName('');
+        setMode('phone');
+        setPhone(''); setEmail(''); setPassword(''); setName('');
         setOtp(['', '', '', '', '', '']);
         setError(''); setShowPwd(false); setDevOtp(''); setDevTempPwd('');
       }, 300);
@@ -124,13 +137,15 @@ export default function QuickAuthModal() {
   // ── Étape 1 : vérifier le numéro ────────────────────────────────────────
 
   const handleCheckPhone = async () => {
-    if (rawDigits.length !== country.length) {
-      setError(`Numéro invalide — exactement ${country.length} chiffres attendus (ex: ${country.sample})`);
+    if (!identifierReady) {
+      setError(isEmailMode
+        ? 'Adresse email invalide (ex: nom@exemple.com)'
+        : `Numéro invalide — exactement ${country.length} chiffres attendus (ex: ${country.sample})`);
       return;
     }
     setLoading(true); setError('');
     try {
-      const res = await checkPhone(apiPhone);
+      const res = await checkPhone(identifier);
       if (res.data?.exists) setStep(STEPS.LOGIN);
       else setStep(STEPS.REGISTER);
     } catch (e: any) {
@@ -146,7 +161,9 @@ export default function QuickAuthModal() {
     if (!password) { setError('Mot de passe requis'); return; }
     setLoading(true); setError('');
     try {
-      await apiLogin({ loginType: 'phone', phone: apiPhone, password });
+      await apiLogin(isEmailMode
+        ? { loginType: 'email', email: normalizedEmail, password }
+        : { loginType: 'phone', phone: apiPhone, password });
       handleSuccess();
     } catch (e: any) {
       setError(e.message || 'Identifiants incorrects');
@@ -161,7 +178,7 @@ export default function QuickAuthModal() {
     if (name.trim().length < 2) { setError('Nom trop court (2 caractères min.)'); return; }
     setLoading(true); setError('');
     try {
-      const res = await sendOTP(apiPhone);
+      const res = await sendOTP(identifier);
       setDevOtp(res.devOTP || res.data?.devOTP || '');
       setOtpResendCooldown(60);
       setStep(STEPS.OTP);
@@ -179,8 +196,8 @@ export default function QuickAuthModal() {
     if (code.length < 6) { setError('Code incomplet'); return; }
     setLoading(true); setError('');
     try {
-      await verifyOTP(apiPhone, code);
-      const reg = await quickRegister({ name: name.trim(), phone: apiPhone });
+      await verifyOTP(identifier, code);
+      const reg = await quickRegister({ name: name.trim(), identifier });
       if (reg.success && reg.data?.tokens) {
         localStorage.setItem('accessToken', reg.data.tokens.accessToken);
         localStorage.setItem('refreshToken', reg.data.tokens.refreshToken);
@@ -225,7 +242,7 @@ export default function QuickAuthModal() {
     if (otpResendCooldown > 0) return;
     setLoading(true); setError('');
     try {
-      const res = await sendOTP(apiPhone);
+      const res = await sendOTP(identifier);
       setDevOtp(res.devOTP || res.data?.devOTP || '');
       setOtpResendCooldown(60);
       setOtp(['', '', '', '', '', '']);
@@ -248,11 +265,24 @@ export default function QuickAuthModal() {
   // ── Titres ───────────────────────────────────────────────────────────────
 
   const stepMeta = {
-    [STEPS.PHONE]:    { icon: '📱', title: 'Votre numéro',    sub: 'Connexion ou inscription en quelques secondes' },
+    [STEPS.PHONE]:    { icon: isEmailMode ? '✉️' : '📱', title: isEmailMode ? 'Votre email' : 'Votre numéro', sub: 'Connexion ou inscription en quelques secondes' },
     [STEPS.LOGIN]:    { icon: '🔐', title: 'Bon retour ! 👋', sub: 'Votre mot de passe pour continuer' },
     [STEPS.REGISTER]: { icon: '✨', title: 'Bienvenue !',     sub: "Créons votre profil express" },
-    [STEPS.OTP]:      { icon: '📬', title: 'Code de vérif.', sub: `Code envoyé au ${fmtPhone}` },
+    [STEPS.OTP]:      { icon: '📬', title: 'Code de vérif.', sub: `Code envoyé ${isEmailMode ? 'à' : 'au'} ${displayIdentifier}` },
   };
+
+  // Rappel de l'identifiant saisi (étapes login / register)
+  const identifierSummary = (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200">
+      {isEmailMode
+        ? <Mail className="h-4 w-4 text-gray-500" />
+        : <span className="text-lg">{country.flag}</span>}
+      <span className="text-sm font-medium text-gray-700 flex-1 truncate">{displayIdentifier}</span>
+      <button onClick={() => setStep(STEPS.PHONE)} className="text-xs text-[#ec5a13] font-semibold hover:underline">
+        Modifier
+      </button>
+    </div>
+  );
   const meta = stepMeta[step];
   const stepNum = { [STEPS.PHONE]: 1, [STEPS.LOGIN]: 2, [STEPS.REGISTER]: 2, [STEPS.OTP]: 3 }[step];
   const totalSteps = step === STEPS.LOGIN ? 2 : 3;
@@ -323,6 +353,48 @@ export default function QuickAuthModal() {
           {/* ── ÉTAPE PHONE */}
           {step === STEPS.PHONE && (
             <div className="space-y-4">
+              {/* Sélecteur téléphone / email */}
+              <div className="relative flex bg-gray-100 rounded-2xl p-1 border border-gray-200">
+                <div
+                  className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-xl shadow transition-all duration-200"
+                  style={{ left: isEmailMode ? 'calc(50%)' : '4px' }}
+                />
+                {(['phone', 'email'] as AuthMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => { setMode(m); setError(''); }}
+                    className={`flex-1 relative z-10 py-2.5 text-sm font-bold transition-colors rounded-xl ${
+                      mode === m ? 'text-[#ec5a13]' : 'text-gray-500'
+                    }`}
+                  >
+                    {m === 'phone' ? '📱 Téléphone' : '✉️ Email'}
+                  </button>
+                ))}
+              </div>
+
+              {isEmailMode ? (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Adresse email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 focus:border-[#ec5a13] focus:ring-2 focus:ring-[#ec5a13]/20 outline-none text-sm transition-all"
+                      placeholder="exemple@email.com"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCheckPhone()}
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1.5">Le code de vérification vous sera envoyé par email.</p>
+                </div>
+              ) : (
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   Numéro de téléphone
@@ -381,20 +453,15 @@ export default function QuickAuthModal() {
                   </p>
                 </div>
               </div>
+              )}
             </div>
           )}
 
           {/* ── ÉTAPE LOGIN */}
           {step === STEPS.LOGIN && (
             <div className="space-y-4">
-              {/* Numéro (lecture seule) */}
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200">
-                <span className="text-lg">{country.flag}</span>
-                <span className="text-sm font-medium text-gray-700 flex-1">{fmtPhone}</span>
-                <button onClick={() => setStep(STEPS.PHONE)} className="text-xs text-[#ec5a13] font-semibold hover:underline">
-                  Modifier
-                </button>
-              </div>
+              {/* Identifiant (lecture seule) */}
+              {identifierSummary}
               {/* Mot de passe */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
@@ -432,14 +499,8 @@ export default function QuickAuthModal() {
           {/* ── ÉTAPE REGISTER */}
           {step === STEPS.REGISTER && (
             <div className="space-y-4">
-              {/* Numéro (lecture seule) */}
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200">
-                <span className="text-lg">{country.flag}</span>
-                <span className="text-sm font-medium text-gray-700 flex-1">{fmtPhone}</span>
-                <button onClick={() => setStep(STEPS.PHONE)} className="text-xs text-[#ec5a13] font-semibold hover:underline">
-                  Modifier
-                </button>
-              </div>
+              {/* Identifiant (lecture seule) */}
+              {identifierSummary}
               {/* Nom */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
@@ -463,7 +524,7 @@ export default function QuickAuthModal() {
               <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-orange-50 border border-orange-100">
                 <span className="text-base flex-shrink-0">🔒</span>
                 <p className="text-xs text-orange-800 leading-relaxed">
-                  Un code de vérification sera envoyé à votre numéro. Un mot de passe temporaire sera généré — vous pourrez le modifier ensuite.
+                  Un code de vérification sera envoyé {isEmailMode ? 'à votre adresse email' : 'à votre numéro'}. Un mot de passe temporaire sera généré — vous pourrez le modifier ensuite.
                 </p>
               </div>
             </div>
@@ -580,7 +641,7 @@ export default function QuickAuthModal() {
               }
               disabled={
                 loading ||
-                (step === STEPS.PHONE && rawDigits.length !== country.length)
+                (step === STEPS.PHONE && !identifierReady)
               }
               className="w-full h-12 bg-[#ec5a13] hover:bg-[#d94f0f] text-white font-semibold rounded-xl shadow-sm disabled:opacity-50 text-[15px]"
             >
@@ -590,7 +651,7 @@ export default function QuickAuthModal() {
                 <>
                   {step === STEPS.PHONE && 'Continuer →'}
                   {step === STEPS.LOGIN && 'Se connecter →'}
-                  {step === STEPS.REGISTER && 'Vérifier mon numéro →'}
+                  {step === STEPS.REGISTER && (isEmailMode ? 'Vérifier mon email →' : 'Vérifier mon numéro →')}
                   {step === STEPS.OTP && 'Confirmer →'}
                 </>
               )}

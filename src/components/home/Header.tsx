@@ -37,131 +37,44 @@ export function Header() {
   
   const urlType = searchParams?.get('type');
   
-  // Ref pour éviter les appels multiples simultanés (debounce)
+  // ─── Compteur de messages non lus ───────────────────────────────────────────
+  // Chargé une fois (et à chaque reconnexion), puis tenu à jour par le serveur qui
+  // pousse le total dans « unreadCount:changed ». Repli : un rechargement par minute
+  // seulement si le temps réel est indisponible.
   const loadingRef = useRef(false);
-  const lastLoadRef = useRef(0);
-  
-  // Log de debug pour vérifier l'état d'authentification
-  useEffect(() => {
-    console.log('🔍 Header: État auth:', {
-      hasUser: !!user,
-      userId: user?.id,
-      hasToken: !!token,
-      isLoggedIn,
-      unreadCount,
-      isSocketConnected: isConnected
-    });
-  }, [user, token, isLoggedIn, unreadCount, isConnected]);
-  
-  // Charger le nombre de messages non lus depuis l'API (avec debounce)
   const loadUnreadCount = useCallback(async () => {
-    if (!isLoggedIn) {
-      setUnreadCount(0);
-      return;
-    }
-    
-    // Debounce: éviter les appels trop rapprochés (< 500ms pour permettre mises à jour rapides)
-    const now = Date.now();
-    if (now - lastLoadRef.current < 500) {
-      console.log('⏭️ Header: Appel ignoré (debounce 500ms)');
-      return;
-    }
-    
-    // Éviter les appels simultanés
-    if (loadingRef.current) {
-      console.log('⏭️ Header: Appel ignoré (déjà en cours)');
-      return;
-    }
-    
+    if (!isLoggedIn || loadingRef.current) return;
     loadingRef.current = true;
-    lastLoadRef.current = now;
-    
     try {
-      console.log('📊 Header: Chargement compteur messages...');
       const response = await getUnreadCount();
-      const count = response.data?.unreadCount || 0;
-      console.log('✅ Header: Compteur chargé:', count);
-      setUnreadCount(count);
-    } catch (err) {
-      console.error('❌ Erreur chargement compteur messages:', err);
-      setUnreadCount(0);
+      setUnreadCount(Number(response.data?.unreadCount || 0));
+    } catch {
+      // le compteur garde sa dernière valeur
     } finally {
       loadingRef.current = false;
     }
   }, [isLoggedIn]);
 
-  // Polling de secours (uniquement si WebSocket déconnecté)
   useEffect(() => {
     if (!isLoggedIn) {
       setUnreadCount(0);
-      return;
+      return undefined;
     }
-
-    // Charger immédiatement
     loadUnreadCount();
-    
-    // Si WebSocket connecté, pas besoin de polling (temps réel via Socket.IO)
-    if (isConnected) {
-      console.log('🔌 Header: WebSocket connecté, polling désactivé');
-      return;
-    }
-    
-    // WebSocket déconnecté → activer le polling de secours (toutes les 60 secondes)
-    console.log('🔄 Header: WebSocket déconnecté, activation du polling (60s)');
-    const interval = setInterval(() => {
-      console.log('⏰ Header: Polling de secours...');
-      loadUnreadCount();
-    }, 60000);
-    
-    return () => {
-      console.log('🛑 Header: Nettoyage du polling');
-      clearInterval(interval);
-    };
+    if (isConnected) return undefined;
+    const interval = setInterval(loadUnreadCount, 60000);
+    return () => clearInterval(interval);
   }, [isLoggedIn, isConnected, loadUnreadCount]);
 
-  // Écouter les événements Socket.IO pour mettre à jour le compteur en temps réel
   useEffect(() => {
-    if (!isConnected || !isLoggedIn) return;
-
-    console.log('📡 Header: Écoute des événements Socket.IO pour compteur messages');
-
-    // Nouveau message reçu → incrémenter localement (optimiste) + recharger
-    const handleNewMessage = (message: any) => {
-      const currentUserId = String(user?.id || '').trim();
-      const messageSenderId = String(message.senderId || '').trim();
-      
-      if (messageSenderId !== currentUserId) {
-        console.log('📨 Header: Nouveau message reçu, mise à jour du compteur');
-        // Mise à jour optimiste (instantanée)
-        setUnreadCount(prev => prev + 1);
-        // Puis synchroniser avec l'API (debounced)
-        setTimeout(() => loadUnreadCount(), 100);
-      }
+    if (!isConnected || !isLoggedIn) return undefined;
+    const handleUnreadChanged = (payload?: { unreadCount?: number }) => {
+      if (typeof payload?.unreadCount === 'number') setUnreadCount(payload.unreadCount);
+      else loadUnreadCount(); // ancien serveur sans total dans l'événement
     };
-
-    // Message marqué comme lu → recharger depuis l'API
-    const handleMessageRead = () => {
-      console.log('👁️ Header: Message marqué comme lu, rechargement du compteur');
-      // Recharger depuis l'API pour avoir le vrai compte
-      setTimeout(() => loadUnreadCount(), 100);
-    };
-
-    // Conversation mise à jour → recharger (utile quand on envoie un message dans une conversation)
-    const handleConversationUpdated = () => {
-      console.log('🔄 Header: Conversation mise à jour, rechargement du compteur');
-      setTimeout(() => loadUnreadCount(), 100);
-    };
-
-    on('message:new', handleNewMessage);
-    on('message:read', handleMessageRead);
-    on('conversation:updated', handleConversationUpdated);
-
-    return () => {
-      off('message:new', handleNewMessage);
-      off('message:read', handleMessageRead);
-      off('conversation:updated', handleConversationUpdated);
-    };
-  }, [isConnected, isLoggedIn, user, loadUnreadCount, on, off]);
+    on('unreadCount:changed', handleUnreadChanged);
+    return () => off('unreadCount:changed', handleUnreadChanged);
+  }, [isConnected, isLoggedIn, loadUnreadCount, on, off]);
 
   const handleNavigation = (path: string) => {
     router.push(path);
