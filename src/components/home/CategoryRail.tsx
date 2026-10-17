@@ -2,19 +2,12 @@
 
 // Catégories — tuiles icône sur une ligne défilante (comme l'app mobile)
 import Link from 'next/link';
-import {
-  Baby, Book, Briefcase, Car, Dumbbell, Gamepad2, HardHat, Home, LayoutGrid, Laptop, MoreHorizontal,
-  Package, Palette, PawPrint, Shirt, Smartphone, UtensilsCrossed, Wrench, type LucideIcon,
-} from 'lucide-react';
+import { LayoutGrid, type LucideIcon } from 'lucide-react';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import type { HomeCategory } from '@/lib/api/home';
 import { formatCompact } from '@/lib/format';
 
-const ICONS: Record<string, LucideIcon> = {
-  Smartphone, UtensilsCrossed, Home, Car, Shirt, Wrench, Laptop, Dumbbell, Baby, PawPrint,
-  Book, Palette, Briefcase, Gamepad2, HardHat, Package, MoreHorizontal,
-};
-
-function Tile({ href, label, count, Icon, highlight = false }: { href: string; label: string; count?: number; Icon: LucideIcon; highlight?: boolean }) {
+function Tile({ href, label, count, Icon, icon, highlight = false }: { href: string; label: string; count?: number; Icon?: LucideIcon; icon?: React.ReactNode; highlight?: boolean }) {
   return (
     <Link href={href} prefetch={false} className="group flex w-[84px] flex-col items-center gap-2 text-center focus-visible:outline-none">
       <span
@@ -24,7 +17,7 @@ function Tile({ href, label, count, Icon, highlight = false }: { href: string; l
             : 'relative flex h-16 w-16 items-center justify-center rounded-[22px] border border-orange-100 bg-orange-50 text-[#ec5a13] transition group-hover:-translate-y-0.5 group-hover:border-orange-200 group-hover:bg-orange-100 group-focus-visible:ring-2 group-focus-visible:ring-[#ec5a13] group-focus-visible:ring-offset-2'
         }
       >
-        <Icon className="h-6 w-6" />
+        {icon || (Icon ? <Icon className="h-6 w-6" /> : null)}
         {count ? (
           <span className="absolute -right-1.5 -top-1.5 min-w-[22px] rounded-full bg-gray-900 px-1.5 py-0.5 text-[10px] font-extrabold text-white">
             {formatCompact(count)}
@@ -47,7 +40,7 @@ export function CategoryRail({ categories }: { categories: HomeCategory[] }) {
             href={`/categories/${cat.slug}`}
             label={cat.name}
             count={cat.totalCount ?? (cat.productsCount || 0) + (cat.servicesCount || 0)}
-            Icon={ICONS[cat.icon || ''] || Package}
+            icon={<CategoryIcon item={cat} size={40} />}
           />
         </div>
       ))}

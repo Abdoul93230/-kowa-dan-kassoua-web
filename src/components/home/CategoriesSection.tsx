@@ -1,48 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Smartphone,
-  UtensilsCrossed,
-  Home,
-  Car,
-  Shirt,
-  Wrench,
-  Laptop,
-  Dumbbell,
-  Baby,
-  PawPrint,
-  Book,
-  Palette,
-  Briefcase,
-  Gamepad2,
-  HardHat,
-  Package
-} from 'lucide-react';
+
 import { Card } from '@/components/ui/card';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { getCategories, Category } from '@/lib/api/categories';
 
-// Map des icônes Lucide par nom
-const iconMap: Record<string, any> = {
-  Smartphone,
-  UtensilsCrossed,
-  Home,
-  Car,
-  Shirt,
-  Wrench,
-  Laptop,
-  Dumbbell,
-  Baby,
-  PawPrint,
-  Book,
-  Palette,
-  Briefcase,
-  Gamepad2,
-  HardHat,
-  Package
-};
 
 export function CategoriesSection() {
   const router = useRouter();
@@ -102,14 +67,13 @@ export function CategoriesSection() {
 
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 max-w-5xl mx-auto">
           {categories.map((category) => {
-            const IconComponent = iconMap[category.icon || 'Package'] || Package;
             
             return (
               <Link href={`/categories/${category.slug}`} key={category._id}>
                 <Card className="group cursor-pointer border-gray-200 hover:border-[#ec5a13] card-leboncoin">
                   <div className="p-2 flex flex-col items-center text-center">
-                    <div className={`w-8 h-8 rounded-full ${category.color || 'bg-gray-100 text-gray-600'} flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform duration-300`}>
-                      <IconComponent className="h-4 w-4" />
+                    <div className="w-11 h-11 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform duration-300">
+                      <CategoryIcon item={category} size={40} />
                     </div>
                     <h3 className="text-xs font-semibold text-gray-900 mb-0.5 group-hover:text-[#ec5a13] transition-colors">
                       {category.name}

@@ -5,46 +5,14 @@ import { Header } from '../../components/home/Header';
 import { Footer } from '../../components/home/Footer';
 import { getCategories, Category } from '@/lib/api/categories';
 import { Card } from '@/components/ui/card';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Smartphone, 
-  UtensilsCrossed, 
-  Home, 
-  Car, 
-  Shirt, 
-  Briefcase, 
-  BookOpen, 
-  Heart,
-  Search,
-  ChevronRight,
-  Grid3x3,
-  Package,
-  Wrench,
-  Laptop,
-  Gamepad2,
-  HardHat,
-  Loader2
-} from 'lucide-react';
+
+import { Search, ChevronRight, Wrench, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-// Map des icônes par nom
-const iconMap: Record<string, any> = {
-  Smartphone,
-  UtensilsCrossed,
-  Home,
-  Car,
-  Shirt,
-  Briefcase,
-  BookOpen,
-  Heart,
-  Wrench,
-  Laptop,
-  Gamepad2,
-  HardHat,
-  Package
-};
 
 export default function CategoriesListPage() {
   const router = useRouter();
@@ -162,7 +130,6 @@ export default function CategoriesListPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {filteredCategories.map((category) => {
-              const IconComponent = iconMap[category.icon || 'Package'] || Package;
               
               return (
                 <Card 
@@ -177,7 +144,7 @@ export default function CategoriesListPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4 flex-1">
                         <div className="bg-white p-3 rounded-lg shadow-sm">
-                          <IconComponent className="h-8 w-8 text-[#ec5a13]" />
+                          <CategoryIcon item={category} size={44} />
                         </div>
                         <div className="flex-1">
                           <h2 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-[#ec5a13] transition-colors">
@@ -209,6 +176,7 @@ export default function CategoriesListPage() {
                             onClick={() => handleSubcategoryClick(category.slug, sub.slug)}
                             className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-[#ec5a13] hover:bg-[#ffe9de] transition-all duration-200 text-left group/sub"
                           >
+                            <CategoryIcon item={sub} parentSlug={category.slug} size={34} className="mr-3 flex-shrink-0" />
                             <div className="flex-1">
                               <div className="text-sm font-medium text-gray-900 group-hover/sub:text-[#ec5a13]">
                                 {sub.name}

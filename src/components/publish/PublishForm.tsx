@@ -46,7 +46,8 @@ import {
   Eye,
   Loader2,
 } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { CategoryIcon } from '@/components/CategoryIcon';
+import { filterCategoriesForType, subcategoryAllows } from '@/lib/categoryTypes';
 import { Switch } from '@/components/ui/switch';
 
 // Liste des pays avec leurs indicatifs
@@ -100,31 +101,6 @@ interface FormData {
   promoted?: boolean;
   featured?: boolean;
 }
-
-const toPascalCase = (value: string) =>
-  value
-    .trim()
-    .split(/[\s_-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join('');
-
-const resolveLucideIcon = (iconName?: string, fallback = 'Package') => {
-  const fallbackIcon = (LucideIcons[fallback as keyof typeof LucideIcons] || LucideIcons.Package) as any;
-  if (!iconName || !iconName.trim()) return fallbackIcon;
-
-  const raw = iconName.trim();
-  const normalized = toPascalCase(raw);
-  const withoutIconSuffix = normalized.replace(/Icon$/i, '');
-
-  const candidates = [raw, normalized, withoutIconSuffix];
-  for (const name of candidates) {
-    const found = LucideIcons[name as keyof typeof LucideIcons] as any;
-    if (found) return found;
-  }
-
-  return fallbackIcon;
-};
 
 const normalizeCategoryValue = (value: unknown): string => {
   if (!value) return '';
@@ -283,6 +259,23 @@ export function PublishForm() {
 
     loadCategories();
   }, []);
+
+  // Catégories proposées selon le type (produit / service)
+  const typeCategories = filterCategoriesForType(categories, formData.type);
+
+  // Changement produit ⇄ service : on retire une catégorie ou sous-catégorie qui ne convient plus
+  useEffect(() => {
+    if (!categories.length || !formData.category) return;
+    const raw = categories.find((c) => c._id === formData.category || c.slug === formData.category);
+    if (!raw) return;
+    if (!typeCategories.some((c) => c._id === raw._id)) {
+      setFormData((p) => ({ ...p, category: '', subcategory: '' }));
+      return;
+    }
+    const sub = raw.subcategories?.find((x) => x.slug === formData.subcategory || x._id === formData.subcategory);
+    if (sub && !subcategoryAllows(sub, raw.slug, formData.type)) setFormData((p) => ({ ...p, subcategory: '' }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.type, categories]);
 
   // Trouver la catégorie et sous-catégorie sélectionnées
   const selectedCategory = categories.find((cat) => {
@@ -925,7 +918,7 @@ export function PublishForm() {
               ) : (
                 <div className="overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   <div className="flex gap-2.5 pr-2 snap-x snap-mandatory">
-                  {categories.map((category) => (
+                  {typeCategories.map((category) => (
                     <button
                       key={category._id}
                       type="button"
@@ -943,10 +936,7 @@ export function PublishForm() {
                             : 'bg-gray-100 text-gray-700'
                         }`}
                       >
-                      {(() => {
-                        const Icon = resolveLucideIcon(category.icon, 'Package');
-                        return <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />;
-                      })()}
+                      <CategoryIcon item={category} size={26} />
                       </span>
                       <span className={`text-xs md:text-sm font-medium text-center leading-tight ${
                         isCategorySelected(category)
@@ -964,14 +954,14 @@ export function PublishForm() {
             </div>
 
             {/* Sous-catégories - Affichage dynamique si une catégorie est sélectionnée */}
-            {selectedCategory && selectedCategory.subcategories.length > 0 && (
+            {selectedCategory && selectedCategory.subcategories.some((sub) => subcategoryAllows(sub, selectedCategory.slug, formData.type)) && (
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-3 block">
                   Type de {selectedCategory.name.toLowerCase()}
                 </Label>
                 
                 <div className="flex flex-wrap gap-2">
-                  {selectedCategory.subcategories.map((subcategory) => (
+                  {selectedCategory.subcategories.filter((sub) => subcategoryAllows(sub, selectedCategory.slug, formData.type)).map((subcategory) => (
                     <button
                       key={subcategory._id}
                       type="button"
@@ -982,10 +972,7 @@ export function PublishForm() {
                           : 'border-gray-200 bg-white hover:border-[#ec5a13]'
                       }`}
                     >
-                      {(() => {
-                        const Icon = resolveLucideIcon(subcategory.icon, 'FileText');
-                        return <Icon className="h-4 w-4" strokeWidth={2.2} />;
-                      })()}
+                      <CategoryIcon item={subcategory} parentSlug={selectedCategory.slug} size={20} />
                       <span className={`text-xs md:text-sm font-semibold leading-tight ${
                         formData.subcategory === subcategory.slug
                           ? 'text-[#ec5a13]'
