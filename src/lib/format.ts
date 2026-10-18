@@ -6,11 +6,13 @@ const groupThousands = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g,
 export const formatPrice = (price: unknown): string => {
   const digits = String(price ?? '').replace(/[^\d]/g, '');
   const n = Number(digits);
-  if (!digits || !Number.isFinite(n) || n <= 0) return 'Prix à discuter';
+  if (!digits || !Number.isFinite(n) || n < 0) return 'Prix à discuter';
+  if (n === 0) return 'Gratuit'; // annonce publiée à 0 F
   return `${groupThousands(n)} FCFA`;
 };
 
-export const hasPrice = (price: unknown) => formatPrice(price) !== 'Prix à discuter';
+// Un vrai montant (ni « Gratuit » ni « Prix à discuter »)
+export const hasPrice = (price: unknown) => Number(String(price ?? '').replace(/[^\d]/g, '')) > 0;
 
 export const formatCompact = (num: unknown): string => {
   const n = Number(num) || 0;

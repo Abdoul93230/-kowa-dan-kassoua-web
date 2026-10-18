@@ -18,6 +18,8 @@ export interface User {
   rating?: number;
   totalSales?: number;
   memberSince?: string;
+  role?: 'buyer' | 'seller' | 'admin';
+  needsPasswordChange?: boolean;
 }
 
 /**

@@ -137,6 +137,9 @@ export function formatPriceFCFA(price: string | number | null | undefined): stri
   const numericOnly = valuePart.replace(/[^\d]/g, '');
   if (!numericOnly) return raw;
 
+  // Annonce publiée à 0 F
+  if (Number.parseInt(numericOnly, 10) === 0) return 'Gratuit';
+
   const formattedNumber = Number.parseInt(numericOnly, 10).toLocaleString('fr-FR');
   const slashIndex = valuePart.indexOf('/');
 

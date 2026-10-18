@@ -389,7 +389,6 @@ export default function QuickAuthModal() {
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setError(''); }}
                       onKeyDown={(e) => e.key === 'Enter' && handleCheckPhone()}
-                      autoFocus
                     />
                   </div>
                   <p className="text-xs text-gray-400 mt-1.5">Le code de vérification vous sera envoyé par email.</p>
@@ -443,7 +442,6 @@ export default function QuickAuthModal() {
                       setError('');
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && handleCheckPhone()}
-                    autoFocus
                   />
                 </div>
                 <div className="flex items-center justify-between mt-1.5">
@@ -476,7 +474,6 @@ export default function QuickAuthModal() {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                    autoFocus
                   />
                   <button
                     type="button"
@@ -516,7 +513,6 @@ export default function QuickAuthModal() {
                     onChange={(e) => { setName(e.target.value); setError(''); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendOTP()}
                     autoCapitalize="words"
-                    autoFocus
                   />
                 </div>
               </div>
@@ -586,7 +582,6 @@ export default function QuickAuthModal() {
                             ? 'border-[#ec5a13] bg-orange-50 text-[#ec5a13]'
                             : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-[#ec5a13] focus:bg-white'
                         }`}
-                        autoFocus={i === 0}
                       />
                     ))}
                   </div>

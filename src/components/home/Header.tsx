@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, X, MessageSquare, Heart, User, LogOut, Package } from 'lucide-react';
+import { Menu, X, MessageSquare, Heart, User, LogOut, Package, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -253,6 +253,12 @@ export function Header() {
                     <User className="mr-2 h-4 w-4" />
                     Mon profil
                   </DropdownMenuItem>
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem onClick={() => handleNavigation('/admin')}>
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Administration
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={handleLogout}

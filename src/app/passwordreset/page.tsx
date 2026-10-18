@@ -290,7 +290,6 @@ export default function PasswordResetPage() {
                       value={rawFormatted}
                       onChange={e => { setPhoneDigits(onlyDigits(e.target.value).slice(0, country.length)); setError(''); }}
                       onKeyDown={e => e.key === 'Enter' && handleSend()}
-                      autoFocus
                     />
                   </div>
                   <div className="flex items-center justify-between mt-1.5">
@@ -312,7 +311,6 @@ export default function PasswordResetPage() {
                     value={email}
                     onChange={e => { setEmail(e.target.value); setError(''); }}
                     onKeyDown={e => e.key === 'Enter' && handleSend()}
-                    autoFocus
                   />
                 </div>
               )}
@@ -371,7 +369,6 @@ export default function PasswordResetPage() {
                           ? 'border-[#ec5a13] bg-orange-50 text-[#ec5a13]'
                           : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-[#ec5a13] focus:bg-white'
                       }`}
-                      autoFocus={i === 0}
                     />
                   ))}
                 </div>
@@ -411,7 +408,6 @@ export default function PasswordResetPage() {
                     placeholder="••••••••"
                     value={newPassword}
                     onChange={e => { setNewPassword(e.target.value); setError(''); }}
-                    autoFocus
                   />
                   <button
                     type="button"

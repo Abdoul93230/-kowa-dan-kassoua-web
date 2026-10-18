@@ -372,7 +372,6 @@ export default function RegisterPage() {
           {/* Input selon step */}
           {step.id === 'name' && (
             <input
-              autoFocus
               className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
               placeholder="Ex: Amadou Diallo"
               value={form1.name}
@@ -425,7 +424,6 @@ export default function RegisterPage() {
                 <span className="font-bold text-gray-700 text-sm">{country.dialCode}</span>
               </div>
               <input
-                autoFocus
                 inputMode="numeric"
                 className="flex-1 text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
                 placeholder={step.id === 'phone' ? country.sample : `${country.sample} (optionnel)`}
@@ -448,7 +446,6 @@ export default function RegisterPage() {
 
           {step.id === 'email' && (
             <input
-              autoFocus
               type="email"
               className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
               placeholder="exemple@email.com (optionnel)"
@@ -462,7 +459,6 @@ export default function RegisterPage() {
             <div>
               <div className="relative">
                 <input
-                  autoFocus
                   type={showPwd ? 'text' : 'password'}
                   className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 pr-10 outline-none placeholder:font-normal placeholder:text-gray-300"
                   placeholder="Minimum 6 caractères"
@@ -505,7 +501,6 @@ export default function RegisterPage() {
             <div>
               <div className="relative">
                 <input
-                  autoFocus
                   type={showCPwd ? 'text' : 'password'}
                   className={`w-full text-xl font-bold border-b-[3px] bg-transparent pb-3 pr-10 outline-none placeholder:font-normal placeholder:text-gray-300 ${
                     form1.confirmPassword && form1.confirmPassword !== form1.password ? 'border-red-400 text-red-600' :
@@ -663,7 +658,6 @@ export default function RegisterPage() {
         {/* businessName */}
         {step2.id === 'businessName' && (
           <input
-            autoFocus
             className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
             placeholder="Ex: Boutique Amadou"
             value={businessName}
@@ -676,7 +670,6 @@ export default function RegisterPage() {
         {step2.id === 'description' && (
           <div>
             <textarea
-              autoFocus
               rows={4}
               className="w-full text-base font-semibold text-gray-900 rounded-2xl border-2 border-gray-200 focus:border-[#ec5a13] bg-white px-4 py-3 outline-none resize-none transition-all"
               placeholder="Décrivez votre activité, vos produits ou services…"
@@ -709,7 +702,6 @@ export default function RegisterPage() {
             ) : (
               <div>
                 <input
-                  autoFocus
                   className="w-full text-xl font-bold text-gray-900 border-b-[3px] border-[#ec5a13] bg-transparent pb-3 outline-none placeholder:font-normal placeholder:text-gray-300"
                   placeholder="Entrez votre localisation"
                   value={location}

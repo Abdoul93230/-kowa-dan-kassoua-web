@@ -50,6 +50,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
+import { ReportButton } from '@/components/ReportButton';
 import { formatRelativeDate, formatPriceFCFA } from '@/lib/utils';
 
 export default function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -1101,6 +1102,14 @@ export default function ItemDetailPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
               </Card>
+
+              {!isOwnProduct && (
+                <ReportButton
+                  productId={String(id)}
+                  isAuthenticated={Boolean(user && token)}
+                  onRequireAuth={() => openQuickAuth(`/items/${id}`)}
+                />
+              )}
             </div>
           </div>
         </div>

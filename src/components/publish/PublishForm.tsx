@@ -39,6 +39,7 @@ import {
   Info,
   AlertCircle,
   Plus,
+  ImagePlus,
   Globe,
   Edit2,
   Save,
@@ -47,6 +48,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { CategoryIcon } from '@/components/CategoryIcon';
+import { formatPriceFCFA } from '@/lib/utils';
 import { filterCategoriesForType, subcategoryAllows } from '@/lib/categoryTypes';
 import { Switch } from '@/components/ui/switch';
 
@@ -208,7 +210,8 @@ export function PublishForm() {
           setFormData({
             type: item.type,
             title: item.title,
-            category: normalizeCategoryValue(item.category),
+            // L'identifiant d'abord : item.category contient le NOM de la catégorie
+            category: (item as { categoryId?: string }).categoryId || normalizeCategoryValue(item.category),
             subcategory: normalizeSubcategoryValue(item.subcategory),
             price: item.price.replace(/[^\d]/g, ''),
             description: item.description,
@@ -263,19 +266,20 @@ export function PublishForm() {
   // Catégories proposées selon le type (produit / service)
   const typeCategories = filterCategoriesForType(categories, formData.type);
 
-  // Changement produit ⇄ service : on retire une catégorie ou sous-catégorie qui ne convient plus
-  useEffect(() => {
-    if (!categories.length || !formData.category) return;
-    const raw = categories.find((c) => c._id === formData.category || c.slug === formData.category);
-    if (!raw) return;
-    if (!typeCategories.some((c) => c._id === raw._id)) {
-      setFormData((p) => ({ ...p, category: '', subcategory: '' }));
-      return;
-    }
-    const sub = raw.subcategories?.find((x) => x.slug === formData.subcategory || x._id === formData.subcategory);
-    if (sub && !subcategoryAllows(sub, raw.slug, formData.type)) setFormData((p) => ({ ...p, subcategory: '' }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.type, categories]);
+  // Changement produit ⇄ service par l'utilisateur : on retire une catégorie ou
+  // sous-catégorie qui ne convient plus au nouveau type. (Jamais au chargement
+  // d'une annonce à modifier : sa catégorie doit être conservée.)
+  const changeType = (type: 'product' | 'service') => {
+    setFormData((p) => {
+      if (p.type === type) return p;
+      const raw = categories.find((c) => c._id === p.category || c.slug === p.category);
+      if (!raw) return { ...p, type };
+      if (!filterCategoriesForType([raw], type).length) return { ...p, type, category: '', subcategory: '' };
+      const sub = raw.subcategories?.find((x) => x.slug === p.subcategory || x._id === p.subcategory);
+      if (sub && !subcategoryAllows(sub, raw.slug, type)) return { ...p, type, subcategory: '' };
+      return { ...p, type };
+    });
+  };
 
   // Trouver la catégorie et sous-catégorie sélectionnées
   const selectedCategory = categories.find((cat) => {
@@ -336,10 +340,7 @@ export function PublishForm() {
       if (formData.title.length < 5) newErrors.title = 'Le titre doit contenir au moins 5 caractères';
       if (!formData.category) newErrors.category = 'Veuillez sélectionner une catégorie';
     } else if (step === 2) {
-      if (!formData.price.trim()) newErrors.price = 'Le prix est requis';
-      if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
-        newErrors.price = 'Veuillez entrer un prix valide';
-      }
+      // Prix facultatif : vide = 0 F
       if (imagesPreviews.length === 0) {
         newErrors.images = 'Ajoutez au moins une image';
       }
@@ -599,7 +600,7 @@ export function PublishForm() {
           category: formData.category,
           subcategory: formData.subcategory || '',
           type: formData.type,
-          price: formData.price,
+          price: formData.price || "0",
           location: formData.location || 'Non spécifié',
           condition: formData.condition as 'new' | 'used' | 'refurbished' | undefined,
           newImages: newImagesBase64, // Nouvelles images à ajouter
@@ -633,7 +634,7 @@ export function PublishForm() {
           category: formData.category,
           subcategory: formData.subcategory || '',
           type: formData.type,
-          price: formData.price,
+          price: formData.price || "0",
           location: formData.location || 'Non spécifié',
           condition: formData.condition as 'new' | 'used' | 'refurbished' | undefined,
           images: imagesBase64, // Toutes les images
@@ -716,7 +717,7 @@ export function PublishForm() {
   };
 
   const isStep1Valid = formData.type && formData.title && formData.category;
-  const isStep2Valid = formData.price && imagesPreviews.length > 0;
+  const isStep2Valid = imagesPreviews.length > 0;
   const isStep3Valid = formData.sellerName && formData.sellerPhone.number;
 
   return (
@@ -812,7 +813,7 @@ export function PublishForm() {
               <div className="flex border-b border-gray-200">
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, type: 'product' })}
+                  onClick={() => changeType('product')}
                   className={`flex-1 items-center justify-center flex gap-1 md:gap-2 px-3 md:px-6 py-3 font-medium transition-all relative text-sm md:text-base ${
                     formData.type === 'product'
                       ? 'text-[#ec5a13]'
@@ -827,7 +828,7 @@ export function PublishForm() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, type: 'service' })}
+                  onClick={() => changeType('service')}
                   className={`flex-1 items-center justify-center flex gap-1 md:gap-2 px-3 md:px-6 py-3 font-medium transition-all relative text-sm md:text-base ${
                     formData.type === 'service'
                       ? 'text-[#ec5a13]'
@@ -1010,12 +1011,12 @@ export function PublishForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="price" className="text-sm font-medium text-gray-700 mb-2 block">
-                  Prix en FCFA *
+                  Prix en FCFA <span className="font-normal text-gray-500">(facultatif)</span>
                 </Label>
                 <Input
                   id="price"
                   type="text"
-                  placeholder="850 000"
+                  placeholder="Laisser vide pour 0 F"
                   value={formData.price ? formData.price.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : ''}
                   onChange={(e) => {
                     // Retirer tous les caractères non numériques
@@ -1114,7 +1115,7 @@ export function PublishForm() {
                       onChange={handleImageUpload}
                       className="hidden"
                     />
-                    <Plus className="h-8 w-8 text-gray-400 group-hover:text-[#ec5a13] transition-colors" />
+                    <ImagePlus className="h-8 w-8 text-gray-400 group-hover:text-[#ec5a13] transition-colors" />
                     <span className="text-xs text-gray-500 mt-1 group-hover:text-[#ec5a13] text-center px-1">
                       Ajouter
                     </span>
@@ -1555,7 +1556,7 @@ export function PublishForm() {
                   <div className="flex items-center gap-1.5">
                     <div className="w-5 flex-shrink-0"></div>
                     <p className="text-sm font-semibold text-[#ec5a13]">
-                      {formData.price ? `${parseInt(formData.price).toLocaleString()} FCFA` : '0 FCFA'}
+                      {formatPriceFCFA(formData.price || '0')}
                     </p>
                   </div>
                 </div>
@@ -1591,7 +1592,7 @@ export function PublishForm() {
                 </div>
                 <div>
                   <span className="text-gray-600">Prix:</span>
-                  <span className="ml-2 font-medium">{formData.price} FCFA</span>
+                  <span className="ml-2 font-medium">{formatPriceFCFA(formData.price || '0')}</span>
                 </div>
               </div>
             </div>
