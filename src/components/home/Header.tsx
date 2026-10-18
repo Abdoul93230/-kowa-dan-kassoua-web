@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { getUnreadCount } from '@/lib/api/messaging';
@@ -22,6 +22,14 @@ import { useSocket } from '@/hooks/useSocket';
 import { useQuickAuth } from '@/contexts/QuickAuthContext';
 
 export function Header() {
+  return (
+    <Suspense fallback={<header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm" />}>
+      <HeaderContent />
+    </Suspense>
+  );
+}
+
+function HeaderContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

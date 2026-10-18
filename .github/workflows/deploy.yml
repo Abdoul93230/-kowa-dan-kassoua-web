@@ -1,0 +1,71 @@
+name: Deploy TAKTAK Frontend to Oracle
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: taktak-frontend-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy frontend on Oracle Cloud
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -eu
+            cd /opt/taktak/frontend
+
+            echo "===== UPDATE SOURCE ====="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "===== BUILD IMAGE ====="
+            sudo docker build \
+              --build-arg NEXT_PUBLIC_API_URL=https://api.taktak-ne.com/api \
+              -t taktak-frontend:latest .
+
+            echo "===== PRESERVE CURRENT CONTAINER ====="
+            sudo docker rm -f taktak-frontend-previous 2>/dev/null || true
+            sudo docker stop taktak-frontend
+            sudo docker rename taktak-frontend taktak-frontend-previous
+
+            echo "===== START NEW CONTAINER ====="
+            if ! sudo docker run -d \
+              --name taktak-frontend \
+              --restart unless-stopped \
+              --network taktak-network \
+              -p 127.0.0.1:3002:3000 \
+              taktak-frontend:latest; then
+              echo "New container failed; restoring previous container"
+              sudo docker rm -f taktak-frontend 2>/dev/null || true
+              sudo docker rename taktak-frontend-previous taktak-frontend
+              sudo docker start taktak-frontend
+              exit 1
+            fi
+
+            echo "===== HEALTH CHECK ====="
+            sleep 10
+            if ! curl --fail --silent --show-error \
+              --max-time 20 http://127.0.0.1:3002/ -o /dev/null; then
+              echo "Health check failed; rolling back"
+              sudo docker rm -f taktak-frontend || true
+              sudo docker rename taktak-frontend-previous taktak-frontend
+              sudo docker start taktak-frontend
+              exit 1
+            fi
+
+            echo "===== CLEANUP OLD CONTAINER ====="
+            sudo docker rm -f taktak-frontend-previous
+
+            echo "===== DEPLOYMENT SUCCESS ====="
+            sudo docker ps --filter "name=^/taktak-frontend$"
+            sudo docker logs --tail 30 taktak-frontend
