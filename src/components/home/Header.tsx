@@ -188,7 +188,7 @@ function HeaderContent() {
                         {getInitials(user.name)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="max-w-[9rem] truncate text-sm font-semibold text-gray-900">{user.name.split(' ')[0]}</span>
+                    <span className="max-w-[13rem] truncate text-sm font-semibold text-gray-900">{user.name}</span>
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </button>
                 </DropdownMenuTrigger>

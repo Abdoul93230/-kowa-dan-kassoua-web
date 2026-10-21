@@ -32,7 +32,7 @@ export function HomeHero({ stats, cities, city, onCityChange, shortcuts, aside }
     setGreeting(new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir');
   }, []);
 
-  const firstName = (user?.name || '').trim().split(/\s+/)[0];
+  const fullName = (user?.name || '').trim();
   const cityQuery = city !== 'all' ? `?location=${encodeURIComponent(city)}` : '';
 
   const submit = (e: FormEvent) => {
@@ -75,9 +75,11 @@ export function HomeHero({ stats, cities, city, onCityChange, shortcuts, aside }
             )}
           </div>
 
-          <p className="mt-5 text-sm font-semibold text-[#ffa87b] sm:mt-6" suppressHydrationWarning>
-            {greeting ? `${greeting}${firstName ? `, ${firstName}` : ''} 👋` : ' '}
-          </p>
+          {/* Comme sur le mobile : salutation discrète, nom complet mis en avant */}
+          <div className="mt-5 sm:mt-6" suppressHydrationWarning>
+            <p className="text-sm font-semibold text-[#ffa87b]">{greeting ? greeting + " 👋" : " "}</p>
+            {fullName ? <p className="truncate text-xl font-extrabold tracking-tight text-white sm:text-2xl">{fullName}</p> : null}
+          </div>
           <h1 className="mt-2 text-balance text-white text-[2.15rem] font-black leading-[1.05] tracking-[-0.035em] sm:text-5xl lg:text-[3.6rem]">
             Achetez et vendez{' '}
             <span className="bg-gradient-to-r from-[#ffb48a] via-[#ff8a4c] to-[#ec5a13] bg-clip-text text-transparent">
