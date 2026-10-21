@@ -18,6 +18,8 @@ export interface ProductFilters {
   seller?: string;
   status?: 'active' | 'expired' | 'sold';
   sort?: string; // '-createdAt', 'price', '-price', '-views', etc.
+  /** 'card' : uniquement les champs affichés dans les listes (réponse plus légère) */
+  view?: 'card' | 'full';
 }
 
 export interface PaginationInfo {
@@ -65,6 +67,7 @@ export const getProducts = async (filters?: ProductFilters): Promise<ProductsRes
       if (filters.seller) params.append('seller', filters.seller);
       if (filters.status) params.append('status', filters.status);
       if (filters.sort) params.append('sort', filters.sort);
+      if (filters.view) params.append('view', filters.view);
     }
     
     const queryString = params.toString();
