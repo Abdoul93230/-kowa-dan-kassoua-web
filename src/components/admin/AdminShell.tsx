@@ -11,7 +11,7 @@ import { useAuthGuard } from '@/hooks/useAuth';
 const NAV = [
   { href: '/admin/signalements', label: 'Signalements', icon: Flag },
   { href: '/admin/equipe', label: 'Équipe admin', icon: Users },
-  { href: '/profile', label: 'Mon mot de passe', icon: KeyRound },
+  { href: '/profile?tab=security', label: 'Mon mot de passe', icon: KeyRound },
 ];
 
 export function AdminShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
