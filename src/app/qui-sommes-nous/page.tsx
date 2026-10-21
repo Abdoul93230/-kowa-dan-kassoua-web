@@ -21,7 +21,7 @@ export default function QuiSommesNousPage() {
               Qui sommes-nous ?
             </h1>
             <p className="text-xl text-white/90 leading-relaxed">
-              MarketHub est une plateforme qui connecte vendeurs et acheteurs 
+              TakTak est une plateforme qui connecte vendeurs et acheteurs 
               dans différents secteurs, facilitant les échanges commerciaux de manière simple et sécurisée.
             </p>
           </div>
@@ -75,14 +75,14 @@ export default function QuiSommesNousPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Notre Histoire</h2>
             <div className="space-y-6 text-gray-600 leading-relaxed">
               <p>
-                MarketHub est né d'une vision simple : faciliter les échanges commerciaux 
+                TakTak est né d'une vision simple : faciliter les échanges commerciaux 
                 en créant une plateforme digitale accessible à tous. Nous avons créé une solution 
                 qui combine simplicité d'utilisation et fonctionnalités pratiques.
               </p>
               <p>
                 Notre équipe travaille pour construire une plateforme qui répond aux besoins 
                 des vendeurs et des acheteurs. Que vous soyez un particulier, un artisan ou une 
-                entreprise, MarketHub vous offre les outils pour vendre et acheter facilement.
+                entreprise, TakTak vous offre les outils pour vendre et acheter facilement.
               </p>
               <p>
                 Nous pensons que le commerce doit être transparent et équitable. C'est pourquoi 
@@ -159,7 +159,7 @@ export default function QuiSommesNousPage() {
 
         {/* CTA Section */}
         <div className="bg-gradient-to-r from-orange-400 to-orange-300 rounded-2xl shadow-xl p-12 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Rejoignez MarketHub</h2>
+          <h2 className="text-3xl font-bold mb-4">Rejoignez TakTak</h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Commencez à vendre ou acheter sur notre plateforme.
           </p>

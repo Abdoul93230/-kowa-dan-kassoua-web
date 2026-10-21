@@ -1,6 +1,6 @@
 'use client';
 
-import { HelpCircle, Search, MessageCircle, ShoppingBag, User, CreditCard, Shield, Mail, Phone } from 'lucide-react';
+import { HelpCircle, Search, MessageCircle, ShoppingBag, User, CreditCard, Shield, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -47,9 +47,9 @@ export default function CentreAidePage() {
       title: 'Paiement et transactions',
       color: 'purple',
       questions: [
-        { q: 'Comment se passe le paiement ?', a: 'Le paiement se fait directement entre acheteur et vendeur. MarketHub ne gère pas les transactions financières.' },
+        { q: 'Comment se passe le paiement ?', a: 'Le paiement se fait directement entre acheteur et vendeur. TakTak ne gère pas les transactions financières.' },
         { q: 'Quels sont les modes de paiement ?', a: 'Les modes de paiement sont convenus entre acheteur et vendeur (espèces, mobile money, virement, etc.).' },
-        { q: 'La publication d\'annonces est-elle payante ?', a: 'Non, la publication d\'annonces est gratuite sur MarketHub.' },
+        { q: 'La publication d\'annonces est-elle payante ?', a: 'Non, la publication d\'annonces est gratuite sur TakTak.' },
         { q: 'Y a-t-il des frais cachés ?', a: 'Non, notre plateforme est entièrement gratuite pour les utilisateurs.' },
       ]
     },
@@ -58,7 +58,7 @@ export default function CentreAidePage() {
       title: 'Sécurité et confiance',
       color: 'red',
       questions: [
-        { q: 'Comment éviter les arnaques ?', a: 'Ne payez jamais avant d\'avoir vu le produit. Privilégiez les rencontres en lieu public. Utilisez uniquement la messagerie de MarketHub.' },
+        { q: 'Comment éviter les arnaques ?', a: 'Ne payez jamais avant d\'avoir vu le produit. Privilégiez les rencontres en lieu public. Utilisez uniquement la messagerie de TakTak.' },
         { q: 'Comment vérifier un vendeur ?', a: 'Consultez les évaluations et avis laissés par d\'autres acheteurs. Un vendeur avec de bonnes notes est généralement fiable.' },
         { q: 'Que faire en cas de litige ?', a: 'Essayez d\'abord de résoudre le problème directement avec l\'autre partie. Si cela échoue, contactez notre support avec les détails.' },
         { q: 'Comment signaler une annonce suspecte ?', a: 'Sur la page de l\'annonce, cliquez sur "Signaler" et indiquez le problème. Nous examinerons l\'annonce rapidement.' },
@@ -158,16 +158,16 @@ export default function CentreAidePage() {
                 <Mail className="h-8 w-8 mb-3" />
                 <h3 className="font-semibold text-lg mb-2">Par email</h3>
                 <p className="text-white/80 mb-3">Réponse sous 24h</p>
-                <a href="mailto:contact@markethub.com" className="text-white underline">
-                  contact@markethub.com
+                <a href="mailto:support@taktak-ne.com" className="text-white underline">
+                  support@taktak-ne.com
                 </a>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                <Phone className="h-8 w-8 mb-3" />
-                <h3 className="font-semibold text-lg mb-2">Par téléphone</h3>
-                <p className="text-white/80 mb-3">Lundi - Vendredi : 9h - 18h</p>
-                <a href="tel:+221771234567" className="text-white underline">
-                  +221 77 123 45 67
+                <MessageCircle className="h-8 w-8 mb-3" />
+                <h3 className="font-semibold text-lg mb-2">Dans l'application</h3>
+                <p className="text-white/80 mb-3">Écrivez-nous depuis la messagerie TakTak, nous répondons rapidement.</p>
+                <a href="/messages" className="text-white underline">
+                  Ouvrir la messagerie
                 </a>
               </div>
             </div>

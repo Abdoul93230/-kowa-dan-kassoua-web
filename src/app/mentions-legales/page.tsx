@@ -38,7 +38,7 @@ export default function MentionsLegalesPage() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Éditeur du site</h2>
                 <div className="space-y-3 text-gray-600">
                   <p>
-                    <span className="font-semibold text-gray-900">Raison sociale :</span> MarketHub
+                    <span className="font-semibold text-gray-900">Raison sociale :</span> TakTak
                   </p>
                   <p>
                     <span className="font-semibold text-gray-900">Forme juridique :</span> Société en cours de constitution
@@ -47,10 +47,7 @@ export default function MentionsLegalesPage() {
                     <span className="font-semibold text-gray-900">Siège social :</span> Dakar, Sénégal
                   </p>
                   <p>
-                    <span className="font-semibold text-gray-900">Email :</span> contact@markethub.com
-                  </p>
-                  <p>
-                    <span className="font-semibold text-gray-900">Téléphone :</span> +221 77 123 45 67
+                    <span className="font-semibold text-gray-900">Email :</span> support@taktak-ne.com
                   </p>
                 </div>
               </div>
@@ -62,7 +59,7 @@ export default function MentionsLegalesPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Directeur de publication</h2>
             <div className="space-y-3 text-gray-600">
               <p>
-                Le directeur de la publication est le représentant légal de MarketHub.
+                Le directeur de la publication est le représentant légal de TakTak.
               </p>
             </div>
           </div>
@@ -86,14 +83,14 @@ export default function MentionsLegalesPage() {
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
                 L'ensemble du contenu de ce site (textes, images, logos, vidéos, structure) est la propriété 
-                de MarketHub, sauf mention contraire.
+                de TakTak, sauf mention contraire.
               </p>
               <p>
                 Toute reproduction, distribution, modification, adaptation, retransmission ou publication de 
-                ces différents éléments est strictement interdite sans l'accord écrit de MarketHub.
+                ces différents éléments est strictement interdite sans l'accord écrit de TakTak.
               </p>
               <p>
-                Les marques et logos présents sur le site sont déposés par MarketHub ou éventuellement par 
+                Les marques et logos présents sur le site sont déposés par TakTak ou éventuellement par 
                 des partenaires. Toute reproduction non autorisée de ces marques constitue une contrefaçon.
               </p>
             </div>
@@ -104,12 +101,12 @@ export default function MentionsLegalesPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Protection des données personnelles</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                MarketHub s'engage à protéger la vie privée de ses utilisateurs conformément à la 
+                TakTak s'engage à protéger la vie privée de ses utilisateurs conformément à la 
                 réglementation en vigueur.
               </p>
               <p>
                 Les informations collectées lors de votre inscription sont destinées à l'usage interne 
-                de MarketHub et ne seront en aucun cas cédées à des tiers sans votre consentement.
+                de TakTak et ne seront en aucun cas cédées à des tiers sans votre consentement.
               </p>
               <p>
                 Pour en savoir plus sur la gestion de vos données personnelles, consultez notre{' '}
@@ -125,7 +122,7 @@ export default function MentionsLegalesPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Utilisation des cookies</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                Le site MarketHub utilise des cookies pour améliorer l'expérience utilisateur et analyser 
+                Le site TakTak utilise des cookies pour améliorer l'expérience utilisateur et analyser 
                 le trafic du site.
               </p>
               <p>
@@ -141,11 +138,11 @@ export default function MentionsLegalesPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Limitation de responsabilité</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                MarketHub s'efforce d'assurer l'exactitude et la mise à jour des informations diffusées 
+                TakTak s'efforce d'assurer l'exactitude et la mise à jour des informations diffusées 
                 sur le site. Toutefois, des erreurs ou omissions peuvent survenir.
               </p>
               <p>
-                MarketHub ne saurait être tenu responsable :
+                TakTak ne saurait être tenu responsable :
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>Des dommages directs ou indirects causés au matériel de l'utilisateur</li>
@@ -177,7 +174,7 @@ export default function MentionsLegalesPage() {
                 Contactez-nous pour plus d'informations
               </p>
               <a 
-                href="mailto:contact@markethub.com"
+                href="mailto:support@taktak-ne.com"
                 className="inline-block bg-white text-orange-500 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
               >
                 Nous contacter

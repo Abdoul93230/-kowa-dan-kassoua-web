@@ -40,7 +40,7 @@ export default function ConfidentialitePage() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Notre engagement</h2>
                 <p className="text-gray-600 leading-relaxed">
-                  MarketHub s'engage à protéger vos données personnelles. Cette politique explique 
+                  TakTak s'engage à protéger vos données personnelles. Cette politique explique 
                   quelles informations nous collectons, comment nous les utilisons et vos droits concernant 
                   ces données.
                 </p>
@@ -219,8 +219,8 @@ export default function ConfidentialitePage() {
               </ul>
               <p className="mt-4">
                 Pour exercer ces droits, contactez-nous à{' '}
-                <a href="mailto:contact@markethub.com" className="text-orange-500 hover:underline font-semibold">
-                  contact@markethub.com
+                <a href="mailto:support@taktak-ne.com" className="text-orange-500 hover:underline font-semibold">
+                  support@taktak-ne.com
                 </a>
               </p>
             </div>
@@ -271,14 +271,8 @@ export default function ConfidentialitePage() {
               <div className="space-y-2">
                 <p>
                   📧 Email :{' '}
-                  <a href="mailto:contact@markethub.com" className="underline">
-                    contact@markethub.com
-                  </a>
-                </p>
-                <p>
-                  📱 Téléphone :{' '}
-                  <a href="tel:+221771234567" className="underline">
-                    +221 77 123 45 67
+                  <a href="mailto:support@taktak-ne.com" className="underline">
+                    support@taktak-ne.com
                   </a>
                 </p>
               </div>

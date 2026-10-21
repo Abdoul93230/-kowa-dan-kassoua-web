@@ -35,7 +35,7 @@ export default function ConditionsUtilisationPage() {
                 <CheckCircle className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Bienvenue sur MarketHub</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Bienvenue sur TakTak</h2>
                 <p className="text-gray-600 leading-relaxed">
                   En accédant à notre plateforme, vous acceptez de respecter les présentes conditions d'utilisation. 
                   Veuillez les lire attentivement avant d'utiliser nos services.
@@ -49,7 +49,7 @@ export default function ConditionsUtilisationPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Acceptation des conditions</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                En utilisant MarketHub, vous acceptez d'être lié par ces conditions d'utilisation. 
+                En utilisant TakTak, vous acceptez d'être lié par ces conditions d'utilisation. 
                 Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre plateforme.
               </p>
               <p>
@@ -64,7 +64,7 @@ export default function ConditionsUtilisationPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Inscription et compte utilisateur</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                Pour utiliser certaines fonctionnalités de MarketHub, vous devez créer un compte en fournissant 
+                Pour utiliser certaines fonctionnalités de TakTak, vous devez créer un compte en fournissant 
                 des informations exactes et à jour.
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
@@ -90,7 +90,7 @@ export default function ConditionsUtilisationPage() {
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-800">
-                  MarketHub se réserve le droit de supprimer toute annonce qui ne respecte pas ces conditions, 
+                  TakTak se réserve le droit de supprimer toute annonce qui ne respecte pas ces conditions, 
                   sans préavis ni justification.
                 </p>
               </div>
@@ -102,11 +102,11 @@ export default function ConditionsUtilisationPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Transactions entre utilisateurs</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                MarketHub est une plateforme de mise en relation. Les transactions sont effectuées directement 
+                TakTak est une plateforme de mise en relation. Les transactions sont effectuées directement 
                 entre acheteurs et vendeurs.
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>MarketHub n'est pas partie aux transactions entre utilisateurs</li>
+                <li>TakTak n'est pas partie aux transactions entre utilisateurs</li>
                 <li>Nous ne garantissons pas la qualité, la sécurité ou la légalité des articles proposés</li>
                 <li>Les utilisateurs sont responsables du respect de leurs engagements</li>
                 <li>Nous encourageons la communication via notre messagerie sécurisée</li>
@@ -135,12 +135,12 @@ export default function ConditionsUtilisationPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Propriété intellectuelle</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                Le contenu de MarketHub (logos, textes, graphiques, etc.) est protégé par les droits de 
+                Le contenu de TakTak (logos, textes, graphiques, etc.) est protégé par les droits de 
                 propriété intellectuelle. Vous ne pouvez pas copier, reproduire ou distribuer ce contenu 
                 sans autorisation.
               </p>
               <p>
-                En publiant du contenu sur MarketHub, vous nous accordez une licence pour afficher, 
+                En publiant du contenu sur TakTak, vous nous accordez une licence pour afficher, 
                 reproduire et distribuer ce contenu sur notre plateforme.
               </p>
             </div>
@@ -151,7 +151,7 @@ export default function ConditionsUtilisationPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Limitation de responsabilité</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-                MarketHub est fourni "tel quel". Nous ne garantissons pas que la plateforme sera toujours 
+                TakTak est fourni "tel quel". Nous ne garantissons pas que la plateforme sera toujours 
                 disponible ou exempte d'erreurs.
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
@@ -184,8 +184,7 @@ export default function ConditionsUtilisationPage() {
                 Pour toute question concernant ces conditions d'utilisation, veuillez nous contacter :
               </p>
               <ul className="list-none space-y-2 ml-4">
-                <li>📧 Email : contact@markethub.com</li>
-                <li>📱 Téléphone : +221 77 123 45 67</li>
+                <li>📧 Email : support@taktak-ne.com</li>
               </ul>
             </div>
           </div>
