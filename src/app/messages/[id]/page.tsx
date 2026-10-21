@@ -1,34 +1,46 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+// Conversation — même ambiance que le reste du site ; panneau latéral (annonce, affaire) sur ordinateur
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
+import { toast } from 'sonner';
+import { Header } from '@/components/home/Header';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   ArrowLeft,
   Send,
-  Info,
-  Image as ImageIcon,
-  Smile,
   CheckCheck,
   Check,
   MoreVertical,
-  MapPin,
   Star,
-  ShoppingBag,
   ExternalLink,
   AlertCircle,
   Loader2,
   WifiOff,
-  Mic
+  Mic,
+  ShieldCheck,
+  Store,
+  Lock,
+  Unlock,
+  Handshake,
+  Hourglass,
+  CheckCircle2,
+  XCircle,
+  ChevronUp,
+  X,
 } from 'lucide-react';
 import { Message, Conversation, Item } from '@/types';
 import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { formatPrice, getInitials, sizedImage } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { getProductById } from '@/lib/api/products';
 import { getMessages, getConversationById, markMessageAsRead as apiMarkMessageAsRead, markConversationAsRead, sendVoiceMessage, updateConversationDeal, closeConversationByOwner, reopenConversationByOwner } from '@/lib/api/messaging';
 import { checkReviewEligibility, createReview } from '@/lib/api/reviews';
@@ -37,7 +49,6 @@ import { useQuickAuth } from '@/contexts/QuickAuthContext';
 import { useSocket } from '@/hooks/useSocket';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import AudioPlayer from '@/components/AudioPlayer';
-import { formatPriceFCFA } from '@/lib/utils';
 
 
 function extractMongoId(value: any): string {
@@ -93,15 +104,16 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   // Charger la conversation et les messages
   useEffect(() => {
     // Attendre que l'authentification soit vérifiée
     if (authLoading) return;
     
+    // Visiteur non connecté : la page affiche une invitation à se connecter
     if (!token || !user) {
-      // Ancien : router.push('/login');
-      openQuickAuth(`/messages/${conversationId}`);
+      setLoading(false);
       return;
     }
 
@@ -292,10 +304,25 @@ export default function ChatPage() {
     };
   }, [isConnected, conversationId, user, on, off, socketMarkAsRead]);
 
+  // Défilement vers le bas seulement quand un message arrive en fin de liste
+  // (pas quand des messages plus anciens sont ajoutés en tête), et seulement si
+  // l'utilisateur est déjà en bas ou si c'est son propre message
+  const lastMessageId = messages[messages.length - 1]?.id;
+  const lastMessageMine = String(messages[messages.length - 1]?.senderId || '') === String(user?.id || '');
   useEffect(() => {
-    // Scroll automatique vers le bas
-    scrollToBottom();
-  }, [messages]);
+    if (!lastMessageId) return;
+    const el = messagesScrollRef.current;
+    const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 240;
+    if (nearBottom || lastMessageMine) scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastMessageId]);
+
+  useEffect(() => {
+    if (typingUsers.size > 0) {
+      const el = messagesScrollRef.current;
+      if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 240) scrollToBottom();
+    }
+  }, [typingUsers.size]);
 
   useEffect(() => {
     if (!optimisticDealStatus) return;
@@ -392,6 +419,7 @@ export default function ChatPage() {
     
     // Vider le champ de saisie
     setMessage('');
+    if (composerRef.current) composerRef.current.style.height = 'auto';
     
     // Arrêter l'indicateur de saisie
     stopTyping(conversationId);
@@ -405,14 +433,12 @@ export default function ChatPage() {
     if (!conversation || !user) return;
 
     try {
-      console.log('📤 Envoi message vocal...', audioBlob.size, 'bytes');
       await sendVoiceMessage(conversationId, audioBlob);
-      console.log('✅ Message vocal envoyé avec succès');
       stopTyping(conversationId);
       setIsRecordingVoice(false);
     } catch (error) {
       console.error('❌ Erreur envoi message vocal:', error);
-      alert('Erreur lors de l\'envoi du message vocal');
+      toast.error("Le message vocal n'a pas pu être envoyé. Réessayez.");
     }
   };
 
@@ -435,6 +461,9 @@ export default function ChatPage() {
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
+    // Hauteur automatique (jusqu'à ~6 lignes)
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
     
     // Envoyer l'indicateur "en train d'écrire"
     if (e.target.value.trim() && isConnected) {
@@ -460,50 +489,71 @@ export default function ChatPage() {
     }
   };
 
-  // États de chargement et d'erreur
-  if (loading) {
+  // États de chargement, visiteur, erreur
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#ec5a13] mx-auto mb-3" />
-          <p className="text-gray-600">Chargement de la conversation...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="p-6 max-w-md w-full text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <div className="flex gap-3 justify-center">
-            <Button onClick={() => router.push('/messages')} variant="outline">
-              Retour aux messages
-            </Button>
-            <Button onClick={() => window.location.reload()} className="bg-[#ec5a13] hover:bg-[#d94f0f]">
-              Réessayer
-            </Button>
+      <ChatShell>
+        <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3">
+          <div className="h-10 w-10 animate-pulse rounded-2xl bg-gray-200" />
+          <div className="space-y-2">
+            <div className="h-4 w-40 animate-pulse rounded-full bg-gray-200" />
+            <div className="h-3 w-20 animate-pulse rounded-full bg-gray-100" />
           </div>
-        </Card>
-      </div>
+        </div>
+        <div className="flex-1 space-y-3 bg-[#f6f7fb] px-4 py-6">
+          {[60, 40, 70, 35, 55].map((w, i) => (
+            <div key={i} className={cn('flex', i % 2 ? 'justify-end' : 'justify-start')}>
+              <div className={cn('h-10 animate-pulse rounded-2xl', i % 2 ? 'bg-[#ec5a13]/20' : 'bg-white')} style={{ width: `${w}%`, maxWidth: 420 }} />
+            </div>
+          ))}
+        </div>
+      </ChatShell>
     );
   }
 
-  if (!conversation) {
+  if (!user || !token) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Conversation introuvable</p>
-          <Button onClick={() => router.push('/messages')}>
-            Retour aux messages
-          </Button>
+      <ChatShell>
+        <div className="flex flex-1 items-center justify-center bg-[#f6f7fb] p-6">
+          <div className="w-full max-w-md rounded-3xl border border-gray-100 bg-white p-8 text-center shadow-[0_24px_60px_-34px_rgba(15,23,42,0.45)]">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fff1e8] text-[#ec5a13]"><Lock className="h-8 w-8" /></span>
+            <h1 className="mt-5 text-xl font-black tracking-tight text-gray-900">Conversation privée</h1>
+            <p className="mt-2 text-[15px] text-gray-500">Connectez-vous pour lire et répondre à vos messages.</p>
+            <button
+              type="button"
+              onClick={() => openQuickAuth(`/messages/${conversationId}`)}
+              className="mt-6 inline-flex h-12 items-center rounded-full bg-[#ec5a13] px-6 text-[15px] font-bold text-white transition hover:bg-[#d44f11]"
+            >
+              Se connecter
+            </button>
+          </div>
         </div>
-      </div>
+      </ChatShell>
     );
   }
+
+  if (error || !conversation) {
+    return (
+      <ChatShell>
+        <div className="flex flex-1 items-center justify-center bg-[#f6f7fb] p-6">
+          <div className="w-full max-w-md rounded-3xl border border-gray-100 bg-white p-8 text-center">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 text-gray-500"><AlertCircle className="h-8 w-8" /></span>
+            <h1 className="mt-5 text-xl font-black tracking-tight text-gray-900">{error ? 'Conversation indisponible' : 'Conversation introuvable'}</h1>
+            <p className="mt-2 text-[15px] text-gray-500">{error || "Elle a peut-être été supprimée."}</p>
+            <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+              <Link href="/messages" className="inline-flex h-11 items-center justify-center rounded-full border border-gray-200 px-5 text-sm font-bold text-gray-700 transition hover:border-gray-300">
+                Mes messages
+              </Link>
+              <button type="button" onClick={() => window.location.reload()} className="inline-flex h-11 items-center justify-center rounded-full bg-[#ec5a13] px-5 text-sm font-bold text-white transition hover:bg-[#d44f11]">
+                Réessayer
+              </button>
+            </div>
+          </div>
+        </div>
+      </ChatShell>
+    );
+  }
+
 
   const seller = conversation.participants.seller;
   const buyer = conversation.participants.buyer;
@@ -598,7 +648,7 @@ export default function ChatPage() {
     } catch (err: any) {
       setOptimisticDealStatus(null);
       setConversation(previousConversation);
-      setError(err?.response?.data?.message || 'Impossible de mettre à jour le statut de l\'affaire');
+      toast.error(err?.response?.data?.message || 'Impossible de mettre à jour le statut de l\'affaire');
     } finally {
       setDealActionLoading(false);
     }
@@ -627,7 +677,7 @@ export default function ChatPage() {
       }
     } catch (err: any) {
       setConversation(previousConversation);
-      setError(err?.response?.data?.message || 'Impossible de mettre à jour la clôture de la discussion');
+      toast.error(err?.response?.data?.message || 'Impossible de mettre à jour la clôture de la discussion');
     } finally {
       setOwnerClosureLoading(false);
     }
@@ -644,498 +694,476 @@ export default function ChatPage() {
       setReviewRating(0);
       setReviewComment('');
       setReviewEligible(false);
+      toast.success('Merci pour votre avis !');
     } catch (err: any) {
       console.error('❌ Erreur publication avis:', err);
+      toast.error(err?.message || "L'avis n'a pas pu être publié");
     } finally {
       setSubmittingReview(false);
     }
   };
 
+  // ─── Dérivés d'affichage ──────────────────────────────────────────────────
+  const peer = otherParticipant as { id: string; name: string; avatar?: string; businessName?: string; verified?: boolean };
+  const peerName = peer.businessName || peer.name || 'Utilisateur';
+  const peerTyping = typingUsers.size > 0;
+  const itemId = extractMongoId(conversation.item?.id);
+  const itemStatus = productDetails && productDetails.status !== 'active'
+    ? (productDetails.status === 'sold' ? 'Vendu' : productDetails.status === 'expired' ? 'Expiré' : 'En attente')
+    : null;
+  const myRoleLabel = isConversationSeller ? 'Vous vendez' : 'Vous achetez';
+
+  // Bandeau « affaire » : ce que chacun peut faire selon l'état (mêmes règles que l'app)
+  const dealBanner: null | { tone: 'wait' | 'ok' | 'ko'; title: string; text: string; actions: { label: string; onClick: () => void; primary?: boolean }[] } = (() => {
+    if (dealStatus === 'pending_conclusion') {
+      if (isDealRequester) {
+        return { tone: 'wait', title: 'Affaire en attente de confirmation', text: `${peerName} doit confirmer que l'affaire est conclue.`, actions: [{ label: 'Annuler la demande', onClick: () => handleDealAction('reopen') }] };
+      }
+      if (!isConversationSeller) {
+        return {
+          tone: 'wait',
+          title: 'Le vendeur indique que l\'affaire est conclue',
+          text: 'Confirmez-vous avoir conclu cette affaire ?',
+          actions: [
+            { label: 'Non conclue', onClick: () => handleDealAction('reject') },
+            { label: 'Oui, confirmer', onClick: () => handleDealAction('confirm'), primary: true },
+          ],
+        };
+      }
+      return { tone: 'wait', title: 'Affaire en attente de confirmation', text: 'En attente de la réponse de l\'acheteur.', actions: [] };
+    }
+    return null;
+  })();
+
+  const dealPill = dealStatus === 'concluded'
+    ? { icon: CheckCircle2, label: 'Affaire conclue', cls: 'bg-emerald-50 text-emerald-700' }
+    : dealStatus === 'not_concluded'
+      ? { icon: XCircle, label: 'Non conclue', cls: 'bg-red-50 text-red-600' }
+      : dealStatus === 'pending_conclusion'
+        ? { icon: Hourglass, label: 'En attente', cls: 'bg-amber-50 text-amber-700' }
+        : null;
+
+  const userIdStr = String(user?.id || '').trim();
+
+  // ─── Rendu ────────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
-      {/* Header de la conversation */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="container mx-auto px-4 py-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.back()}
-                className="flex-shrink-0 hover:bg-gray-100"
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-700" />
-              </Button>
-              
-              {/* Info interlocuteur */}
-              <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-gray-100 rounded-lg p-2 -m-2 transition-colors"
-                   onClick={() => {
-                     if (otherParticipant.id === seller.id) {
-                       router.push(`/seller/${seller.id}`);
-                     }
-                   }}>
-                <div className="relative flex-shrink-0">
-                  <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                    {otherParticipant.avatar ? (
-                      <img src={otherParticipant.avatar} alt={otherParticipant.name} className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-[#ec5a13] to-orange-600 flex items-center justify-center text-white font-bold">
-                        {otherParticipant.name.charAt(0)}
-                      </div>
-                    )}
-                  </Avatar>
-                  {/* Dot statut en ligne sur l'avatar */}
-                  <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${peerIsOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <h2 className="font-semibold text-gray-900 truncate">
-                      {otherParticipant.name}
-                    </h2>
-                    {otherParticipant.id === seller.id && seller.verified && (
-                      <CheckCheck className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    )}
-                  </div>
-                  {/* Statut en ligne sous le nom */}
-                  <p className={`text-xs font-medium ${peerIsOnline ? 'text-green-600' : 'text-gray-400'}`}>
-                    {isConnected ? (peerIsOnline ? 'En ligne' : 'Hors ligne') : 'Connexion…'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Badge statut + bouton vendeur sur la même ligne */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {isOwnerClosureActive ? (
-                <Badge variant="outline" className="border-slate-400 text-slate-500 text-[11px] px-2 py-0.5">🔒 Clôturée</Badge>
-              ) : dealStatus === 'concluded' ? (
-                <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[11px] px-2 py-0.5">✓ Conclue</Badge>
-              ) : dealStatus === 'not_concluded' ? (
-                <Badge variant="outline" className="border-slate-400 text-slate-500 text-[11px] px-2 py-0.5">Non conclue</Badge>
-              ) : dealStatus === 'pending_conclusion' ? (
-                <Badge variant="outline" className="border-orange-400 text-orange-600 text-[11px] px-2 py-0.5">⏳ En attente</Badge>
-              ) : null}
-              {isConversationSeller && (
-                <Button
-                  onClick={handleOwnerClosureAction}
-                  disabled={ownerClosureLoading}
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-[11px] px-2 py-0"
-                >
-                  {ownerClosureLoading ? '…' : isOwnerClosureActive ? 'Réouvrir' : 'Clôturer'}
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push(`/seller/${seller.id}`)}
-                className="hover:bg-gray-100 h-7 w-7 p-0"
-              >
-                <Info className="h-4 w-4 text-gray-500" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Carte produit fixe — hors de la zone scrollable */}
-      {conversation.item && (
-        <div className="bg-white border-b border-gray-100 shadow-sm">
-          <div className="container mx-auto px-4 py-2.5 max-w-4xl">
-            <div className="flex items-center gap-3">
-              <img
-                src={conversation.item.image}
-                alt={conversation.item.title}
-                className="w-12 h-12 object-cover rounded-lg shadow-sm flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">À propos de</p>
-                <h3 className="font-semibold text-gray-900 truncate text-sm leading-tight">
-                  {conversation.item.title}
-                </h3>
-                <p className="text-sm font-bold text-[#ec5a13]">
-                  {formatPriceFCFA(conversation.item.price)}
-                </p>
-              </div>
-              {productDetails && productDetails.status !== 'active' && (
-                <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-1 rounded-full flex-shrink-0">
-                  {productDetails.status === 'sold' ? 'Vendu' : productDetails.status === 'expired' ? 'Expiré' : 'En attente'}
+    <ChatShell>
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 gap-6 lg:px-4 lg:py-5">
+        {/* ── Colonne conversation ── */}
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white lg:rounded-3xl lg:border lg:border-gray-100 lg:shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)]">
+          {/* En-tête */}
+          <div className="flex items-center gap-2 border-b border-gray-100 px-2 py-2.5 sm:px-4">
+            <button type="button" onClick={() => router.push('/messages')} aria-label="Retour aux messages" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-700 transition hover:bg-gray-100">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <Link href={otherParticipant.id === seller.id ? `/seller/${seller.id}` : '#'} onClick={(e) => { if (otherParticipant.id !== seller.id) e.preventDefault(); }} className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-1 transition hover:bg-gray-50">
+              <span className="relative shrink-0">
+                {peer.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={sizedImage(peer.avatar, 96)} alt="" className="h-11 w-11 rounded-2xl object-cover" />
+                ) : (
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#ff8a4c,#ec5a13)] text-sm font-black text-white">{getInitials(peerName)}</span>
+                )}
+                {peerIsOnline ? <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[3px] border-white bg-emerald-500" /> : null}
+              </span>
+              <span className="min-w-0">
+                <span className="flex items-center gap-1.5">
+                  <span className="truncate text-[15px] font-black text-gray-900">{peerName}</span>
+                  {peer.verified ? <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-500" aria-label="Vérifié" /> : null}
                 </span>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { const pid = extractMongoId(conversation.item?.id); if (pid) router.push(`/items/${pid}`); }}
-                className="flex-shrink-0 hover:bg-gray-100 h-8 w-8 p-0"
-              >
-                <ExternalLink className="h-4 w-4 text-gray-500" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+                <span className={cn('block text-xs font-semibold', peerTyping ? 'text-[#ec5a13]' : peerIsOnline ? 'text-emerald-600' : 'text-gray-400')}>
+                  {peerTyping ? 'écrit…' : !isConnected ? 'Connexion…' : peerIsOnline ? 'En ligne' : 'Hors ligne'}
+                </span>
+              </span>
+            </Link>
 
-      {/* Bannière avis — fixe entre la carte produit et les messages */}
-      {reviewEligible && conversation.closedByOwner && !reviewModalOpen && (
-        <div className="bg-white border-b border-amber-100 flex-shrink-0">
-          <div className="container mx-auto px-4 py-0 max-w-4xl">
-            <button
-              onClick={() => { setReviewRating(0); setReviewComment(''); setReviewModalOpen(true); }}
-              className="w-full flex items-center gap-3 p-3 hover:bg-amber-50 transition-colors text-left"
-            >
-              <span className="text-xl">⭐</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-amber-900 text-sm leading-tight">Donnez votre avis</p>
-                <p className="text-xs text-amber-700">Discussion clôturée — notez ce produit en 10 secondes</p>
-              </div>
-              <span className="text-amber-500 font-bold text-sm flex-shrink-0">Noter →</span>
-            </button>
-          </div>
-        </div>
-      )}
+            {dealPill ? (
+              <span className={cn('hidden shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold sm:inline-flex lg:hidden', dealPill.cls)}>
+                <dealPill.icon className="h-3.5 w-3.5" /> {dealPill.label}
+              </span>
+            ) : null}
+            {isOwnerClosureActive ? (
+              <span className="hidden shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600 sm:inline-flex lg:hidden">
+                <Lock className="h-3.5 w-3.5" /> Clôturée
+              </span>
+            ) : null}
 
-      {/* Formulaire avis inline — fixe entre la carte produit et les messages */}
-      {reviewModalOpen && (
-        <div className="bg-white border-b border-orange-200 flex-shrink-0 shadow-sm">
-          <div className="container mx-auto px-4 py-3 max-w-4xl">
-            {/* En-tête produit */}
-            {conversation.item && (
-              <div className="flex items-center gap-3 mb-3">
-                <img
-                  src={conversation.item.image}
-                  alt={conversation.item.title}
-                  className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-orange-600 font-medium uppercase tracking-wide">Votre avis sur</p>
-                  <p className="font-semibold text-gray-900 text-sm truncate">{conversation.item.title}</p>
-                </div>
-                <button onClick={() => setReviewModalOpen(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 text-xl leading-none">×</button>
-              </div>
-            )}
-
-            {/* Étoiles */}
-            <div className="flex justify-center gap-2 mb-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={() => setReviewRating(star)}
-                  className="text-3xl transition-transform hover:scale-110 active:scale-95"
-                  style={{ color: reviewRating >= star ? '#f59e0b' : '#d1d5db', lineHeight: 1 }}
-                >
-                  ★
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" aria-label="Plus d'options" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100">
+                  <MoreVertical className="h-5 w-5" />
                 </button>
-              ))}
-            </div>
-            {reviewRating > 0 && (
-              <p className="text-center text-xs font-semibold text-amber-500 mb-3">
-                {['', 'Très déçu', 'Déçu', 'Correct', 'Bien', 'Excellent !'][reviewRating]}
-              </p>
-            )}
-
-            {/* Commentaire */}
-            <Textarea
-              placeholder="Décrivez votre expérience (facultatif)"
-              value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value.slice(0, 500))}
-              className="resize-none text-sm min-h-[60px] mb-1"
-              rows={2}
-            />
-            <p className="text-xs text-gray-400 text-right mb-3">{reviewComment.length}/500</p>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setReviewModalOpen(false)} className="flex-1 h-9 text-sm">
-                Annuler
-              </Button>
-              <Button
-                onClick={submitReview}
-                disabled={reviewRating === 0 || submittingReview}
-                className="flex-[2] h-9 text-sm bg-[#ec5a13] hover:bg-[#d94f0f] text-white disabled:opacity-50"
-              >
-                {submittingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publier mon avis'}
-              </Button>
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60 rounded-2xl p-1.5">
+                {itemId ? (
+                  <DropdownMenuItem className="rounded-xl" onClick={() => router.push(`/items/${itemId}`)}>
+                    <ExternalLink className="h-4 w-4" /> Voir l&apos;annonce
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem className="rounded-xl" onClick={() => router.push(`/seller/${seller.id}`)}>
+                  <Store className="h-4 w-4" /> {isConversationSeller ? 'Ma boutique' : 'Boutique du vendeur'}
+                </DropdownMenuItem>
+                {isConversationSeller && dealStatus === 'open' ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="rounded-xl" disabled={dealActionLoading} onClick={() => handleDealAction('request')}>
+                      <Handshake className="h-4 w-4" /> Marquer l&apos;affaire comme conclue
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+                {isConversationSeller && (dealStatus === 'concluded' || dealStatus === 'not_concluded') ? (
+                  <DropdownMenuItem className="rounded-xl" disabled={dealActionLoading} onClick={() => handleDealAction('reopen')}>
+                    <Handshake className="h-4 w-4" /> Rouvrir l&apos;affaire
+                  </DropdownMenuItem>
+                ) : null}
+                {isConversationSeller ? (
+                  <DropdownMenuItem className="rounded-xl" disabled={ownerClosureLoading} onClick={handleOwnerClosureAction}>
+                    {isOwnerClosureActive ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    {isOwnerClosureActive ? 'Rouvrir la discussion' : 'Clôturer la discussion'}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
-      )}
 
-      {/* Zone des messages */}
-      <div
-        ref={messagesScrollRef}
-        className="flex-1 overflow-y-auto bg-gray-50"
-        onScroll={handleMessagesScroll}
-      >
-        <div className="container mx-auto px-4 py-6 max-w-4xl">
-          {/* Bouton/indicateur charger plus anciens */}
-          {loadingOlder && (
-            <div className="flex items-center justify-center gap-2 py-3 text-sm text-gray-500">
-              <Loader2 className="h-4 w-4 animate-spin text-[#ec5a13]" />
-              <span>Chargement des messages plus anciens…</span>
+          {/* Annonce (mobile et tablette ; sur ordinateur elle est dans le panneau) */}
+          {conversation.item ? (
+            <Link href={itemId ? `/items/${itemId}` : '#'} className="flex items-center gap-3 border-b border-gray-100 bg-gray-50/70 px-4 py-2.5 transition hover:bg-gray-50 lg:hidden">
+              {conversation.item.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={sizedImage(conversation.item.image, 96)} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+              ) : null}
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-bold uppercase tracking-wide text-gray-400">{myRoleLabel}</span>
+                <span className="block truncate text-sm font-semibold text-gray-900">{conversation.item.title}</span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="block text-sm font-black text-gray-900">{formatPrice(conversation.item.price)}</span>
+                {itemStatus ? <span className="text-[11px] font-bold text-amber-700">{itemStatus}</span> : null}
+              </span>
+            </Link>
+          ) : null}
+
+          {/* Bandeau affaire à traiter */}
+          {dealBanner ? (
+            <div className="flex flex-col gap-3 border-b border-amber-100 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center">
+              <Hourglass className="hidden h-5 w-5 shrink-0 text-amber-600 sm:block" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-amber-950">{dealBanner.title}</p>
+                <p className="text-xs text-amber-800">{dealBanner.text}</p>
+              </div>
+              {dealBanner.actions.length ? (
+                <div className="flex shrink-0 gap-2">
+                  {dealBanner.actions.map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      disabled={dealActionLoading}
+                      onClick={a.onClick}
+                      className={cn('h-9 rounded-full px-4 text-xs font-bold transition disabled:opacity-50', a.primary ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white text-gray-700 ring-1 ring-amber-200 hover:ring-amber-300')}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
-          )}
-          {!loadingOlder && hasMoreMessages && (
+          ) : null}
+
+          {/* Invitation à laisser un avis */}
+          {reviewEligible && conversation.closedByOwner && !reviewModalOpen ? (
             <button
-              onClick={loadOlderMessages}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-[#ec5a13] hover:bg-orange-50 rounded-lg transition-colors mb-2"
+              type="button"
+              onClick={() => { setReviewRating(0); setReviewComment(''); setReviewModalOpen(true); }}
+              className="flex items-center gap-3 border-b border-amber-100 bg-[linear-gradient(90deg,#fffbeb,#fff7f2)] px-4 py-3 text-left transition hover:brightness-[0.98]"
             >
-              <span>↑ Messages plus anciens</span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-amber-950"><Star className="h-5 w-5 fill-current" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-gray-900">Donnez votre avis</span>
+                <span className="block text-xs text-gray-600">La discussion est clôturée : notez cette annonce en 10 secondes.</span>
+              </span>
+              <span className="shrink-0 text-sm font-bold text-[#ec5a13]">Noter</span>
             </button>
-          )}
+          ) : null}
+
+          {reviewModalOpen ? (
+            <div className="border-b border-gray-100 bg-white px-4 py-4">
+              <div className="mx-auto max-w-md">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-black text-gray-900">Votre avis {conversation.item ? `sur « ${conversation.item.title} »` : ''}</p>
+                  <button type="button" onClick={() => setReviewModalOpen(false)} aria-label="Fermer" className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"><X className="h-4 w-4" /></button>
+                </div>
+                <div className="mt-2 flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button key={star} type="button" onClick={() => setReviewRating(star)} aria-label={`${star} étoile${star > 1 ? 's' : ''}`} className="p-0.5 transition hover:scale-110 active:scale-95">
+                      <Star className={cn('h-8 w-8', reviewRating >= star ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200')} />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-sm font-bold text-amber-600">{['', 'Très déçu', 'Déçu', 'Correct', 'Bien', 'Excellent'][reviewRating]}</span>
+                </div>
+                <textarea
+                  placeholder="Racontez votre expérience (facultatif)"
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value.slice(0, 500))}
+                  rows={2}
+                  className="mt-3 w-full resize-none rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#ec5a13]"
+                />
+                <div className="mt-2 flex gap-2">
+                  <button type="button" onClick={() => setReviewModalOpen(false)} className="h-10 flex-1 rounded-full text-sm font-bold text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50">Plus tard</button>
+                  <button type="button" onClick={submitReview} disabled={reviewRating === 0 || submittingReview} className="inline-flex h-10 flex-[2] items-center justify-center rounded-full bg-[#ec5a13] text-sm font-bold text-white transition hover:bg-[#d44f11] disabled:opacity-40">
+                    {submittingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publier mon avis'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Messages */}
-          <div className="space-y-1">
-            {messages.map((msg, index) => {
-              if (msg.type === 'system' || msg.systemId) {
+          <div ref={messagesScrollRef} onScroll={handleMessagesScroll} className="min-h-0 flex-1 overflow-y-auto bg-[#f6f7fb] lg:bg-[#fafafa]">
+            <div className="mx-auto max-w-3xl px-3 py-5 sm:px-6">
+              {loadingOlder ? (
+                <div className="flex items-center justify-center gap-2 py-3 text-xs text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#ec5a13]" /> Messages plus anciens…
+                </div>
+              ) : hasMoreMessages ? (
+                <button type="button" onClick={loadOlderMessages} className="mx-auto mb-2 flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-gray-600 ring-1 ring-gray-200 transition hover:text-gray-900">
+                  <ChevronUp className="h-4 w-4" /> Messages plus anciens
+                </button>
+              ) : messages.length > 0 ? (
+                <p className="mx-auto mb-4 flex max-w-sm items-center justify-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-center text-[11px] text-gray-500 ring-1 ring-gray-100">
+                  <Lock className="h-3 w-3 shrink-0 text-emerald-600" /> Messagerie TakTak : vos numéros restent privés.
+                </p>
+              ) : null}
+
+              {messages.length === 0 ? (
+                <div className="py-16 text-center">
+                  <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl ring-1 ring-gray-100">👋</span>
+                  <p className="mt-4 text-base font-black text-gray-900">Dites bonjour à {peerName}</p>
+                  <p className="mx-auto mt-1 max-w-xs text-sm text-gray-500">Posez vos questions sur l&apos;annonce : disponibilité, état, lieu de rencontre…</p>
+                </div>
+              ) : null}
+
+              {messages.map((msg, index) => {
+                if (msg.type === 'system' || msg.systemId) {
+                  return (
+                    <div key={msg.id} className="flex justify-center py-2">
+                      <p className="max-w-[85%] rounded-full bg-white px-4 py-1.5 text-center text-xs font-semibold text-gray-500 ring-1 ring-gray-200">{msg.content}</p>
+                    </div>
+                  );
+                }
+
+                const isCurrentUser = userIdStr === String(msg.senderId || '').trim();
+                const prevMsg = index > 0 ? messages[index - 1] : null;
+                const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+                const msgDay = new Date(msg.timestamp).toDateString();
+                const prevDay = prevMsg ? new Date(prevMsg.timestamp).toDateString() : null;
+                const showDateSeparator = msgDay !== prevDay;
+                const isFirstInGroup = !(prevMsg && prevMsg.senderId === msg.senderId && msgDay === prevDay && prevMsg.type !== 'system');
+                const isLastInGroup = !(nextMsg && nextMsg.senderId === msg.senderId && new Date(nextMsg.timestamp).toDateString() === msgDay && nextMsg.type !== 'system');
+                const showAvatar = !isCurrentUser && isLastInGroup;
+
                 return (
-                  <div key={msg.id} className="w-full flex justify-center py-2">
-                    <div className="max-w-[85%] rounded-full border border-gray-200 bg-white px-4 py-2 shadow-sm">
-                      <p className="text-xs font-semibold text-gray-500 text-center">
-                        {msg.content}
-                      </p>
+                  <div key={msg.id}>
+                    {showDateSeparator ? (
+                      <div className="my-5 flex justify-center">
+                        <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold capitalize text-gray-500 shadow-sm ring-1 ring-gray-100">{formatDateSeparator(msg.timestamp)}</span>
+                      </div>
+                    ) : null}
+                    <div className={cn('flex items-end gap-2', isCurrentUser ? 'justify-end' : 'justify-start', isLastInGroup ? 'mb-3' : 'mb-0.5')}>
+                      {!isCurrentUser ? (
+                        <span className="w-8 shrink-0">
+                          {showAvatar ? (
+                            msg.senderAvatar ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={sizedImage(msg.senderAvatar, 64)} alt="" className="h-8 w-8 rounded-full object-cover" />
+                            ) : (
+                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-[11px] font-black text-gray-600">{getInitials(msg.senderName)}</span>
+                            )
+                          ) : null}
+                        </span>
+                      ) : null}
+                      <div
+                        className={cn(
+                          'max-w-[78%] px-3.5 py-2 sm:max-w-[68%]',
+                          isCurrentUser ? 'bg-[#ec5a13] text-white' : 'bg-white text-gray-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)] ring-1 ring-gray-100',
+                          'rounded-[20px]',
+                          isCurrentUser
+                            ? cn(!isFirstInGroup && 'rounded-tr-md', !isLastInGroup && 'rounded-br-md', isLastInGroup && 'rounded-br-md')
+                            : cn(!isFirstInGroup && 'rounded-tl-md', !isLastInGroup && 'rounded-bl-md', isLastInGroup && 'rounded-bl-md'),
+                          msg.postClosure && 'opacity-80'
+                        )}
+                      >
+                        {msg.type === 'audio' ? (
+                          <AudioPlayer audioUrl={msg.attachments?.[0] || ''} isCurrentUser={isCurrentUser} />
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words text-[15px] leading-[21px]">{msg.content}</p>
+                        )}
+                        <span className={cn('mt-0.5 flex items-center justify-end gap-1 text-[11px]', isCurrentUser ? 'text-white/75' : 'text-gray-400')}>
+                          {formatMessageTime(msg.timestamp)}
+                          {isCurrentUser ? (
+                            msg.read ? (
+                              <CheckCheck className="h-[15px] w-[15px] text-amber-200" aria-label="Lu" />
+                            ) : msg.delivered ? (
+                              <CheckCheck className="h-[15px] w-[15px] text-white/90" aria-label="Distribué" />
+                            ) : (
+                              <Check className="h-[15px] w-[15px] text-white/50" aria-label="Envoyé" />
+                            )
+                          ) : null}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
-              }
+              })}
 
-              // Comparaison stricte pour déterminer si c'est l'utilisateur actuel
-              // On compare à la fois avec l'ID de l'utilisateur et avec le nom
-              const userIdStr = String(user?.id || '').trim();
-              const msgSenderIdStr = String(msg.senderId || '').trim();
-              const isCurrentUser = userIdStr === msgSenderIdStr || user?.name === msg.senderName;
-              
-              // Log de debug détaillé
-              if (index === 0) {
-                console.log('🔍 Debug positionnement MESSAGE:', {
-                  userRaw: user,
-                  userId: user?.id,
-                  userIdStr,
-                  userName: user?.name,
-                  msgSenderId: msg.senderId,
-                  msgSenderIdStr,
-                  msgSenderName: msg.senderName,
-                  comparison: `"${msgSenderIdStr}" === "${userIdStr}"`,
-                  nameComparison: `"${user?.name}" === "${msg.senderName}"`,
-                  isCurrentUser,
-                  willBePositioned: isCurrentUser ? 'DROITE (orange)' : 'GAUCHE (blanc)'
-                });
-              }
-              
-              // Séparateur de date
-              const prevMsg = index > 0 ? messages[index - 1] : null;
-              const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
-              const msgDay = new Date(msg.timestamp).toDateString();
-              const prevDay = prevMsg ? new Date(prevMsg.timestamp).toDateString() : null;
-              const showDateSeparator = msgDay !== prevDay;
-              const isSameSenderAsPrev = prevMsg && prevMsg.senderId === msg.senderId && msgDay === prevDay;
-              const isSameSenderAsNext = nextMsg && nextMsg.senderId === msg.senderId;
-              
-              // Déterminer le style de la bulle selon la position dans le groupe
-              const isFirstInGroup = !isSameSenderAsPrev;
-              const isLastInGroup = !isSameSenderAsNext;
-              
-              // Afficher l'avatar seulement pour le dernier message d'un groupe
-              const showAvatar = !isCurrentUser && isLastInGroup;
-
-              return (
-                <div key={msg.id}>
-                  {showDateSeparator && (
-                    <div className="flex items-center gap-3 my-4">
-                      <div className="flex-1 h-px bg-gray-200" />
-                      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap px-1">
-                        {formatDateSeparator(msg.timestamp)}
-                      </span>
-                      <div className="flex-1 h-px bg-gray-200" />
-                    </div>
-                  )}
-                <div
-                  className={`w-full flex items-end gap-2 ${
-                    isCurrentUser ? 'flex-row-reverse' : 'flex-row'
-                  } ${!isLastInGroup ? 'mb-0.5' : 'mb-3'}`}
-                >
-                  {/* Avatar (seulement pour le dernier message d'un groupe) */}
-                  <div className="flex-shrink-0 w-8">
-                    {showAvatar ? (
-                      <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
-                        {msg.senderAvatar ? (
-                          <img src={msg.senderAvatar} alt={msg.senderName} className="object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-xs font-bold">
-                            {msg.senderName?.charAt(0)?.toUpperCase() || '?'}
-                          </div>
-                        )}
-                      </Avatar>
-                    ) : !isCurrentUser ? (
-                      <div className="w-8"></div>
-                    ) : null}
-                  </div>
-
-                  {/* Bulle de message */}
-                  <div
-                    className={`flex flex-col max-w-[75%] sm:max-w-[70%] ${
-                      isCurrentUser ? 'items-end ml-auto' : 'items-start mr-auto'
-                    }`}
-                  >
-                    {/* Nom de l'expéditeur (seulement pour le premier message d'un groupe reçu) */}
-                    {!isCurrentUser && isFirstInGroup && (
-                      <span className="text-xs text-gray-500 mb-1 px-3">
-                        {msg.senderName}
-                      </span>
-                    )}
-                    
-                    {/* Message bubble avec les couleurs de l'app */}
-                    <div className="relative group">
-                      <div
-                        className={`relative px-3 py-2 shadow-sm transition-shadow hover:shadow-md ${
-                          isCurrentUser
-                            ? 'bg-[#ec5a13] text-white' // Orange de l'app pour messages envoyés
-                            : 'bg-white text-gray-900 border border-gray-200' // Blanc pour messages reçus
-                        } ${
-                          // Coins arrondis selon la position dans le groupe
-                          isCurrentUser
-                            ? isFirstInGroup && isLastInGroup
-                              ? 'rounded-2xl rounded-br-md' // Message seul
-                              : isFirstInGroup
-                              ? 'rounded-2xl rounded-br-md rounded-tr-2xl' // Premier d'un groupe
-                              : isLastInGroup
-                              ? 'rounded-2xl rounded-br-md rounded-tr-md' // Dernier d'un groupe
-                              : 'rounded-tr-md rounded-tl-2xl rounded-bl-2xl rounded-br-md' // Milieu d'un groupe
-                            : isFirstInGroup && isLastInGroup
-                              ? 'rounded-2xl rounded-bl-md' // Message seul
-                              : isFirstInGroup
-                              ? 'rounded-2xl rounded-bl-md rounded-tl-2xl' // Premier d'un groupe
-                              : isLastInGroup
-                              ? 'rounded-2xl rounded-bl-md rounded-tl-md' // Dernier d'un groupe
-                              : 'rounded-tl-md rounded-tr-2xl rounded-br-2xl rounded-bl-md' // Milieu d'un groupe
-                        }`}
-                      >
-                        {/* Contenu du message */}
-                        {msg.type === 'audio' ? (
-                          <AudioPlayer 
-                            audioUrl={msg.attachments?.[0] || ''} 
-                            isCurrentUser={isCurrentUser}
-                          />
-                        ) : (
-                          <p className="text-[14px] leading-[19px] whitespace-pre-wrap break-words">
-                            {msg.content}
-                          </p>
-                        )}
-                        
-                        {/* Heure et statut intégrés dans la bulle */}
-                        <div className="flex items-center justify-end gap-1 mt-1">
-                          <span className={`text-[11px] ${isCurrentUser ? 'text-white/80' : 'text-gray-500'}`}>
-                            {formatMessageTime(msg.timestamp)}
-                          </span>
-                          {isCurrentUser && (
-                            <>
-                              {msg.read ? (
-                                /* Vu — ambre pâle, analogique de l'orange */
-                                <CheckCheck className="h-[15px] w-[15px]" style={{ color: '#fde68a' }} />
-                              ) : msg.delivered ? (
-                                /* Livré — blanc plein */
-                                <CheckCheck className="h-[15px] w-[15px] text-white/90" />
-                              ) : (
-                                /* Envoyé — blanc discret */
-                                <Check className="h-[15px] w-[15px] text-white/45" />
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                </div>
-              );
-            })}
-
-            {/* Indicateur "En train d'écrire..." */}
-            {typingUsers.size > 0 && (
-              <div className="w-full flex items-end gap-2 mb-3">
-                <div className="flex-shrink-0 w-8">
-                  <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
-                    {otherParticipant.avatar ? (
-                      <img src={otherParticipant.avatar} alt={otherParticipant.name} className="object-cover" />
+              {peerTyping ? (
+                <div className="mb-3 flex items-end gap-2">
+                  <span className="w-8 shrink-0">
+                    {peer.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={sizedImage(peer.avatar, 64)} alt="" className="h-8 w-8 rounded-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-xs font-bold">
-                        {otherParticipant.name.charAt(0)}
-                      </div>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-[11px] font-black text-gray-600">{getInitials(peerName)}</span>
                     )}
-                  </Avatar>
-                </div>
-                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl rounded-bl-md px-5 py-3">
-                  <div className="flex gap-1.5 items-center">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
+                  <div className="flex items-center gap-1.5 rounded-[20px] rounded-bl-md bg-white px-4 py-3.5 ring-1 ring-gray-100">
+                    {[0, 150, 300].map((d) => <span key={d} className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: `${d}ms` }} />)}
                   </div>
                 </div>
-              </div>
-            )}
+              ) : null}
 
-            <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} />
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Zone de saisie */}
-      <div className="bg-white border-t border-gray-200 sticky bottom-0 shadow-lg">
-        <div className="container mx-auto px-4 py-3 max-w-4xl">
-          {/* Indicateur de connexion */}
-          {!isConnected && (
-            <div className="mb-3 flex items-center gap-2 text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
-              <WifiOff className="h-4 w-4 flex-shrink-0" />
-              <p className="text-xs font-medium">Connexion perdue. Reconnexion en cours...</p>
+          {/* Saisie */}
+          <div className="border-t border-gray-100 bg-white px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 sm:px-4">
+            <div className="mx-auto max-w-3xl">
+              {!isConnected ? (
+                <p className="mb-2 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  <WifiOff className="h-4 w-4 shrink-0" /> Connexion perdue, reconnexion en cours…
+                </p>
+              ) : null}
+              {isOwnerClosureActive ? (
+                <p className="mb-2 flex items-center gap-2 text-xs text-gray-500">
+                  <Lock className="h-3.5 w-3.5 shrink-0" />
+                  {isConversationSeller ? 'Vous avez clôturé cette discussion. Vos messages restent possibles.' : 'Le vendeur a clôturé cette discussion. Vous pouvez encore lui écrire.'}
+                </p>
+              ) : null}
+
+              {isRecordingVoice ? (
+                <VoiceRecorder onSendVoice={handleSendVoice} onCancel={handleCancelVoice} onStartRecording={handleStartRecording} onStopRecording={handleStopRecording} />
+              ) : (
+                <div className="flex items-end gap-2">
+                  <textarea
+                    ref={composerRef}
+                    placeholder={isConnected ? 'Écrire un message…' : 'Reconnexion…'}
+                    value={message}
+                    onChange={handleMessageChange}
+                    onKeyDown={handleKeyPress}
+                    rows={1}
+                    disabled={!isConnected}
+                    className="max-h-40 min-h-[48px] flex-1 resize-none rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-[15px] leading-[22px] outline-none transition placeholder:text-gray-400 focus:border-[#ec5a13] focus:bg-white focus:ring-4 focus:ring-[#ec5a13]/10 disabled:opacity-60"
+                  />
+                  {message.trim() ? (
+                    <button type="button" onClick={handleSendMessage} disabled={!isConnected} aria-label="Envoyer" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ec5a13] text-white shadow-[0_10px_24px_-10px_rgba(236,90,19,0.8)] transition hover:bg-[#d44f11] active:scale-95 disabled:opacity-50">
+                      <Send className="h-5 w-5" />
+                    </button>
+                  ) : (
+                    <button type="button" onClick={toggleVoiceMode} disabled={!isConnected} aria-label="Enregistrer un message vocal" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0b1020] text-white transition hover:bg-black active:scale-95 disabled:opacity-50">
+                      <Mic className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+              )}
+              <p className="mt-1.5 hidden text-[11px] text-gray-400 sm:block">Entrée pour envoyer · Maj + Entrée pour aller à la ligne</p>
             </div>
-          )}
-          
-          {/* Mode message vocal */}
-          {isRecordingVoice ? (
-            <VoiceRecorder
-              onSendVoice={handleSendVoice}
-              onCancel={handleCancelVoice}
-              onStartRecording={handleStartRecording}
-              onStopRecording={handleStopRecording}
-            />
-          ) : (
-            /* Mode message texte */
-            <div className="flex items-end gap-2">
-              <div className="flex-1 bg-gray-50 rounded-2xl border border-gray-300 overflow-hidden hover:border-gray-400 focus-within:border-[#ec5a13] transition-colors">
-                <Textarea
-                  placeholder="Écrivez un message..."
-                  value={message}
-                  onChange={handleMessageChange}
-                  onKeyPress={handleKeyPress}
-                  className="min-h-[44px] max-h-[150px] resize-none border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-4 py-3 text-[15px] bg-transparent"
-                  rows={1}
-                  disabled={!isConnected}
-                />
+          </div>
+        </section>
+
+        {/* ── Panneau latéral (ordinateur) ── */}
+        <aside className="hidden w-[320px] shrink-0 flex-col gap-4 overflow-y-auto lg:flex">
+          {conversation.item ? (
+            <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white">
+              {conversation.item.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={sizedImage(conversation.item.image, 480)} alt="" className="aspect-[4/3] w-full object-cover" />
+              ) : null}
+              <div className="p-4">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">{myRoleLabel}</p>
+                <p className="mt-0.5 line-clamp-2 font-bold text-gray-900">{conversation.item.title}</p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <p className="text-lg font-black text-gray-900">{formatPrice(conversation.item.price)}</p>
+                  {itemStatus ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">{itemStatus}</span> : null}
+                </div>
+                {itemId ? (
+                  <Link href={`/items/${itemId}`} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full text-sm font-bold text-gray-800 ring-1 ring-gray-200 transition hover:bg-gray-50">
+                    <ExternalLink className="h-4 w-4" /> Voir l&apos;annonce
+                  </Link>
+                ) : null}
               </div>
-              
-              {/* Bouton micro */}
-              <Button
-                onClick={toggleVoiceMode}
-                disabled={!isConnected}
-                className="bg-gray-100 hover:bg-gray-200 h-11 w-11 rounded-full p-0 flex items-center justify-center shadow-md transition-all disabled:bg-gray-300 disabled:opacity-50"
-                size="icon"
-              >
-                <Mic className="h-5 w-5 text-gray-700" />
-              </Button>
-              
-              {/* Bouton envoi */}
-              <Button
-                onClick={handleSendMessage}
-                disabled={!message.trim() || !isConnected}
-                className="bg-[#ec5a13] hover:bg-[#d94f0f] h-11 w-11 rounded-full p-0 flex items-center justify-center shadow-md transition-all disabled:bg-gray-300 disabled:opacity-50"
-                size="icon"
-              >
-                <Send className="h-5 w-5 text-white" />
-              </Button>
             </div>
-          )}
-        </div>
+          ) : null}
+
+          {/* Suivi de l'affaire */}
+          <div className="rounded-3xl border border-gray-100 bg-white p-4">
+            <p className="flex items-center gap-2 text-sm font-black text-gray-900"><Handshake className="h-4 w-4 text-[#ec5a13]" /> Suivi de l&apos;affaire</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {dealPill ? (
+                <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold', dealPill.cls)}><dealPill.icon className="h-3.5 w-3.5" /> {dealPill.label}</span>
+              ) : (
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600">En discussion</span>
+              )}
+              {isOwnerClosureActive ? <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-600"><Lock className="h-3.5 w-3.5" /> Clôturée</span> : null}
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-gray-500">
+              {dealStatus === 'open'
+                ? isConversationSeller ? "Une fois la vente faite, marquez l'affaire comme conclue : l'acheteur confirmera." : "Le vendeur pourra marquer l'affaire comme conclue ; vous n'aurez qu'à confirmer."
+                : dealStatus === 'pending_conclusion' ? 'En attente de confirmation.'
+                  : dealStatus === 'concluded' ? 'Bravo ! Cette affaire compte dans les ventes conclues du vendeur.' : 'Cette affaire ne s\'est pas faite.'}
+            </p>
+            {isConversationSeller ? (
+              <div className="mt-3 space-y-2">
+                {dealStatus === 'open' ? (
+                  <button type="button" disabled={dealActionLoading} onClick={() => handleDealAction('request')} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                    <CheckCircle2 className="h-4 w-4" /> Marquer comme conclue
+                  </button>
+                ) : null}
+                {dealStatus === 'concluded' || dealStatus === 'not_concluded' ? (
+                  <button type="button" disabled={dealActionLoading} onClick={() => handleDealAction('reopen')} className="inline-flex h-10 w-full items-center justify-center rounded-full text-sm font-bold text-gray-700 ring-1 ring-gray-200 transition hover:bg-gray-50 disabled:opacity-50">
+                    Rouvrir l&apos;affaire
+                  </button>
+                ) : null}
+                <button type="button" disabled={ownerClosureLoading} onClick={handleOwnerClosureAction} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full text-sm font-bold text-gray-700 ring-1 ring-gray-200 transition hover:bg-gray-50 disabled:opacity-50">
+                  {ownerClosureLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : isOwnerClosureActive ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                  {isOwnerClosureActive ? 'Rouvrir la discussion' : 'Clôturer la discussion'}
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-3xl border border-emerald-100 bg-[linear-gradient(160deg,#f0fdf6,#ffffff)] p-4">
+            <p className="flex items-center gap-2 text-sm font-black text-emerald-900"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Restez prudent</p>
+            <ul className="mt-2 space-y-1.5 text-xs leading-snug text-emerald-950/75">
+              <li>• Ne payez jamais à l&apos;avance.</li>
+              <li>• Rencontrez-vous dans un lieu public.</li>
+              <li>• Ne partagez pas d&apos;informations bancaires.</li>
+            </ul>
+          </div>
+        </aside>
       </div>
+    </ChatShell>
+  );
+}
+
+// Page plein écran : en-tête du site + zone de discussion qui occupe le reste de la hauteur
+function ChatShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#f6f7fb]">
+      <Suspense fallback={<div className="h-16 shrink-0 border-b border-gray-200 bg-white" />}>
+        <Header />
+      </Suspense>
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }
