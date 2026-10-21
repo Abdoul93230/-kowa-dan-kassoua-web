@@ -54,10 +54,11 @@ export const removeFavorite = async (productId: string): Promise<FavoriteRespons
  */
 export const getMyFavorites = async (
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  view?: 'card' | 'full'
 ): Promise<FavoritesListResponse> => {
   try {
-    const response = await api.get(`/favorites?page=${page}&limit=${limit}`);
+    const response = await api.get(`/favorites?page=${page}&limit=${limit}${view ? `&view=${view}` : ''}`);
     return response.data;
   } catch (error: any) {
     console.error('❌ Erreur récupération favoris:', error);
