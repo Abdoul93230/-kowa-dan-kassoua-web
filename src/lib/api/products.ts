@@ -63,7 +63,7 @@ export const getProducts = async (filters?: ProductFilters): Promise<ProductsRes
       if (filters.location) params.append('location', filters.location);
       if (filters.search) params.append('search', filters.search);
       if (filters.minPrice) params.append('minPrice', filters.minPrice.toString());
-      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice.toString());
+      if (filters.maxPrice !== undefined && filters.maxPrice !== null) params.append('maxPrice', filters.maxPrice.toString()); // 0 = gratuit
       if (filters.seller) params.append('seller', filters.seller);
       if (filters.status) params.append('status', filters.status);
       if (filters.sort) params.append('sort', filters.sort);
