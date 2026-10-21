@@ -1,9 +1,7 @@
 'use client';
 
-import { Menu, X, MessageSquare, Heart, User, LogOut, Package, ShieldCheck } from 'lucide-react';
+import { Menu, X, MessageSquare, Heart, User, LogOut, Package, ShieldCheck, Plus, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -114,322 +112,204 @@ function HeaderContent() {
       .slice(0, 2);
   };
 
+  const isProducts = pathname === '/categories/tous' && urlType === 'product';
+  const isServices = pathname === '/categories/tous' && urlType === 'service';
+  const NAV = [
+    { label: 'Produits', path: '/categories/tous?type=product', active: isProducts },
+    { label: 'Services', path: '/categories/tous?type=service', active: isServices },
+    { label: 'Catégories', path: '/categories-list', active: pathname === '/categories-list' },
+    ...(isLoggedIn ? [{ label: 'Mes annonces', path: '/mes-annonces', active: pathname === '/mes-annonces' }] : []),
+  ];
+
+  const countBadge = (n: number) =>
+    n > 0 ? (
+      <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#ec5a13] px-1 text-[10px] font-extrabold text-white ring-2 ring-white">
+        {n > 99 ? '99+' : n}
+      </span>
+    ) : null;
+
+  const iconBtn =
+    'relative flex h-10 w-10 items-center justify-center rounded-full text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ec5a13]';
+
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-4 md:gap-8">
-            <div
-              className="flex items-center cursor-pointer"
-              onClick={() => handleNavigation('/')}
-            >
-              <Image
-                src="/branding/flogo-removebg-preview.png"
-                alt="TakTak"
-                width={150}
-                height={56}
-                className="h-24 w-auto object-contain mb-2"
-                priority
-              />
-            </div>
+    <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/85 backdrop-blur-xl supports-[backdrop-filter]:bg-white/75">
+      <div className="container mx-auto max-w-7xl px-4">
+        <div className="flex h-16 items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-6 lg:gap-8">
+            <button type="button" onClick={() => handleNavigation('/')} className="flex shrink-0 items-center" aria-label="TakTak, accueil">
+              <Image src="/branding/flogo-removebg-preview.png" alt="TakTak" width={150} height={56} className="-my-3 h-[4.5rem] w-auto object-contain" priority />
+            </button>
 
-            <Button
-              onClick={() => handleProtectedNav('/publish')}
-              className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white hidden md:inline-flex"
-            >
-              Publier une annonce
-            </Button>
-
-            <nav className="hidden md:flex items-center gap-6">
-              <button 
-                onClick={() => handleNavigation('/categories/tous?type=product')}
-                className="relative text-gray-600 hover:text-[#ec5a13] font-medium transition-colors pb-1"
-              >
-                Produits
-                {pathname === '/categories/tous' && urlType === 'product' && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
-                )}
-              </button>
-              <button 
-                onClick={() => handleNavigation('/categories/tous?type=service')}
-                className="relative text-gray-600 hover:text-[#ec5a13] font-medium transition-colors pb-1"
-              >
-                Services
-                {pathname === '/categories/tous' && urlType === 'service' && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
-                )}
-              </button>
-              <button 
-                onClick={() => handleNavigation('/categories-list')}
-                className="relative text-gray-600 hover:text-[#ec5a13] font-medium transition-colors pb-1"
-              >
-                Catégories
-                {pathname === '/categories-list' && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
-                )}
-              </button>
-              {isLoggedIn && (
-                <button 
-                  onClick={() => handleNavigation('/mes-annonces')}
-                  className="relative text-gray-600 hover:text-[#ec5a13] font-medium transition-colors pb-1"
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Navigation principale">
+              {NAV.map((item) => (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => handleNavigation(item.path)}
+                  aria-current={item.active ? 'page' : undefined}
+                  className={`rounded-full px-3.5 py-2 text-[14.5px] font-semibold transition ${
+                    item.active ? 'bg-orange-50 text-[#ec5a13]' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
                 >
-                  Mes Annonces
-                  {pathname === '/mes-annonces' && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ec5a13]"></span>
-                  )}
+                  {item.label}
                 </button>
-              )}
+              ))}
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* Bouton Favoris */}
-            <Button
-              onClick={() => handleProtectedNav('/favoris')}
-              variant="ghost"
-              size="icon"
-              className="relative hidden md:inline-flex hover:bg-[#ffe9de] hover:text-[#ec5a13]"
-            >
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <button type="button" onClick={() => handleProtectedNav('/favoris')} className={`${iconBtn} hidden md:flex`} aria-label="Favoris">
               <Heart className="h-5 w-5" />
-              {isLoggedIn && favorites.length > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-[#ec5a13] text-white text-xs">
-                  {favorites.length}
-                </Badge>
-              )}
-            </Button>
-            
-            {/* Bouton Messages */}
-            <Button
-              onClick={() => handleProtectedNav('/messages')}
-              variant="ghost"
-              size="icon"
-              className="relative hidden md:inline-flex hover:bg-[#ffe9de] hover:text-[#ec5a13]"
-            >
+              {isLoggedIn ? countBadge(favorites.length) : null}
+            </button>
+            <button type="button" onClick={() => handleProtectedNav('/messages')} className={`${iconBtn} hidden md:flex`} aria-label="Messages">
               <MessageSquare className="h-5 w-5" />
-              {isLoggedIn && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-[#ec5a13] text-white text-xs">
-                  {unreadCount}
-                </Badge>
-              )}
-            </Button>
-            
-            {/* Menu utilisateur ou bouton connexion */}
+              {isLoggedIn ? countBadge(unreadCount) : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleProtectedNav('/publish')}
+              className="ml-1 hidden h-10 items-center gap-1.5 rounded-full bg-gradient-to-r from-[#ec5a13] to-[#c2410c] px-4 text-[14px] font-bold text-white shadow-md shadow-orange-500/25 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ec5a13] focus-visible:ring-offset-2 md:flex"
+            >
+              <Plus className="h-4 w-4" /> Publier
+            </button>
+
             {isLoggedIn && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="hidden md:flex items-center gap-2 hover:bg-[#ffe9de]">
+                  <button
+                    type="button"
+                    className="ml-1 hidden items-center gap-2 rounded-full border border-gray-200 py-1 pl-1 pr-3 transition hover:border-gray-300 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ec5a13] md:flex"
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback className="bg-[#ec5a13] text-white">
+                      <AvatarFallback className="bg-gradient-to-br from-[#ec5a13] to-[#b3420e] text-xs font-bold text-white">
                         {getInitials(user.name)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-medium text-gray-900">{user.name}</span>
-                  </Button>
+                    <span className="max-w-[9rem] truncate text-sm font-semibold text-gray-900">{user.name.split(' ')[0]}</span>
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col">
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-xs text-gray-500">{user.email || user.phone}</p>
-                    </div>
+                <DropdownMenuContent align="end" className="w-60 rounded-2xl p-1.5">
+                  <DropdownMenuLabel className="px-2.5 py-2">
+                    <p className="truncate font-semibold text-gray-900">{user.name}</p>
+                    <p className="truncate text-xs font-normal text-gray-500">{user.email || user.phone}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleNavigation('/mes-annonces')}>
-                    <Package className="mr-2 h-4 w-4" />
-                    Mes annonces
+                  <DropdownMenuItem className="rounded-xl" onClick={() => handleNavigation('/mes-annonces')}>
+                    <Package className="mr-2 h-4 w-4" /> Mes annonces
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleNavigation('/favoris')}>
-                    <Heart className="mr-2 h-4 w-4" />
-                    Favoris
-                    {favorites.length > 0 && (
-                      <Badge className="ml-auto bg-[#ec5a13] text-white text-xs">
-                        {favorites.length}
-                      </Badge>
-                    )}
+                  <DropdownMenuItem className="rounded-xl" onClick={() => handleNavigation('/favoris')}>
+                    <Heart className="mr-2 h-4 w-4" /> Favoris
+                    {favorites.length > 0 && <span className="ml-auto text-xs font-bold text-[#ec5a13]">{favorites.length}</span>}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleNavigation('/messages')}>
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Messages
-                    {unreadCount > 0 && (
-                      <Badge className="ml-auto bg-[#ec5a13] text-white text-xs">
-                        {unreadCount}
-                      </Badge>
-                    )}
+                  <DropdownMenuItem className="rounded-xl" onClick={() => handleNavigation('/messages')}>
+                    <MessageSquare className="mr-2 h-4 w-4" /> Messages
+                    {unreadCount > 0 && <span className="ml-auto text-xs font-bold text-[#ec5a13]">{unreadCount}</span>}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleNavigation('/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    Mon profil
+                  <DropdownMenuItem className="rounded-xl" onClick={() => handleNavigation('/profile')}>
+                    <User className="mr-2 h-4 w-4" /> Mon profil
                   </DropdownMenuItem>
                   {user?.role === 'admin' && (
-                    <DropdownMenuItem onClick={() => handleNavigation('/admin')}>
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                      Administration
+                    <DropdownMenuItem className="rounded-xl" onClick={() => handleNavigation('/admin')}>
+                      <ShieldCheck className="mr-2 h-4 w-4" /> Administration
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={handleLogout}
-                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Déconnexion
+                  <DropdownMenuItem onClick={handleLogout} className="rounded-xl text-red-600 focus:bg-red-50 focus:text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" /> Déconnexion
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button
+              <button
+                type="button"
                 onClick={() => openQuickAuth('/')}
-                variant="outline"
-                className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] hidden md:inline-flex"
+                className="ml-1 hidden h-10 items-center rounded-full border border-gray-300 px-4 text-[14px] font-bold text-gray-900 transition hover:border-gray-900 md:flex"
               >
                 Connexion
-              </Button>
+              </button>
             )}
-            
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="md:hidden"
+
+            {/* Téléphone : messages + menu */}
+            <button type="button" onClick={() => handleProtectedNav('/messages')} className={`${iconBtn} md:hidden`} aria-label="Messages">
+              <MessageSquare className="h-5 w-5" />
+              {isLoggedIn ? countBadge(unreadCount) : null}
+            </button>
+            <button
+              type="button"
+              className={`${iconBtn} md:hidden`}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
+            </button>
           </div>
         </div>
 
-        {/* Menu mobile */}
+        {/* Menu téléphone */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
-            <nav className="flex flex-col gap-4">
-              <button 
-                onClick={() => handleNavigation('/categories/tous?type=product')}
-                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 ${
-                  pathname === '/categories/tous' && urlType === 'product'
-                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
-                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
-                }`}
+          <div className="border-t border-gray-100 pb-5 pt-3 md:hidden">
+            {isLoggedIn && user ? (
+              <button
+                type="button"
+                onClick={() => handleNavigation('/profile')}
+                className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-gray-50 p-3 text-left"
               >
-                Produits
+                <Avatar className="h-11 w-11">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="bg-gradient-to-br from-[#ec5a13] to-[#b3420e] font-bold text-white">{getInitials(user.name)}</AvatarFallback>
+                </Avatar>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-gray-900">{user.name}</span>
+                  <span className="block truncate text-xs text-gray-500">Voir mon profil</span>
+                </span>
               </button>
-              <button 
-                onClick={() => handleNavigation('/categories/tous?type=service')}
-                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 ${
-                  pathname === '/categories/tous' && urlType === 'service'
-                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
-                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
-                }`}
-              >
-                Services
-              </button>
-              <button 
-                onClick={() => handleNavigation('/categories-list')}
-                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 ${
-                  pathname === '/categories-list'
-                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
-                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
-                }`}
-              >
-                Catégories
-              </button>
-              {isLoggedIn && (
-                <button 
-                  onClick={() => handleNavigation('/mes-annonces')}
-                  className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 ${
-                    pathname === '/mes-annonces'
-                      ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
-                      : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
-                  }`}
+            ) : null}
+
+            <nav className="grid gap-1" aria-label="Menu">
+              {NAV.map((item) => (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => handleNavigation(item.path)}
+                  className={`rounded-xl px-3 py-3 text-left font-semibold transition ${item.active ? 'bg-orange-50 text-[#ec5a13]' : 'text-gray-700 hover:bg-gray-50'}`}
                 >
-                  Mes Annonces
+                  {item.label}
+                </button>
+              ))}
+              <button type="button" onClick={() => handleProtectedNav('/favoris')} className="flex items-center justify-between rounded-xl px-3 py-3 text-left font-semibold text-gray-700 hover:bg-gray-50">
+                <span className="flex items-center gap-2"><Heart className="h-4 w-4" /> Favoris</span>
+                {isLoggedIn && favorites.length > 0 ? <span className="text-sm font-bold text-[#ec5a13]">{favorites.length}</span> : null}
+              </button>
+              {isLoggedIn && user?.role === 'admin' ? (
+                <button type="button" onClick={() => handleNavigation('/admin')} className="flex items-center gap-2 rounded-xl px-3 py-3 text-left font-semibold text-gray-700 hover:bg-gray-50">
+                  <ShieldCheck className="h-4 w-4" /> Administration
+                </button>
+              ) : null}
+            </nav>
+
+            <div className="mt-4 grid gap-2 border-t border-gray-100 pt-4">
+              <button
+                type="button"
+                onClick={() => handleProtectedNav('/publish')}
+                className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#ec5a13] to-[#c2410c] font-bold text-white"
+              >
+                <Plus className="h-5 w-5" /> Publier une annonce
+              </button>
+              {isLoggedIn && user ? (
+                <button type="button" onClick={handleLogout} className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-gray-200 font-semibold text-red-600">
+                  <LogOut className="h-4 w-4" /> Déconnexion
+                </button>
+              ) : (
+                <button type="button" onClick={() => openQuickAuth('/')} className="h-12 rounded-2xl border border-gray-300 font-bold text-gray-900">
+                  Connexion
                 </button>
               )}
-              <button
-                onClick={() => handleProtectedNav('/favoris')}
-                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 flex items-center justify-between ${
-                  pathname === '/favoris'
-                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
-                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <Heart className="h-4 w-4" />
-                  Favoris
-                </span>
-                {isLoggedIn && favorites.length > 0 && (
-                  <Badge className="bg-[#ec5a13] text-white">
-                    {favorites.length}
-                  </Badge>
-                )}
-              </button>
-              <button
-                onClick={() => handleProtectedNav('/messages')}
-                className={`text-left font-medium transition-colors py-2 border-l-4 pl-3 flex items-center justify-between ${
-                  pathname === '/messages'
-                    ? 'text-[#ec5a13] border-[#ec5a13] bg-[#ffe9de]/30'
-                    : 'text-gray-600 border-transparent hover:text-[#ec5a13]'
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Messages
-                </span>
-                {isLoggedIn && (
-                  <Badge className="bg-[#ec5a13] text-white">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </button>
-              <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">
-                <Button
-                  onClick={() => handleProtectedNav('/publish')}
-                  className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white w-full"
-                >
-                  Publier une annonce
-                </Button>
-                
-                {isLoggedIn && user ? (
-                  <>
-                    <div className="flex items-center gap-3 p-3 bg-[#ffe9de]/30 rounded-lg">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback className="bg-[#ec5a13] text-white">
-                          {getInitials(user.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.email || user.phone}</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => handleNavigation('/profile')}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      Mon profil
-                    </Button>
-                    <Button 
-                      onClick={handleLogout}
-                      variant="outline" 
-                      className="border-red-600 text-red-600 hover:bg-red-50 w-full"
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Déconnexion
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    onClick={() => openQuickAuth('/')}
-                    variant="outline"
-                    className="border-[#ec5a13] text-[#ec5a13] hover:bg-[#ffe9de] w-full"
-                  >
-                    Connexion
-                  </Button>
-                )}
-              </div>
-            </nav>
+            </div>
           </div>
         )}
       </div>
