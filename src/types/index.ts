@@ -1,7 +1,7 @@
 // types/index.ts
 
 export interface ContactInfo {
-  phone: string;
+  phone?: string; // jamais renvoyé par les routes publiques
   whatsapp?: string;
   email?: string;
   website?: string;

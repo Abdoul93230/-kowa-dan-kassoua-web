@@ -223,9 +223,10 @@ export function PublishForm() {
             deliveryAreas: item.delivery?.areas || [],
             availability: item.availability || { days: [], openingTime: '', closingTime: '' },
             sellerName: item.seller.name,
-            sellerPhone: parsePhone(item.seller.contactInfo.phone),
-            sellerWhatsapp: item.seller.contactInfo.whatsapp ? parsePhone(item.seller.contactInfo.whatsapp) : parsePhone(item.seller.contactInfo.phone),
-            sellerEmail: item.seller.contactInfo.email || '',
+            // Coordonnées : celles du compte connecté (l'API ne les expose plus dans l'annonce)
+            sellerPhone: parsePhone(currentUser?.phone || '+227'),
+            sellerWhatsapp: parsePhone(currentUser?.whatsapp || currentUser?.phone || '+227'),
+            sellerEmail: currentUser?.email || '',
             specifications: item.specifications || {},
             serviceArea: item.serviceArea || [],
             promoted: item.promoted || false,
