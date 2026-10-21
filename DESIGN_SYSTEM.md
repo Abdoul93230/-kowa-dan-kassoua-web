@@ -1,4 +1,4 @@
-# Charte Graphique - MarketHub (inspirée de Leboncoin)
+# Charte Graphique - TakTak (inspirée de Leboncoin)
 
 ## 🎨 Couleurs Principales
 
