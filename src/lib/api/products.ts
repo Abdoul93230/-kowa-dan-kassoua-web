@@ -20,6 +20,8 @@ export interface ProductFilters {
   sort?: string; // '-createdAt', 'price', '-price', '-views', etc.
   /** 'card' : uniquement les champs affichés dans les listes (réponse plus légère) */
   view?: 'card' | 'full';
+  /** 'type' : la réponse inclut aussi les compteurs Tout / Produits / Services */
+  facets?: 'type';
 }
 
 export interface PaginationInfo {
@@ -33,6 +35,7 @@ export interface ProductsResponse {
   success: boolean;
   data: any[]; // Type Item from @/types/index
   pagination: PaginationInfo;
+  facets?: { all: number; product: number; service: number };
 }
 
 export interface ProductResponse {
@@ -68,6 +71,7 @@ export const getProducts = async (filters?: ProductFilters): Promise<ProductsRes
       if (filters.status) params.append('status', filters.status);
       if (filters.sort) params.append('sort', filters.sort);
       if (filters.view) params.append('view', filters.view);
+      if (filters.facets) params.append('facets', filters.facets);
     }
     
     const queryString = params.toString();

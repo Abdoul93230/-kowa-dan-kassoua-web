@@ -1,664 +1,502 @@
 'use client';
 
-import { Suspense, useState, use, useEffect } from 'react';
+// Boutique d'un vendeur — même présentation que l'écran mobile (identité, chiffres clés, onglets, grille infinie)
+import { Suspense, useCallback, useEffect, useRef, useState, use } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Header } from '@/components/home/Header';
 import { Footer } from '@/components/home/Footer';
-import { Item } from '@/types';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { ListingCard } from '@/components/home/ListingCard';
+import { SellerQRCode } from '@/components/seller/SellerQRCode';
 import { getSellerProfile } from '@/lib/api/auth';
 import { getProducts } from '@/lib/api/products';
+import type { CardItem } from '@/lib/api/home';
+import { useAuth } from '@/hooks/useAuth';
+import { cityOf, getInitials, sizedImage } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import {
-  Star,
+  ArrowLeft,
+  ArrowUp,
+  BadgeCheck,
+  CalendarDays,
+  Facebook,
+  Globe,
+  Instagram,
   MapPin,
   Package,
-  Briefcase,
-  BadgeCheck,
-  Phone,
-  Mail,
-  MessageCircle,
-  Facebook,
-  Instagram,
-  Globe,
-  ArrowLeft,
-  Filter,
-  Grid3x3,
-  List,
-  Clock,
-  Loader2,
-  AlertCircle,
+  Pencil,
+  Share2,
+  ShieldCheck,
+  Star,
+  UserX,
+  WifiOff,
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
-import { SellerQRCode } from '@/components/seller/SellerQRCode';
-import { formatPriceFCFA } from '@/lib/utils';
 
-interface Seller {
+interface SellerProfile {
   id: string;
   name: string;
+  businessName?: string;
   avatar?: string;
   rating: number;
   totalReviews: number;
   verified: boolean;
   memberSince: string;
-  responseTime: string;
-  responseRate: number;
+  responseTime?: string;
+  dealsConcluded?: number;
   location: string;
   bio?: string;
-  contactInfo: {
-    phone?: string;
-    whatsapp?: string;
-    email?: string;
-    website?: string;
-    facebook?: string;
-    instagram?: string;
-  };
+  contactInfo?: { website?: string; facebook?: string; instagram?: string };
   totalListings: number;
-  categories: string[];
 }
 
-export default function SellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const sellerId = resolvedParams.id;
-  const [filterType, setFilterType] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(12);
-  
-  // États pour les données API
-  const [seller, setSeller] = useState<Seller | null>(null);
-  const [sellerItems, setSellerItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [totalPages, setTotalPages] = useState(1);
+type Tab = 'all' | 'product' | 'service';
+type Sort = '-createdAt' | 'price' | '-price' | '-views';
 
-  // Charger le profil du vendeur et ses produits
-  useEffect(() => {
-    const fetchSellerData = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Charger le profil du vendeur
-        const sellerResponse = await getSellerProfile(sellerId);
-        setSeller(sellerResponse.data);
-        
-        // Charger les produits du vendeur
-        const productsResponse = await getProducts({
-          seller: sellerId,
-          type: filterType === 'all' ? undefined : filterType as 'product' | 'service',
-          page: currentPage,
-          limit: itemsPerPage,
-          status: 'active',
-        });
-        
-        setSellerItems(productsResponse.data);
-        setTotalPages(productsResponse.pagination.pages);
-      } catch (err: any) {
-        console.error('❌ Erreur chargement vendeur:', err);
-        setError(err.message || 'Erreur lors du chargement des données');
-      } finally {
-        setLoading(false);
-      }
-    };
+const PAGE_SIZE = 24;
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'all', label: 'Tout' },
+  { key: 'product', label: 'Produits' },
+  { key: 'service', label: 'Services' },
+];
+const SORTS: { value: Sort; label: string }[] = [
+  { value: '-createdAt', label: 'Plus récentes' },
+  { value: '-views', label: 'Plus vues' },
+  { value: 'price', label: 'Prix croissant' },
+  { value: '-price', label: 'Prix décroissant' },
+];
 
-    fetchSellerData();
-  }, [sellerId, filterType, currentPage, itemsPerPage]);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    // Scroll vers le haut de la liste
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Fonction pour calculer la distance
-  const getDistance = (itemId: number | string) => {
-    const distances = [0.5, 1.2, 2.3, 3.5, 4.8, 5.1, 6.7, 8.2, 10.5];
-    
-    if (typeof itemId === 'string') {
-      const hash = itemId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      return distances[hash % distances.length];
-    }
-    
-    return distances[itemId % distances.length];
-  };
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
-          <Header />
-        </Suspense>
-        <div className="container mx-auto px-4 py-16">
-          <Card className="p-12 text-center">
-            <Loader2 className="h-12 w-12 text-[#ec5a13] animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Chargement du profil...</p>
-          </Card>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Error state ou vendeur non trouvé
-  if (error || !seller) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
-          <Header />
-        </Suspense>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <div className="bg-white p-12 rounded-lg shadow-sm max-w-md mx-auto border-red-200">
-            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              {error ? 'Erreur de chargement' : 'Vendeur introuvable'}
-            </h1>
-            <p className="text-gray-600 mb-6">
-              {error || "Ce vendeur n'existe pas ou n'est plus disponible."}
-            </p>
-            <Link href="/">
-              <Button className="bg-[#ec5a13] hover:bg-[#d94f0f]">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour à l'accueil
-              </Button>
-            </Link>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
+function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+    <div className="min-h-screen bg-[#f6f7fb]">
+      <Suspense fallback={<div className="h-16 border-b border-gray-200 bg-white" />}>
         <Header />
       </Suspense>
+      {children}
+      <Footer />
+    </div>
+  );
+}
 
-      {/* Hero Section avec info vendeur */}
-      <div className="bg-[#ffe9de] border-b-4 border-[#ec5a13]">
-        <div className="container mx-auto px-4 py-8 sm:py-12">
-          <Link href="/">
-            <Button variant="ghost" className="text-[#ec5a13] hover:bg-[#ec5a13]/10 mb-4 sm:mb-6">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-            </Button>
-          </Link>
+function CardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+      <div className="aspect-square animate-pulse bg-gray-200" />
+      <div className="space-y-2 p-3">
+        <div className="h-4 w-2/3 animate-pulse rounded-full bg-gray-200" />
+        <div className="h-3 w-full animate-pulse rounded-full bg-gray-100" />
+        <div className="h-3 w-1/2 animate-pulse rounded-full bg-gray-100" />
+      </div>
+    </div>
+  );
+}
 
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
-            {/* Avatar */}
-            <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-white shadow-xl">
-              <AvatarImage src={seller.avatar} alt={seller.name} />
-              <AvatarFallback className="text-2xl sm:text-3xl font-bold bg-[#ec5a13]">
-                {seller.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
+const GRID = 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5';
 
-            {/* Infos vendeur */}
-            <div className="flex-1 text-center sm:text-left">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 mb-2">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">{seller.name}</h1>
-                {seller.verified && (
-                  <Badge className="bg-white text-[#ec5a13] hover:bg-white/90">
-                    <BadgeCheck className="h-3 w-3 mr-1" />
-                    Vérifié
-                  </Badge>
-                )}
-              </div>
+export default function SellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: sellerId } = use(params);
+  const router = useRouter();
+  const { user } = useAuth();
 
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 text-sm sm:text-base mb-3 sm:mb-4 text-gray-700">
-                <div className="flex items-center gap-1.5">
-                  <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-semibold">{seller.rating.toFixed(1)}</span>
-                  <span>({seller.totalReviews} avis)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-[#ec5a13]" />
-                  <span>{seller.location}</span>
-                </div>
-              </div>
+  const [seller, setSeller] = useState<SellerProfile | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'notfound' | 'error'>('loading');
+  const [bioOpen, setBioOpen] = useState(false);
 
-              {seller.bio && (
-                <p className="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6 max-w-2xl mx-auto sm:mx-0">
-                  {seller.bio}
-                </p>
-              )}
+  const [tab, setTab] = useState<Tab>('all');
+  const [sort, setSort] = useState<Sort>('-createdAt');
+  const [counts, setCounts] = useState({ all: 0, product: 0, service: 0 });
+  const [items, setItems] = useState<CardItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [listLoading, setListLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [showTop, setShowTop] = useState(false);
 
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 sm:gap-6 max-w-md mx-auto sm:mx-0 mb-6 sm:mb-8">
-                <div className="text-center sm:text-left">
-                  <div className="text-2xl sm:text-3xl font-bold text-[#ec5a13]">{seller.totalListings}</div>
-                  <div className="text-xs sm:text-sm text-gray-600">Annonces</div>
-                </div>
-                <div className="text-center sm:text-left">
-                  <div className="text-2xl sm:text-3xl font-bold text-[#ec5a13]">{seller.totalReviews}</div>
-                  <div className="text-xs sm:text-sm text-gray-600">Avis</div>
-                </div>
-                <div className="text-center sm:text-left">
-                  <div className="text-2xl sm:text-3xl font-bold text-[#ec5a13]">{seller.responseRate}%</div>
-                  <div className="text-xs sm:text-sm text-gray-600">Réponse</div>
-                </div>
-              </div>
+  const requestId = useRef(0);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const listTop = useRef<HTMLDivElement>(null);
 
-              {/* Boutons de contact */}
-              <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
-                {/* {seller.contactInfo.phone && (
-                  <Button
-                    variant="outline"
-                    className="bg-white text-[#ec5a13] hover:bg-[#ec5a13] hover:text-white border-2 border-[#ec5a13]"
-                    onClick={() => window.location.href = `tel:${seller.contactInfo.phone}`}
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    Appeler
-                  </Button>
-                )}
-                {seller.contactInfo.whatsapp && (
-                  <Button
-                    variant="outline"
-                    className="bg-white text-green-700 hover:bg-green-600 hover:text-white border-2 border-green-600"
-                    onClick={() => window.open(`https://wa.me/${seller.contactInfo.whatsapp?.replace(/\D/g, '')}`, '_blank')}
-                  >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    WhatsApp
-                  </Button>
-                )}
-                {seller.contactInfo.email && (
-                  <Button
-                    variant="outline"
-                    className="bg-white text-gray-700 hover:bg-gray-700 hover:text-white border-2 border-gray-300"
-                    onClick={() => window.location.href = `mailto:${seller.contactInfo.email}`}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Email
-                  </Button>
-                )} */}
+  // ─── Profil ───────────────────────────────────────────────────────────────
+  const fetchProfile = useCallback(async () => {
+    setStatus('loading');
+    try {
+      const res = await getSellerProfile(sellerId);
+      setSeller(res.data || null);
+      setStatus(res.data ? 'ready' : 'notfound');
+    } catch (err: any) {
+      setStatus(/introuvable|not found|404/i.test(String(err?.message)) ? 'notfound' : 'error');
+    }
+  }, [sellerId]);
 
-                {/* QR Code Button */}
-                <SellerQRCode sellerId={sellerId} sellerName={seller.name} />
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
-                {(seller.contactInfo.facebook || seller.contactInfo.instagram || seller.contactInfo.website) && (
-                  <div className="flex gap-2">
-                    {seller.contactInfo.facebook && (
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white border-2 border-blue-600 rounded-full"
-                        onClick={() => window.open(seller.contactInfo.facebook, '_blank')}
-                      >
-                        <Facebook className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {seller.contactInfo.instagram && (
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="bg-white text-pink-600 hover:bg-pink-600 hover:text-white border-2 border-pink-600 rounded-full"
-                        onClick={() => window.open(seller.contactInfo.instagram, '_blank')}
-                      >
-                        <Instagram className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {seller.contactInfo.website && (
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="bg-white text-gray-700 hover:bg-gray-700 hover:text-white border-2 border-gray-300 rounded-full"
-                        onClick={() => window.open(seller.contactInfo.website, '_blank')}
-                      >
-                        <Globe className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
+  // ─── Annonces paginées (la dernière requête l'emporte) ────────────────────
+  // La première page renvoie aussi les compteurs Tout / Produits / Services
+  const loadItems = useCallback(
+    async (pageToLoad: number) => {
+      const reqId = ++requestId.current;
+      if (pageToLoad > 1) setLoadingMore(true);
+      try {
+        const res = await getProducts({
+          seller: sellerId,
+          page: pageToLoad,
+          limit: PAGE_SIZE,
+          status: 'active',
+          view: 'card',
+          sort,
+          ...(pageToLoad === 1 ? { facets: 'type' as const } : {}),
+          ...(tab !== 'all' ? { type: tab } : {}),
+        });
+        if (reqId !== requestId.current) return;
+        if (res.facets) setCounts({ all: res.facets.all || 0, product: res.facets.product || 0, service: res.facets.service || 0 });
+        const list = (Array.isArray(res.data) ? res.data : []) as CardItem[];
+        setItems((prev) => {
+          if (pageToLoad === 1) return list;
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...list.filter((p) => !seen.has(p.id))];
+        });
+        setTotal(Number(res.pagination?.total ?? list.length));
+        setPage(pageToLoad);
+      } catch {
+        if (reqId === requestId.current && pageToLoad === 1) setItems([]);
+      } finally {
+        if (reqId === requestId.current) {
+          setListLoading(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [sellerId, tab, sort]
+  );
+
+  useEffect(() => {
+    setListLoading(true);
+    loadItems(1);
+  }, [loadItems]);
+
+  const hasMore = items.length < total;
+
+  // Défilement infini : la page suivante se charge bien avant d'atteindre le bas
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || listLoading || loadingMore || !hasMore) return undefined;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadItems(page + 1);
+    }, { rootMargin: '1200px 0px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [listLoading, loadingMore, hasMore, page, loadItems]);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 1400);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const changeTab = (t: Tab) => {
+    if (t === tab) return;
+    setTab(t);
+    const top = listTop.current?.getBoundingClientRect().top;
+    if (top !== undefined && top < 0) listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // ─── États globaux ─────────────────────────────────────────────────────────
+  if (status === 'loading') {
+    return (
+      <PageShell>
+        <div className="h-44 bg-[linear-gradient(135deg,#060a14_0%,#10172b_60%,#2a1307_100%)] sm:h-52" />
+        <div className="container mx-auto -mt-20 max-w-7xl px-4 pb-16">
+          <div className="relative rounded-3xl bg-white p-6 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.45)]">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end">
+              <div className="h-28 w-28 animate-pulse rounded-3xl bg-gray-200" />
+              <div className="w-full flex-1 space-y-3">
+                <div className="mx-auto h-7 w-56 animate-pulse rounded-xl bg-gray-200 sm:mx-0" />
+                <div className="mx-auto h-4 w-40 animate-pulse rounded-full bg-gray-100 sm:mx-0" />
               </div>
             </div>
           </div>
+          <div className={cn(GRID, 'mt-8')}>
+            {Array.from({ length: 10 }).map((_, i) => <CardSkeleton key={i} />)}
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (status !== 'ready' || !seller) {
+    const notFound = status === 'notfound';
+    return (
+      <PageShell>
+        <div className="container mx-auto flex max-w-7xl justify-center px-4 py-20">
+          <div className="w-full max-w-md rounded-3xl border border-gray-100 bg-white p-8 text-center shadow-[0_20px_50px_-30px_rgba(15,23,42,0.4)]">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
+              {notFound ? <UserX className="h-8 w-8" /> : <WifiOff className="h-8 w-8" />}
+            </span>
+            <h1 className="mt-5 text-2xl font-black tracking-tight text-gray-900">{notFound ? 'Vendeur introuvable' : 'Connexion impossible'}</h1>
+            <p className="mt-2 text-[15px] text-gray-500">
+              {notFound ? "Ce profil n'existe plus ou a été désactivé." : 'Vérifiez votre connexion internet puis réessayez.'}
+            </p>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+              {notFound ? (
+                <button type="button" onClick={() => router.back()} className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-gray-200 px-5 text-sm font-bold text-gray-700 transition hover:border-gray-300">
+                  <ArrowLeft className="h-4 w-4" /> Retour
+                </button>
+              ) : (
+                <button type="button" onClick={fetchProfile} className="inline-flex h-11 items-center justify-center rounded-full bg-[#ec5a13] px-5 text-sm font-bold text-white transition hover:bg-[#d44f11]">
+                  Réessayer
+                </button>
+              )}
+              <Link href="/categories/tous" className="inline-flex h-11 items-center justify-center rounded-full border border-gray-200 px-5 text-sm font-bold text-gray-700 transition hover:border-gray-300">
+                Voir les annonces
+              </Link>
+            </div>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  const name = seller.businessName || seller.name || 'Vendeur';
+  const isMe = user?.id === seller.id;
+  const rating = Number(seller.rating || 0);
+  const reviews = Number(seller.totalReviews || 0);
+  const bio = String(seller.bio || '').trim();
+  const longBio = bio.length > 220;
+  const links = seller.contactInfo || {};
+  const listingCount = counts.all || seller.totalListings || 0;
+
+  const shareProfile = async () => {
+    const url = window.location.href.split('?')[0];
+    const text = `Découvrez ${name} sur TakTak (${listingCount} annonce${listingCount > 1 ? 's' : ''})`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: name, text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast.success('Lien de la boutique copié');
+    } catch {
+      // Partage annulé
+    }
+  };
+
+  const stats = [
+    { value: String(listingCount), label: listingCount > 1 ? 'Annonces' : 'Annonce' },
+    {
+      value: reviews > 0 ? (
+        <span className="inline-flex items-center gap-1"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{rating.toFixed(1)}</span>
+      ) : '—',
+      label: reviews > 0 ? `${reviews} avis` : "Pas d'avis",
+    },
+    { value: String(seller.dealsConcluded || 0), label: 'Ventes conclues' },
+    { value: seller.responseTime || '—', label: 'Délai de réponse' },
+  ];
+
+  return (
+    <PageShell>
+      {/* Couverture */}
+      <div className="relative isolate h-44 overflow-hidden bg-[linear-gradient(135deg,#060a14_0%,#10172b_60%,#2a1307_100%)] sm:h-52">
+        <div className="pointer-events-none absolute -right-24 -top-28 -z-10 h-96 w-96 rounded-full bg-[radial-gradient(closest-side,rgba(236,90,19,0.4),transparent)]" />
+        <div className="pointer-events-none absolute -bottom-40 left-10 -z-10 h-80 w-80 rounded-full bg-[radial-gradient(closest-side,rgba(255,168,123,0.16),transparent)]" />
+        <div className="container mx-auto max-w-7xl px-4 pt-5">
+          <nav aria-label="Fil d'Ariane" className="flex items-center gap-1.5 text-[13px] text-white/55">
+            <button type="button" onClick={() => router.back()} aria-label="Retour" className="mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <Link href="/" className="transition hover:text-white">Accueil</Link>
+            <span className="opacity-60">/</span>
+            <span className="truncate text-white/80">Boutique</span>
+          </nav>
         </div>
       </div>
 
-      {/* Filtres et Vue */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-              Toutes les annonces
-              {totalPages > 1 && (
-                <span className="ml-2 text-sm sm:text-base font-normal text-gray-600">
-                  (page {currentPage} sur {totalPages})
-                </span>
-              )}
-            </h2>
-            <p className="text-sm text-gray-600">
-              {seller.totalListings} annonce{seller.totalListings > 1 ? 's' : ''} trouvée{seller.totalListings > 1 ? 's' : ''}
-            </p>
-          </div>
+      <div className="container mx-auto -mt-24 max-w-7xl px-4 pb-16 sm:-mt-28">
+        {/* Identité */}
+        <section className="relative rounded-3xl border border-gray-100 bg-white p-5 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.45)] sm:p-7">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
+              <span className="relative shrink-0">
+                {seller.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={sizedImage(seller.avatar, 192)} alt={name} className="h-28 w-28 rounded-3xl object-cover ring-4 ring-white shadow-lg sm:h-32 sm:w-32" />
+                ) : (
+                  <span className="flex h-28 w-28 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,#ff8a4c,#ec5a13)] text-3xl font-black text-white ring-4 ring-white shadow-lg sm:h-32 sm:w-32">
+                    {getInitials(name)}
+                  </span>
+                )}
+                {seller.verified ? (
+                  <BadgeCheck className="absolute -bottom-1.5 -right-1.5 h-8 w-8 rounded-full bg-white fill-blue-500 text-white" aria-label="Vérifié" />
+                ) : null}
+              </span>
 
-          <div className="flex gap-3 w-full sm:w-auto">
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="product">Produits</SelectItem>
-                <SelectItem value="service">Services</SelectItem>
-              </SelectContent>
-            </Select>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-black leading-tight tracking-tight text-gray-900 [overflow-wrap:anywhere] sm:text-3xl">{name}</h1>
+                {seller.businessName && seller.name && seller.businessName !== seller.name ? (
+                  <p className="mt-0.5 text-sm text-gray-500">{seller.name}</p>
+                ) : null}
+                <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-500 sm:justify-start">
+                  <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" />{cityOf(seller.location)}</span>
+                  {seller.memberSince ? (
+                    <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4" />Membre depuis {seller.memberSince}</span>
+                  ) : null}
+                </p>
+                {seller.verified ? (
+                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Vendeur vérifié
+                  </span>
+                ) : null}
+              </div>
+            </div>
 
-            <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Par page" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="8">8 par page</SelectItem>
-                <SelectItem value="12">12 par page</SelectItem>
-                <SelectItem value="16">16 par page</SelectItem>
-                <SelectItem value="24">24 par page</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="flex border rounded-lg overflow-hidden">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-[#ec5a13] hover:bg-[#d94f0f]' : ''}
-              >
-                <Grid3x3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-[#ec5a13] hover:bg-[#d94f0f]' : ''}
-              >
-                <List className="h-4 w-4" />
-              </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-end">
+              {isMe ? (
+                <Link href="/profile" className="inline-flex h-11 items-center gap-2 rounded-full bg-[#ec5a13] px-5 text-sm font-bold text-white transition hover:bg-[#d44f11]">
+                  <Pencil className="h-4 w-4" /> Modifier mon profil
+                </Link>
+              ) : null}
+              <button type="button" onClick={shareProfile} className="inline-flex h-11 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-gray-300 hover:bg-gray-50">
+                <Share2 className="h-4 w-4" /> Partager
+              </button>
+              <SellerQRCode sellerId={sellerId} sellerName={name} />
+              {links.facebook ? (
+                <a href={links.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:text-[#1877f2]">
+                  <Facebook className="h-4 w-4" />
+                </a>
+              ) : null}
+              {links.instagram ? (
+                <a href={links.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:text-[#d62976]">
+                  <Instagram className="h-4 w-4" />
+                </a>
+              ) : null}
+              {links.website ? (
+                <a href={links.website} target="_blank" rel="noopener noreferrer" aria-label="Site web" className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:text-gray-900">
+                  <Globe className="h-4 w-4" />
+                </a>
+              ) : null}
             </div>
           </div>
-        </div>
 
-        {/* Liste des annonces */}
-        {sellerItems.length === 0 ? (
-          <Card className="p-12 text-center">
-            <Package className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Aucune annonce trouvée</h3>
-            <p className="text-gray-600">Ce vendeur n'a pas d'annonces dans cette catégorie.</p>
-          </Card>
-        ) : (
-          <>
-            <div className={viewMode === 'grid'
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6'
-              : 'flex flex-col gap-4'
-            }>
-              {sellerItems.map((item) => {
-                const distance = getDistance(item.id);
-                const isService = item.type === 'service';
+          {bio ? (
+            <div className="mt-5 max-w-3xl">
+              <p className={cn('whitespace-pre-line text-[15px] leading-relaxed text-gray-600 [overflow-wrap:anywhere]', longBio && !bioOpen && 'line-clamp-3')}>{bio}</p>
+              {longBio ? (
+                <button type="button" onClick={() => setBioOpen((v) => !v)} className="mt-1 text-sm font-bold text-[#ec5a13] hover:underline">
+                  {bioOpen ? 'Voir moins' : 'Lire la suite'}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
-                // Mode liste
-                if (viewMode === 'list') {
-                  return (
-                    <Link
-                      key={item.id}
-                      href={`/items/${item.id}`}
-                      className="block group"
-                    >
-                      <Card className={`group overflow-hidden border-gray-200 ${isService ? 'hover:border-blue-500' : 'hover:border-[#ec5a13]'} hover:shadow-xl transition-all duration-300 cursor-pointer bg-white p-0 gap-0`}>
-                        {/* Version mobile - style grille */}
-                        <div className="md:hidden">
-                          <div className="relative h-28 sm:h-32 md:h-36 lg:h-40 xl:h-44 overflow-hidden bg-gray-200">
-                            <img
-                              src={item.mainImage}
-                              alt={item.title}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                            <Badge className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 bg-white/90 backdrop-blur-sm text-gray-700 flex items-center gap-1 sm:gap-1.5 shadow-md text-xs px-2 py-1 rounded-lg border-0">
-                              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                              <span className="font-medium">Il y a {item.postedTime}</span>
-                            </Badge>
-                          </div>
+          <dl className="mt-6 grid grid-cols-2 overflow-hidden rounded-2xl bg-gray-50 sm:grid-cols-4">
+            {stats.map((s, i) => (
+              <div
+                key={s.label}
+                className={cn(
+                  'px-4 py-4 text-center',
+                  i % 2 === 1 && 'border-l border-gray-200/70',
+                  i >= 2 && 'border-t border-gray-200/70 sm:border-t-0',
+                  i === 2 && 'sm:border-l'
+                )}
+              >
+                <dd className="truncate text-xl font-black text-gray-900">{s.value}</dd>
+                <dt className="mt-0.5 text-xs text-gray-500">{s.label}</dt>
+              </div>
+            ))}
+          </dl>
+        </section>
 
-                          <div className="p-3 flex flex-col gap-2">
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full self-start ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
-                              {isService ? '🛠 Service' : '📦 Produit'}
-                            </span>
-                            <h3 className={`font-semibold text-xs sm:text-sm md:text-base text-gray-900 transition-colors truncate ${isService ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
-                              {item.title}
-                            </h3>
-
-                            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600">
-                              <MapPin className={`h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 ${isService ? 'text-blue-500' : 'text-[#ec5a13]'}`} />
-                              <span className="truncate">{item.location}</span>
-                              <span className="text-gray-400">•</span>
-                              <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
-                            </div>
-
-                            <p className={`text-[10px] sm:text-xs md:text-sm font-semibold ${isService ? 'text-blue-600' : 'text-[#ec5a13]'}`}>{formatPriceFCFA(item.price)}</p>
-                          </div>
-                        </div>
-
-                        {/* Version desktop - style liste */}
-                        <div className="hidden md:flex">
-                          <div className="relative w-64 h-auto flex-shrink-0 overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200"></div>
-                            <img
-                              src={item.mainImage}
-                              alt={item.title}
-                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
-                          </div>
-
-                          <div className="flex-1 flex flex-col p-5 gap-2">
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full self-start ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
-                              {isService ? '🛠 Service' : '📦 Produit'}
-                            </span>
-                            <h3 className={`font-semibold text-base sm:text-lg text-gray-900 transition-colors truncate ${isService ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
-                              {item.title}
-                            </h3>
-
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <MapPin className={`h-4 w-4 flex-shrink-0 ${isService ? 'text-blue-500' : 'text-[#ec5a13]'}`} />
-                              <span className="truncate">{item.location}</span>
-                              <span className="text-gray-400">•</span>
-                              <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
-                            </div>
-
-                            <p className={`text-base sm:text-lg font-semibold ${isService ? 'text-blue-600' : 'text-[#ec5a13]'}`}>{formatPriceFCFA(item.price)}</p>
-
-                            {item.description && (
-                              <div className="flex items-start gap-2">
-                                <div className="w-6 flex-shrink-0"></div>
-                                <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-auto pt-4 border-t border-gray-100">
-                              <div className="w-6 flex-shrink-0"></div>
-                              <Clock className="h-3.5 w-3.5" />
-                              <span>Il y a {item.postedTime}</span>
-                              <span className="text-gray-400 mx-1">•</span>
-                              <span>{item.views.toLocaleString()} vues</span>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    </Link>
-                  );
-                }
-
-                // Mode grille
+        {/* Annonces */}
+        <div ref={listTop} className="scroll-mt-20" />
+        <div className="sticky top-16 z-20 -mx-4 mt-8 bg-[#f6f7fb]/90 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div role="tablist" aria-label="Type d'annonces" className="inline-flex rounded-full border border-gray-200 bg-white p-1">
+              {TABS.map((t) => {
+                const active = tab === t.key;
+                const count = counts[t.key];
+                if (t.key !== 'all' && count === 0 && !active) return null;
                 return (
-                  <Link
-                    key={item.id}
-                    href={`/items/${item.id}`}
-                    className="block group"
+                  <button
+                    key={t.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => changeTab(t.key)}
+                    className={cn(
+                      'inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition',
+                      active ? (t.key === 'service' ? 'bg-blue-600 text-white' : 'bg-[#0b1020] text-white') : 'text-gray-600 hover:text-gray-900'
+                    )}
                   >
-                    <Card className="group cursor-pointer overflow-hidden border-gray-200 hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] h-full bg-white p-0 gap-0">
-                      <div className="relative h-28 sm:h-32 md:h-36 lg:h-40 xl:h-44 overflow-hidden bg-gray-200">
-                        <img
-                          src={item.mainImage}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                        {/* Badge de temps en haut à gauche */}
-                        <Badge className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 bg-white/90 backdrop-blur-sm text-gray-700 flex items-center gap-1 sm:gap-1.5 shadow-md text-xs px-2 py-1 rounded-lg border-0">
-                          <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                          <span className="font-medium">Il y a {item.postedTime}</span>
-                        </Badge>
-                      </div>
-
-                      <div className="p-3 flex flex-col gap-2">
-                        {/* Badge type */}
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full self-start ${isService ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-[#ec5a13]'}`}>
-                          {isService ? '🛠 Service' : '📦 Produit'}
-                        </span>
-
-                        {/* Titre */}
-                        <h3 className={`font-semibold text-xs sm:text-sm md:text-base text-gray-900 transition-colors truncate ${isService ? 'group-hover:text-blue-600' : 'group-hover:text-[#ec5a13]'}`}>
-                          {item.title}
-                        </h3>
-
-                        {/* Localité + Distance */}
-                        <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600">
-                          <MapPin className={`h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 ${isService ? 'text-blue-500' : 'text-[#ec5a13]'}`} />
-                          <span className="truncate">{item.location}</span>
-                          <span className="text-gray-400">•</span>
-                          <span className="whitespace-nowrap">{distance.toFixed(1)} km</span>
-                        </div>
-
-                        {/* Prix */}
-                        <p className={`text-[10px] sm:text-xs md:text-sm font-semibold ${isService ? 'text-blue-600' : 'text-[#ec5a13]'}`}>{formatPriceFCFA(item.price)}</p>
-                      </div>
-                    </Card>
-                  </Link>
+                    {t.label}
+                    <span className={cn('rounded-full px-1.5 text-xs', active ? 'bg-white/20' : 'bg-gray-100 text-gray-500')}>{count}</span>
+                  </button>
                 );
               })}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-8">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage > 1) handlePageChange(currentPage - 1);
-                        }}
-                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                      />
-                    </PaginationItem>
+            <label className="inline-flex items-center gap-2 text-sm text-gray-500">
+              <span className="hidden sm:inline">Trier</span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as Sort)}
+                className="h-11 rounded-full border border-gray-200 bg-white px-4 pr-8 text-sm font-semibold text-gray-800 outline-none focus:border-gray-400"
+              >
+                {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </label>
+          </div>
+        </div>
 
-                    {/* Première page */}
-                    {currentPage > 3 && (
-                      <>
-                        <PaginationItem>
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handlePageChange(1);
-                            }}
-                          >
-                            1
-                          </PaginationLink>
-                        </PaginationItem>
-                        {currentPage > 4 && (
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )}
-                      </>
-                    )}
-
-                    {/* Pages autour de la page actuelle */}
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(page => {
-                        return page === currentPage ||
-                          page === currentPage - 1 ||
-                          page === currentPage - 2 ||
-                          page === currentPage + 1 ||
-                          page === currentPage + 2;
-                      })
-                      .map((page) => (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handlePageChange(page);
-                            }}
-                            isActive={currentPage === page}
-                            className={currentPage === page ? 'bg-[#ec5a13] hover:bg-[#d94f0f]' : ''}
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-
-                    {/* Dernière page */}
-                    {currentPage < totalPages - 2 && (
-                      <>
-                        {currentPage < totalPages - 3 && (
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )}
-                        <PaginationItem>
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handlePageChange(totalPages);
-                            }}
-                          >
-                            {totalPages}
-                          </PaginationLink>
-                        </PaginationItem>
-                      </>
-                    )}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage < totalPages) handlePageChange(currentPage + 1);
-                        }}
-                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+        <div className="mt-5">
+          {listLoading ? (
+            <div className={GRID}>
+              {Array.from({ length: 10 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : items.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-14 text-center">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400">
+                <Package className="h-7 w-7" />
+              </span>
+              <p className="mt-4 text-lg font-black text-gray-900">
+                {tab === 'service' ? 'Aucun service' : tab === 'product' ? 'Aucun produit' : 'Aucune annonce'}
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                {isMe ? 'Publiez votre première annonce : elle apparaîtra ici.' : "Ce vendeur n'a rien publié ici pour le moment."}
+              </p>
+              {isMe ? (
+                <Link href="/publish" className="mt-5 inline-flex h-11 items-center rounded-full bg-[#ec5a13] px-5 text-sm font-bold text-white transition hover:bg-[#d44f11]">
+                  Publier une annonce
+                </Link>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <div className={GRID}>
+                {items.map((item, i) => (
+                  <ListingCard key={item.id} item={item} imageWidth={260} priority={i < 5} />
+                ))}
+                {loadingMore ? Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={`s${i}`} />) : null}
               </div>
-            )}
-          </>
-        )}
+              <div ref={sentinel} aria-hidden className="h-px" />
+              {!hasMore && items.length > PAGE_SIZE ? (
+                <p className="mt-8 text-center text-sm text-gray-400">Vous avez vu toutes les annonces de {name}.</p>
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
 
-      <Footer />
-    </div>
+      {showTop ? (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Revenir en haut"
+          className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#0b1020] text-white shadow-xl transition hover:bg-black animate-in fade-in zoom-in-90"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      ) : null}
+    </PageShell>
   );
 }

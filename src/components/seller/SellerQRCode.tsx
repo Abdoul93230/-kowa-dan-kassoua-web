@@ -1,45 +1,36 @@
 'use client';
 
+// QR code de la boutique : à imprimer ou partager pour renvoyer vers le profil TakTak
 import { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { QrCode, Download, Check } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { QrCode, Download, Check, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://taktak-ne.com';
 
 interface SellerQRCodeProps {
   sellerId: string;
   sellerName: string;
+  className?: string;
 }
 
-const BASE_URL = 'https://kowadankassoua-v01.onrender.com';
-
-export function SellerQRCode({ sellerId, sellerName }: SellerQRCodeProps) {
+export function SellerQRCode({ sellerId, sellerName, className }: SellerQRCodeProps) {
   const qrRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
-  const sellerUrl = `${BASE_URL}/seller/${sellerId}`;
+  const sellerUrl = `${SITE_URL}/seller/${sellerId}`;
 
   const handleDownload = async () => {
     if (!qrRef.current) return;
 
     setIsDownloading(true);
     try {
-      const dataUrl = await toPng(qrRef.current, {
-        cacheBust: true,
-        pixelRatio: 3, // Haute qualité
-        backgroundColor: '#ffffff',
-      });
-
+      const dataUrl = await toPng(qrRef.current, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
       const link = document.createElement('a');
-      link.download = `qrcode-${sellerName.replace(/\s+/g, '-').toLowerCase()}.png`;
+      link.download = `taktak-${sellerName.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase()}.png`;
       link.href = dataUrl;
       link.click();
 
@@ -55,81 +46,43 @@ export function SellerQRCode({ sellerId, sellerName }: SellerQRCodeProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          className="bg-white text-[#ec5a13] hover:bg-[#ec5a13] hover:text-white border-2 border-[#ec5a13]"
+        <button
+          type="button"
+          className={cn('inline-flex h-11 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-gray-300 hover:bg-gray-50', className)}
         >
-          <QrCode className="h-4 w-4 mr-2" />
-          QR Code
-        </Button>
+          <QrCode className="h-4 w-4" />
+          QR code
+        </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl">
-            QR Code de {sellerName}
-          </DialogTitle>
+          <DialogTitle className="text-center">QR code de la boutique</DialogTitle>
+          <DialogDescription className="text-center">
+            Imprimez-le sur votre vitrine ou vos cartes : un scan suffit pour voir toutes vos annonces.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-6 py-4">
-          {/* QR Code Container */}
-          <div
-            ref={qrRef}
-            className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-100"
-          >
-            <QRCodeSVG
-              value={sellerUrl}
-              size={200}
-              level="H"
-              includeMargin={true}
-              bgColor="#ffffff"
-              fgColor="#1f2937"
-            />
-            <div className="mt-4 text-center">
-              <p className="font-semibold text-gray-900 text-lg">{sellerName}</p>
-              <p className="text-sm text-[#ec5a13] font-medium mt-1">
-                Kowa Dan Kassoua
-              </p>
-            </div>
+        <div className="flex flex-col items-center gap-5 py-2">
+          <div ref={qrRef} className="rounded-3xl border border-gray-100 bg-white p-5 text-center shadow-[0_20px_50px_-30px_rgba(15,23,42,0.5)]">
+            <QRCodeSVG value={sellerUrl} size={200} level="H" marginSize={2} bgColor="#ffffff" fgColor="#0b1020" />
+            <p className="mt-3 max-w-[220px] truncate text-base font-black text-gray-900">{sellerName}</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ec5a13]">TakTak</p>
           </div>
 
-          {/* URL Preview */}
-          <div className="w-full bg-gray-50 rounded-lg p-3">
-            <p className="text-xs text-gray-500 text-center break-all">
-              {sellerUrl}
-            </p>
-          </div>
+          <p className="w-full truncate rounded-xl bg-gray-50 px-3 py-2 text-center text-xs text-gray-500">{sellerUrl}</p>
 
-          {/* Download Button */}
-          <Button
+          <button
+            type="button"
             onClick={handleDownload}
             disabled={isDownloading}
-            className={`w-full ${downloaded
-                ? 'bg-green-600 hover:bg-green-700'
-                : 'bg-[#ec5a13] hover:bg-[#d94f0f]'
-              }`}
-          >
-            {isDownloading ? (
-              <>
-                <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Téléchargement...
-              </>
-            ) : downloaded ? (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Téléchargé !
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Télécharger le QR Code
-              </>
+            className={cn(
+              'inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-bold text-white transition disabled:opacity-60',
+              downloaded ? 'bg-emerald-600' : 'bg-[#ec5a13] hover:bg-[#d44f11]'
             )}
-          </Button>
-
-          {/* Instructions */}
-          <p className="text-xs text-gray-500 text-center">
-            Scannez ce QR code avec votre téléphone pour accéder directement à cette page vendeur.
-          </p>
+          >
+            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : downloaded ? <Check className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+            {isDownloading ? 'Préparation…' : downloaded ? 'Téléchargé' : 'Télécharger (PNG)'}
+          </button>
         </div>
       </DialogContent>
     </Dialog>
