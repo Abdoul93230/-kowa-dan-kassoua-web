@@ -1,212 +1,253 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { Header } from '../../components/home/Header';
-import { Footer } from '../../components/home/Footer';
-import { getCategories, Category } from '@/lib/api/categories';
-import { Card } from '@/components/ui/card';
+// Toutes les catégories — icônes 3D, sous-catégories cliquables, recherche instantanée
+// (sans accents) et choix Produits / Services, comme dans l'application mobile.
+import Link from 'next/link';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, ChevronRight, Package, Search, SlidersHorizontal, Wrench, X } from 'lucide-react';
+import { Header } from '@/components/home/Header';
+import { Footer } from '@/components/home/Footer';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { getCategories, type Category } from '@/lib/api/categories';
+import { filterCategoriesForType } from '@/lib/categoryTypes';
+import { formatCompact } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
-import { Search, ChevronRight, Wrench, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+type TypeFilter = 'all' | 'product' | 'service';
+const TYPES: { value: TypeFilter; label: string; icon: typeof Package }[] = [
+  { value: 'all', label: 'Tout', icon: SlidersHorizontal },
+  { value: 'product', label: 'Produits', icon: Package },
+  { value: 'service', label: 'Services', icon: Wrench },
+];
+const MAX_SUBS = 6;
 
+// Recherche insensible aux accents et à la casse
+const fold = (v?: string) => (v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export default function CategoriesListPage() {
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+const countOf = (cat: Category, type: TypeFilter) =>
+  type === 'product' ? cat.productsCount || 0
+    : type === 'service' ? cat.servicesCount || 0
+      : cat.totalCount ?? (cat.productsCount || 0) + (cat.servicesCount || 0);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await getCategories();
-        setCategories(response.data);
-      } catch (error) {
-        console.error('Erreur lors du chargement des catégories:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  // Filtrer les catégories selon la recherche
-  const filteredCategories = categories.filter(cat => 
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.subcategories?.some(sub => sub.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const handleCategoryClick = (slug: string) => {
-    router.push(`/categories/${slug}`);
+function CategoryCard({ cat, type, query }: { cat: Category; type: TypeFilter; query: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const q = fold(query);
+  const typeQs = type !== 'all' ? `type=${type}` : '';
+  const href = (sub?: string) => {
+    const p = [typeQs, sub ? `subcategory=${sub}` : ''].filter(Boolean).join('&');
+    return `/categories/${cat.slug}${p ? `?${p}` : ''}`;
   };
+  const count = countOf(cat, type);
 
-  const handleSubcategoryClick = (categorySlug: string, subSlug: string) => {
-    router.push(`/categories/${categorySlug}?subcategory=${subSlug}`);
-  };
+  // Recherche : on montre en priorité les sous-catégories qui correspondent
+  const subs = useMemo(() => {
+    const all = cat.subcategories || [];
+    if (!q || fold(cat.name).includes(q)) return all;
+    return all.filter((s) => fold(s.name).includes(q));
+  }, [cat, q]);
+  const shown = expanded ? subs : subs.slice(0, MAX_SUBS);
+  const hidden = subs.length - shown.length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200"></div>}>
+    <article className="group flex flex-col rounded-3xl border border-gray-100 bg-white p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.45)] transition hover:border-orange-100 hover:shadow-[0_26px_50px_-30px_rgba(236,90,19,0.4)]">
+      <Link href={href()} prefetch={false} className="flex items-center gap-4 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ec5a13]">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-gradient-to-br from-white to-orange-50 transition group-hover:scale-105">
+          <CategoryIcon item={cat} size={44} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-lg font-black tracking-tight text-gray-900">{cat.name}</span>
+          <span className="mt-0.5 block text-sm text-gray-500">
+            {count ? `${formatCompact(count)} annonce${count > 1 ? 's' : ''}` : 'Soyez le premier à publier'}
+          </span>
+        </span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400 transition group-hover:bg-[#ec5a13] group-hover:text-white">
+          <ChevronRight className="h-5 w-5" />
+        </span>
+      </Link>
+
+      {subs.length ? (
+        <div className="mt-5 flex flex-wrap gap-2">
+          {shown.map((s) => {
+            const match = q && fold(s.name).includes(q);
+            return (
+              <Link
+                key={s.slug}
+                href={href(s.slug)}
+                prefetch={false}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-[13px] font-semibold transition',
+                  match ? 'border-[#ec5a13] bg-orange-50 text-[#c2410c]' : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                )}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-50">
+                  <CategoryIcon item={s} parentSlug={cat.slug} size={18} />
+                </span>
+                {s.name}
+              </Link>
+            );
+          })}
+          {hidden > 0 ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="rounded-full border border-dashed border-gray-300 px-3 py-1 text-[13px] font-semibold text-gray-500 hover:border-gray-400 hover:text-gray-800"
+            >
+              +{hidden} autre{hidden > 1 ? 's' : ''}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <Link
+        href={href()}
+        prefetch={false}
+        className="mt-auto inline-flex items-center gap-1.5 self-start pt-5 text-sm font-bold text-[#ec5a13] hover:gap-2.5"
+      >
+        Voir les annonces <ArrowRight className="h-4 w-4 transition-all" />
+      </Link>
+    </article>
+  );
+}
+
+export default function CategoriesListPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState<TypeFilter>('all');
+
+  useEffect(() => {
+    getCategories()
+      .then((res) => setCategories(res.data || []))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const visible = useMemo(() => {
+    const byType = filterCategoriesForType(categories, type === 'all' ? undefined : type);
+    const q = fold(query.trim());
+    if (!q) return byType;
+    return byType.filter((c) => fold(c.name).includes(q) || fold(c.description).includes(q) || c.subcategories?.some((s) => fold(s.name).includes(q)));
+  }, [categories, type, query]);
+
+  const totalAds = categories.reduce((n, c) => n + countOf(c, 'all'), 0);
+  const totalSubs = categories.reduce((n, c) => n + (c.subcategories?.length || 0), 0);
+  const isService = type === 'service';
+
+  return (
+    <div className="min-h-screen bg-[#f6f7fb]">
+      <Suspense fallback={<div className="h-16 border-b border-gray-200 bg-white" />}>
         <Header />
       </Suspense>
-      
-      <div className="container mx-auto px-4 py-12">
-        {/* En-tête */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+
+      {/* ── Bandeau ─────────────────────────────────────────────────────── */}
+      <section className="relative isolate overflow-hidden bg-[#070b16] text-white">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(135deg,#060a14_0%,#10172b_60%,#2a1307_100%)]" />
+        <div className={cn('pointer-events-none absolute -right-24 -top-32 -z-10 h-[28rem] w-[28rem] rounded-full', isService ? 'bg-[radial-gradient(closest-side,rgba(37,99,235,0.45),transparent)]' : 'bg-[radial-gradient(closest-side,rgba(236,90,19,0.45),transparent)]')} />
+        <div className="container mx-auto max-w-7xl px-4 pb-10 pt-6 sm:pb-14 sm:pt-8">
+          <nav aria-label="Fil d'Ariane" className="flex items-center gap-1.5 text-[13px] text-white/55">
+            <Link href="/" className="hover:text-white">Accueil</Link>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <span className="text-white/80">Catégories</span>
+          </nav>
+
+          <h1 className="mt-5 text-balance text-3xl font-black tracking-[-0.03em] text-white sm:text-5xl">
             Toutes les catégories
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-            Explorez nos catégories et trouvez exactement ce que vous cherchez parmi des milliers d'annonces
+          <p className="mt-2 text-white/60 sm:text-lg">
+            {loading
+              ? 'Chargement…'
+              : `${categories.length} catégories · ${totalSubs} sous-catégories · ${formatCompact(totalAds)} annonces en ligne`}
           </p>
 
-          {/* Barre de recherche */}
-          <div className="max-w-2xl mx-auto">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Rechercher une catégorie..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 pr-4 py-6 text-lg border-gray-300 focus:border-[#ec5a13] focus:ring-[#ec5a13]"
+          <div className="mt-7 flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-center">
+            <label className="relative flex flex-1 items-center rounded-2xl bg-white p-1.5 shadow-[0_24px_60px_-28px_rgba(236,90,19,0.6)]">
+              <span className="sr-only">Rechercher une catégorie</span>
+              <Search className="pointer-events-none absolute left-5 h-5 w-5 text-gray-400" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Coiffure, moto, plomberie…"
+                className="h-11 w-full rounded-xl bg-transparent pl-11 pr-10 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none"
               />
-            </div>
-          </div>
-        </div>
+              {query ? (
+                <button type="button" onClick={() => setQuery('')} aria-label="Effacer" className="absolute right-3 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </label>
 
-        {/* Statistiques */}
-        <div className="hidden grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <Card className="p-6 text-center bg-white shadow-sm border-gray-200">
-            <div className="text-3xl font-bold text-[#ec5a13] mb-2">
-              {categories.length}
-            </div>
-            <div className="text-gray-600">Catégories principales</div>
-          </Card>
-          <Card className="p-6 text-center bg-white shadow-sm border-gray-200">
-            <div className="text-3xl font-bold text-[#ec5a13] mb-2">
-              {categories.reduce((acc, cat) => acc + (cat.subcategories?.length || 0), 0)}
-            </div>
-            <div className="text-gray-600">Sous-catégories</div>
-          </Card>
-          <Card className="p-6 text-center bg-white shadow-sm border-gray-200">
-            <div className="text-3xl font-bold text-[#ec5a13] mb-2">
-              {categories.reduce((acc, cat) => acc + cat.totalCount, 0).toLocaleString()}
-            </div>
-            <div className="text-gray-600">Annonces au total</div>
-          </Card>
-        </div>
-
-        {/* État de chargement */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-[#ec5a13] mb-4" />
-            <p className="text-gray-600">Chargement des catégories...</p>
-          </div>
-        ) : filteredCategories.length === 0 ? (
-          <Card className="p-12 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-20 h-20 bg-[#ffe9de] rounded-full flex items-center justify-center">
-                <Search className="h-10 w-10 text-[#ec5a13]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900">Aucune catégorie trouvée</h3>
-              <p className="text-gray-600 max-w-md">
-                Essayez avec d'autres mots-clés
-              </p>
-              <Button 
-                onClick={() => setSearchQuery('')}
-                className="bg-[#ec5a13] hover:bg-[#d94f0f] text-white"
-              >
-                Réinitialiser la recherche
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {filteredCategories.map((category) => {
-              
-              return (
-                <Card 
-                  key={category._id} 
-                  className="group hover:shadow-xl transition-all duration-300 border-gray-200 bg-white overflow-hidden py-0 gap-0"
-                >
-                  {/* En-tête de la catégorie */}
-                  <div 
-                    className="px-6 pb-6 pt-6 bg-gradient-to-r from-[#ffe9de] to-white border-b border-gray-200 cursor-pointer"
-                    onClick={() => handleCategoryClick(category.slug)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="bg-white p-3 rounded-lg shadow-sm">
-                          <CategoryIcon item={category} size={44} />
-                        </div>
-                        <div className="flex-1">
-                          <h2 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-[#ec5a13] transition-colors">
-                            {category.name}
-                          </h2>
-                          <p className="text-sm text-gray-600 mb-3">
-                            {category.description}
-                          </p>
-                          <Badge className="bg-[#ec5a13] text-white">
-                            {category.totalCount.toLocaleString()} annonces
-                          </Badge>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-[#ec5a13] transition-colors flex-shrink-0 ml-4" />
-                    </div>
-                  </div>
-
-                  {/* Sous-catégories */}
-                  {category.subcategories && category.subcategories.length > 0 && (
-                    <div className="p-6">
-                      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                        <Wrench className="h-4 w-4" />
-                        Sous-catégories
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        {category.subcategories.map((sub) => (
-                          <button
-                            key={sub._id}
-                            onClick={() => handleSubcategoryClick(category.slug, sub.slug)}
-                            className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-[#ec5a13] hover:bg-[#ffe9de] transition-all duration-200 text-left group/sub"
-                          >
-                            <CategoryIcon item={sub} parentSlug={category.slug} size={34} className="mr-3 flex-shrink-0" />
-                            <div className="flex-1">
-                              <div className="text-sm font-medium text-gray-900 group-hover/sub:text-[#ec5a13]">
-                                {sub.name}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Sous-catégorie
-                              </div>
-                            </div>
-                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover/sub:text-[#ec5a13] flex-shrink-0 ml-2" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+            <div role="tablist" aria-label="Type d'annonce" className="flex shrink-0 rounded-2xl border border-white/10 bg-white/[0.07] p-1 backdrop-blur">
+              {TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={type === t.value}
+                  onClick={() => setType(t.value)}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none',
+                    type === t.value ? (t.value === 'service' ? 'bg-blue-600 text-white' : 'bg-[#ec5a13] text-white') : 'text-white/70 hover:text-white'
                   )}
-
-                  {/* Bouton voir tout */}
-                  <div className="px-6 pb-6">
-                    <Button
-                      onClick={() => handleCategoryClick(category.slug)}
-                      className="w-full bg-white border-2 border-[#ec5a13] text-[#ec5a13] hover:bg-[#ec5a13] hover:text-white transition-all"
-                    >
-                      Voir toutes les annonces de {category.name}
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
+                >
+                  <t.icon className="h-4 w-4" /> {t.label}
+                </button>
+              ))}
+            </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Grille ──────────────────────────────────────────────────────── */}
+      <main className="container mx-auto max-w-7xl px-4 pb-20 pt-8">
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-3xl border border-gray-100 bg-white p-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 animate-pulse rounded-2xl bg-gray-100" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 w-1/2 animate-pulse rounded bg-gray-100" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-gray-100" />
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {Array.from({ length: 4 }).map((__, j) => <div key={j} className="h-8 w-24 animate-pulse rounded-full bg-gray-100" />)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="rounded-3xl border border-red-100 bg-white px-6 py-14 text-center">
+            <p className="font-semibold text-gray-900">Les catégories n&apos;ont pas pu être chargées</p>
+            <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-[#ec5a13] px-5 py-2.5 text-sm font-bold text-white">Réessayer</button>
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-[#ec5a13]"><Search className="h-7 w-7" /></span>
+            <p className="mt-4 text-lg font-bold text-gray-900">Aucune catégorie pour « {query} »</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">Cherchez plutôt directement parmi les annonces.</p>
+            <Link
+              href={`/categories/tous?q=${encodeURIComponent(query)}`}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#ec5a13] px-5 py-2.5 text-sm font-bold text-white"
+            >
+              <Search className="h-4 w-4" /> Rechercher « {query} » dans les annonces
+            </Link>
+          </div>
+        ) : (
+          <>
+            {query ? (
+              <p className="mb-4 text-sm text-gray-500">
+                <strong className="font-bold text-gray-900">{visible.length}</strong> catégorie{visible.length > 1 ? 's' : ''} pour « {query} »
+              </p>
+            ) : null}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {visible.map((cat) => <CategoryCard key={cat._id} cat={cat} type={type} query={query} />)}
+            </div>
+          </>
         )}
-      </div>
+      </main>
 
       <Footer />
     </div>
