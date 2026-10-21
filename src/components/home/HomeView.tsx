@@ -144,7 +144,7 @@ export function HomeView({ initial }: { initial: HomeData | null }) {
         <div className={cn('transition-opacity duration-300', loading && 'opacity-60')}>
           {/* Catégories */}
           <Section className="mt-14">
-            <SectionHeader title="Explorer par catégorie" subtitle={`Tout ce qui se vend et se propose à ${cityLabel}`} href="/categories-list" linkLabel="Toutes les catégories" />
+            <SectionHeader title="Explorer par catégorie" subtitle={`Tout ce qui se vend et se propose à ${cityLabel}`} href="/categories-list" linkLabel="Tout voir" />
             <CategoryRail categories={data.categories} city={city} />
           </Section>
 
