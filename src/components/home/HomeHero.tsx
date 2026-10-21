@@ -1,10 +1,12 @@
 'use client';
 
-// En-tête de l'accueil : salutation, chiffres réels, recherche avec ville
-import { FormEvent, useEffect, useState } from 'react';
+// En-tête de l'accueil — même ambiance « nuit et braise » que l'application mobile :
+// promesse, recherche avec ville, raccourcis catégories, et les annonces à la une.
+import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { useAuth } from '@/hooks/useAuth';
 import type { HomeCategory, HomeData } from '@/lib/api/home';
 import { formatCompact } from '@/lib/format';
@@ -14,21 +16,24 @@ interface HomeHeroProps {
   cities: string[];
   city: string;
   onCityChange: (city: string) => void;
-  popular: HomeCategory[];
+  shortcuts: HomeCategory[];
+  /** Colonne de droite (annonces à la une) */
+  aside?: ReactNode;
 }
 
-export function HomeHero({ stats, cities, city, onCityChange, popular }: HomeHeroProps) {
+export function HomeHero({ stats, cities, city, onCityChange, shortcuts, aside }: HomeHeroProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   // Calculée dans le navigateur (heure locale) : évite un décalage avec l'heure du serveur
-  const [greeting, setGreeting] = useState('Bienvenue');
+  const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
     setGreeting(new Date().getHours() < 18 ? 'Bonjour' : 'Bonsoir');
   }, []);
 
   const firstName = (user?.name || '').trim().split(/\s+/)[0];
+  const cityQuery = city !== 'all' ? `?location=${encodeURIComponent(city)}` : '';
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -39,91 +44,112 @@ export function HomeHero({ stats, cities, city, onCityChange, popular }: HomeHer
   };
 
   return (
-    <section className="relative overflow-hidden">
-      {/* Halo d'ambiance */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-gradient-to-b from-[#ffe9de] via-[#fff5f0] to-transparent" />
-      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-orange-200/50 blur-3xl" />
+    <section className="relative isolate overflow-hidden rounded-b-[2rem] bg-[#070b16] text-white sm:rounded-b-[2.5rem]">
+      {/* Fond : dégradé nuit → braise, halos et grille fine (comme l'en-tête du profil mobile) */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(135deg,#060a14_0%,#10172b_55%,#2a1307_100%)]" />
+      <div className="pointer-events-none absolute -right-32 -top-40 -z-10 h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(closest-side,rgba(236,90,19,0.45),transparent)] motion-safe:animate-[pulse_7s_ease-in-out_infinite]" />
+      <div className="pointer-events-none absolute -bottom-48 -left-40 -z-10 h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(closest-side,rgba(124,58,237,0.28),transparent)]" />
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.07] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.9) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
 
-      <div className="container relative mx-auto max-w-7xl px-4 pb-6 pt-8 sm:pt-12">
-        <p className="text-sm font-semibold text-[#b3420e]" suppressHydrationWarning>
-          {greeting}{firstName ? `, ${firstName}` : ''} 👋
-        </p>
-        <h1 className="mt-2 max-w-3xl text-3xl font-black leading-[1.1] tracking-tight text-gray-900 sm:text-5xl">
-          Achetez et vendez <span className="text-[#ec5a13]">près de chez vous</span>, au Niger.
-        </h1>
-
-        {stats && stats.totalProducts > 0 ? (
-          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-600">
-            <span className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-              </span>
-              <strong className="font-bold text-gray-900">{formatCompact(stats.totalProducts)}</strong> annonces en ligne
+      <div className="container mx-auto grid max-w-7xl gap-10 px-4 pb-16 pt-10 sm:pb-20 sm:pt-14 lg:grid-cols-[1.08fr_1fr] lg:items-center lg:gap-12">
+        <div className="min-w-0">
+          {/* Signal en direct */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] py-1.5 pl-2.5 pr-3.5 text-[13px] text-white/80 backdrop-blur">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
-            {stats.totalUsers > 0 ? (
-              <span><strong className="font-bold text-gray-900">{formatCompact(stats.totalUsers)}</strong> membres</span>
-            ) : null}
-            {stats.totalCities > 0 ? (
-              <span><strong className="font-bold text-gray-900">{stats.totalCities}</strong> villes</span>
-            ) : null}
+            {stats && stats.totalProducts > 0 ? (
+              <span>
+                <strong className="font-semibold text-white">{formatCompact(stats.totalProducts)}</strong> annonces en ligne au Niger
+              </span>
+            ) : (
+              <span>La place de marché du Niger</span>
+            )}
           </div>
-        ) : null}
 
-        {/* Recherche */}
-        <form onSubmit={submit} role="search" className="mt-6 max-w-3xl">
-          <div className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-2 shadow-[0_18px_40px_-24px_rgba(236,90,19,0.45)] sm:flex-row sm:items-center">
-            <label className="relative flex flex-1 items-center">
-              <span className="sr-only">Que recherchez-vous ?</span>
-              <Search className="pointer-events-none absolute left-3 h-5 w-5 text-gray-400" />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Téléphone, moto, plombier…"
-                enterKeyHint="search"
-                className="h-12 w-full rounded-xl bg-gray-50 pl-10 pr-3 text-[15px] text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#ec5a13]"
-              />
-            </label>
+          <p className="mt-6 text-sm font-semibold text-[#ffa87b]" suppressHydrationWarning>
+            {greeting ? `${greeting}${firstName ? `, ${firstName}` : ''} 👋` : ' '}
+          </p>
+          <h1 className="mt-2 text-balance text-white text-[2.15rem] font-black leading-[1.05] tracking-[-0.035em] sm:text-5xl lg:text-[3.6rem]">
+            Achetez et vendez{' '}
+            <span className="bg-gradient-to-r from-[#ffb48a] via-[#ff8a4c] to-[#ec5a13] bg-clip-text text-transparent">
+              près de chez vous.
+            </span>
+          </h1>
+          <p className="mt-4 max-w-xl text-[15.5px] leading-relaxed text-white/65 sm:text-lg">
+            Produits, services et bonnes affaires de votre quartier. Discutez en toute sécurité dans la messagerie TakTak — gratuit et sans commission.
+          </p>
 
-            <Select value={city} onValueChange={onCityChange}>
-              <SelectTrigger className="!h-12 w-full rounded-xl border-orange-100 bg-orange-50/60 font-semibold text-gray-900 sm:w-52" aria-label="Ville">
-                <MapPin className="h-4 w-4 text-[#ec5a13]" />
-                <SelectValue placeholder="Tout le Niger" />
-              </SelectTrigger>
-              <SelectContent className="max-h-80 rounded-xl">
-                <SelectItem value="all">Tout le Niger</SelectItem>
-                {cities.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <button
-              type="submit"
-              className="h-12 rounded-xl bg-[#ec5a13] px-6 text-[15px] font-bold text-white shadow-md shadow-orange-500/30 transition hover:bg-[#d44f11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ec5a13] focus-visible:ring-offset-2"
-            >
-              Rechercher
-            </button>
-          </div>
-        </form>
-
-        {/* Recherches populaires : les catégories les plus fournies */}
-        {popular.length ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-semibold text-gray-500">Populaire :</span>
-            {popular.map((cat) => (
+          {/* Recherche */}
+          <form onSubmit={submit} role="search" className="mt-8">
+            <div className="flex flex-col gap-2 rounded-[1.4rem] bg-white p-2 shadow-[0_30px_80px_-30px_rgba(236,90,19,0.65)] ring-1 ring-white/10 sm:flex-row sm:items-center">
+              <label className="relative flex flex-1 items-center">
+                <span className="sr-only">Que recherchez-vous ?</span>
+                <Search className="pointer-events-none absolute left-4 h-5 w-5 text-gray-400" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Téléphone, moto, plombier…"
+                  enterKeyHint="search"
+                  className="h-[52px] w-full rounded-2xl bg-transparent pl-12 pr-3 text-[15.5px] text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                />
+              </label>
+              <div className="hidden h-8 w-px bg-gray-200 sm:block" />
+              <Select value={city} onValueChange={onCityChange}>
+                <SelectTrigger
+                  className="!h-[52px] w-full rounded-2xl border-0 bg-gray-50 font-semibold text-gray-900 shadow-none sm:w-48 sm:bg-transparent"
+                  aria-label="Ville"
+                >
+                  <MapPin className="h-4 w-4 text-[#ec5a13]" />
+                  <SelectValue placeholder="Tout le Niger" />
+                </SelectTrigger>
+                <SelectContent className="max-h-80 rounded-xl">
+                  <SelectItem value="all">Tout le Niger</SelectItem>
+                  {cities.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <button
-                key={cat._id}
-                type="button"
-                onClick={() => router.push(`/categories/${cat.slug}${city !== 'all' ? `?location=${encodeURIComponent(city)}` : ''}`)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:border-[#ec5a13] hover:bg-orange-50 hover:text-[#ec5a13]"
+                type="submit"
+                className="flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-[#ec5a13] px-7 text-[15px] font-bold text-white transition hover:bg-[#d44f11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ec5a13] focus-visible:ring-offset-2"
               >
-                {cat.name}
+                <Search className="h-4 w-4 sm:hidden" />
+                Rechercher
               </button>
-            ))}
-          </div>
-        ) : null}
+            </div>
+          </form>
+
+          {/* Raccourcis : catégories les plus fournies, avec leurs icônes 3D */}
+          {shortcuts.length ? (
+            <div className="mt-5 flex flex-wrap gap-2">
+              {shortcuts.map((cat) => (
+                <button
+                  key={cat._id}
+                  type="button"
+                  onClick={() => router.push(`/categories/${cat.slug}${cityQuery}`)}
+                  className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] py-1.5 pl-1.5 pr-3.5 text-[13.5px] font-medium text-white/85 backdrop-blur transition hover:border-white/25 hover:bg-white/[0.12] hover:text-white"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition group-hover:scale-110">
+                    <CategoryIcon item={cat} size={20} />
+                  </span>
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {aside ? <div className="min-w-0">{aside}</div> : null}
       </div>
     </section>
   );
